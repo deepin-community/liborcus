@@ -1,0 +1,22 @@
+---
+"I am quoted: ~ " : "Here is another quote."
+list with quoted string values  :
+  - "1 2 3"
+  - "null"
+  - "true"
+  - "false"
+  - "#hashtag"
+  - "\"quoted inside\""
+  - "'single quote inside'"
+  - "Japan's finest beer"
+'single quoted string values' :
+  - '8.8.8.8'
+  - '''single quote inside'''
+  - 'prefix ''quoted'' suffix'
+  - '"double quote"'
+  - 'before "quote" after'
+  - 'http://www.google.com'
+  - ''''''''      # equivalent of "'''"
+  - ' '' '' '' '  # equivalent of " ' ' ' "
+  - '#hashtag'
+

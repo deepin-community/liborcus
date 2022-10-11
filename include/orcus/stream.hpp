@@ -1,0 +1,150 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#ifndef INCLUDED_ORCUS_STREAM_HPP
+#define INCLUDED_ORCUS_STREAM_HPP
+
+#include "env.hpp"
+#include "orcus/pstring.hpp"
+
+#include <memory>
+
+namespace orcus {
+
+/**
+ * Represents the content of a file.  The file content may be either
+ * in-memory, or memory-mapped; it is initially memory-mapped, but it may
+ * become in-memory when converted to a different encoding.
+ */
+class ORCUS_PSR_DLLPUBLIC file_content
+{
+    struct impl;
+    std::unique_ptr<impl> mp_impl;
+public:
+    file_content(const file_content&) = delete;
+    file_content& operator= (const file_content&) = delete;
+
+    file_content();
+    file_content(file_content&& other);
+    file_content(const char* filepath);
+    ~file_content();
+
+    const char* data() const;
+    size_t size() const;
+    bool empty() const;
+
+    void swap(file_content& other);
+
+    /**
+     * Load from a new file.  This will invalidate the pointer returned from
+     * the {@link file_content#data()} method prior to the call.
+     *
+     * @param filepath path of the file to load from.
+     */
+    void load(const char* filepath);
+
+    /**
+     * Convert a non-utf-8 stream to a utf-8 one if the source stream contains
+     * a byte order mark.  If not, it does nothing.  When the conversion
+     * happens, the converted content will be stored in-memory.
+     */
+    void convert_to_utf8();
+
+    pstring str() const;
+};
+
+/**
+ * Represents the content of an in-memory buffer.  Note that this class will
+ * NOT own the content of the source buffer but simply will reference it,
+ * except when the original buffer is a non-utf-8 stream and the caller
+ * chooses to convert it to utf-8 by calling its {@link
+ * memory_content#convert_to_utf8()} method.
+ */
+class ORCUS_PSR_DLLPUBLIC memory_content
+{
+    struct impl;
+    std::unique_ptr<impl> mp_impl;
+public:
+    memory_content(const file_content&) = delete;
+    memory_content& operator= (const file_content&) = delete;
+
+    memory_content();
+    memory_content(const char* p, size_t n);
+    memory_content(memory_content&& other);
+    ~memory_content();
+
+    const char* data() const;
+    size_t size() const;
+    bool empty() const;
+
+    void swap(memory_content& other);
+
+    /**
+     * Convert a non-utf-8 stream to a utf-8 one if the source stream contains
+     * a byte order mark.  If not, it does nothing.  When the conversion
+     * happens, the converted content will be owned by the object.
+     */
+    void convert_to_utf8();
+
+    pstring str() const;
+};
+
+struct ORCUS_PSR_DLLPUBLIC line_with_offset
+{
+    std::string line;
+    size_t line_number;
+    size_t offset_on_line;
+
+    line_with_offset(std::string _line, size_t _line_number, size_t _offset_on_line);
+    line_with_offset(const line_with_offset& other);
+    line_with_offset(line_with_offset&& other);
+    ~line_with_offset();
+};
+
+/**
+ * Generate a sensible error output for parse error including the line where
+ * the error occurred and the offset of the error position on that line.
+ *
+ * @param strm entire character stream where the error occurred.
+ * @param offset offset of the error position within the stream.
+ *
+ * @return string formatted to be usable as an error message for stdout.
+ */
+ORCUS_PSR_DLLPUBLIC std::string create_parse_error_output(
+    const pstring& strm, std::ptrdiff_t offset);
+
+/**
+ * Given a string consisting of multiple lines i.e. multiple line breaks,
+ * find the line that contains the specified offset position.
+ *
+ * @param strm string buffer containing multiple lines.
+ * @param offset offset position.
+ *
+ * @return structure containing information about the line containing the
+ *         offset position.
+ */
+ORCUS_PSR_DLLPUBLIC line_with_offset locate_line_with_offset(const pstring& strm, std::ptrdiff_t offset);
+
+/**
+ * Given two strings, locate the position of the first character that is
+ * different between the two strings.  Note that if one of the strings is
+ * empty (or both of them are empty), it returns 0.
+ *
+ * @param left one of the strings to compare.
+ * @param right one of the strings to compare.
+ *
+ * @return position of the first character that is different between the two
+ *         compared strings.
+ */
+ORCUS_PSR_DLLPUBLIC size_t locate_first_different_char(
+    const pstring& left, const pstring& right);
+
+} // namespace orcus
+
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

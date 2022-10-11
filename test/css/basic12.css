@@ -1,0 +1,19 @@
+
+div {
+  background-image: url("https://mdn.mozillademos.org/files/6457/mdn_logo_only_color.png");
+}
+
+p {
+  background-image: none;
+}
+
+div.img1 {
+    background-image: url('http://www.rabiakhan.com/Gallery/background.jpg');
+}
+
+div.img2 {
+    background-image: url(
+        http://www.tgraphic.com/userimages/Gallery/Backgrounds/TGraphic_com-Full-Wallpapers-Backgrounds_Colorful_C_1920_33.jpg
+    );
+}
+

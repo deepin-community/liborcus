@@ -1,0 +1,10 @@
+/* Grouped selectors */
+html, body {
+    height: 100%; /* This equals height of browser's inner window size. */
+}
+
+h1, h2, h3, h4 {
+    font-variant: small-caps;
+    padding: 2.5em;
+}
+

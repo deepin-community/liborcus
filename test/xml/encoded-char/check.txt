@@ -1,0 +1,19 @@
+/root
+/root/data
+/root/data"Tom & Jerry"
+/root/data
+/root/data@attr="Black & Whilte"
+/root/data@attr2="'quoted'"
+/root/data"This is 'single-quoted', and this is \"double-quoted\"."
+/root/data
+/root/data@attr="<>'\"&"
+/root/data"Less than (<) and greater than (>) are also encoded."
+/root/data
+/root/data"<>'\"&"
+/root/data
+/root/data@single-char="&"
+/root/data">"
+/root/data
+/root/data"\"B\";"
+/root/data
+/root/data"\";\""

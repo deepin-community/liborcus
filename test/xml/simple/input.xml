@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- this is a comment -->
+<root>
+    <child/>
+    <child attr2="value2" attr1="value1"/>
+    <child>
+        <baby>some text</baby>
+    </child>
+    before comment|<!-- another comment -->|after comment
+    <child attr3="value3"/>
+    <!-- another comment - with a single hyphen. -->
+</root>
+

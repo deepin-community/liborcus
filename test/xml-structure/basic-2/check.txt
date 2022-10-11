@@ -1,0 +1,5 @@
+/root
+/root/name
+/root/age
+/root/nickname
+

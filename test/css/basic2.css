@@ -1,0 +1,10 @@
+/* selectors with class */
+
+div.foo { border: solid 1px; }
+
+.warning
+/* warning for all elements */
+{
+    background-color: red;
+    font-weight: 900;
+}

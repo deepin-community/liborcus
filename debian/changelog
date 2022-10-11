@@ -1,0 +1,623 @@
+liborcus (0.16.1-5) unstable; urgency=medium
+
+  * add Build-Depends: libmdds-dev (<< 2.0~) and
+    libixion-dev (<< 0.17.0~) to prevent trying with them
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 02 Nov 2021 19:45:44 +0100
+
+liborcus (0.16.1-4) unstable; urgency=medium
+
+  [ Rene Engelhard ]
+  * debian/patches/limits.diff: add missing #include <limits> to fix
+    build with GCC11 (from LO tree) (closes: #984198)
+
+  [ Debian Janitor ]
+  * Trim trailing whitespace.
+  * Update standards version to 4.5.1, no changes needed.
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 23 Sep 2021 20:13:31 +0200
+
+liborcus (0.16.1-3) unstable; urgency=medium
+
+  * remove obsolete sed...
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 18 Oct 2020 11:38:46 +0200
+
+liborcus (0.16.1-2) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 18 Oct 2020 10:31:11 +0200
+
+liborcus (0.16.1-1) experimental; urgency=medium
+
+  * New upstream version 0.16.1
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 29 Sep 2020 18:02:00 +0200
+
+liborcus (0.16.0-2) experimental; urgency=medium
+
+  * add upstream patches to fix build on 32bit architectures
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 25 Sep 2020 06:34:23 +0200
+
+liborcus (0.16.0-1) experimental; urgency=medium
+
+  * New upstream version 0.16.0
+  * bump ixion build-dep to >= 0.16
+  * liborcus*0.15-0 -> liborcus*0.16-0
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 12 Sep 2020 11:00:21 +0200
+
+liborcus (0.15.4-3) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Debian Janitor ]
+  * Trim trailing whitespace.
+  * Bump debhelper from deprecated 9 to 12.
+  * Set debhelper-compat version in Build-Depends.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+  * Drop unnecessary dh arguments: --parallel
+
+  [ Mattia Rizzolo ]
+  * d/rules:
+    + Remove obsolete comments and calls to dh_autoreconf, nowadays included
+      in dh >= 10.
+    + Drop options regarding not building liborcus-spreadsheet-model, clearly
+      nobody used them in years anyway.
+    + Simplify dh_auto_configure override a bit.
+  * d/control:
+    + Bump Standards-Version to 4.5.0:
+      - Set Rules-Requires-Root:no.
+    + Capitalize "Python" in the descriptions
+    + Drop build-dependency on dh-autoreconf, implied by debhelper >= 10.
+    + De-duplicate the specification of Section:libs.
+    + Bump debhelper compat level to 13.
+      - Add d/not-installed to list the *.la files.
+  * d/copyright:
+    + Refer to the MPL-2.0 in common-licenses, rather than copying it verbatim.
+    + Style improvements.
+    + Add myself to the copyright holders for debian/*.
+    + Add missing License paragraphs for GPL-2 and GPL-3.
+  * d/watch: Use HTTPS.
+
+  [ Rene Engelhard ]
+  * d/rules: Use dh_makeshlibs -VNone, to revert to the behavioud pre-dh >=12.
+
+ -- Mattia Rizzolo <mattia@debian.org>  Wed, 24 Jun 2020 17:56:40 +0200
+
+liborcus (0.15.4-2) unstable; urgency=medium
+
+  * reupload source-only
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 02 Apr 2020 15:35:40 +0000
+
+liborcus (0.15.4-1) unstable; urgency=medium
+
+  * New upstream version 0.15.4
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 30 Mar 2020 20:49:20 +0200
+
+liborcus (0.15.3+dfsg-1) unstable; urgency=medium
+
+  * actually remove Files-Exluded: files again...
+
+  * split -mso- and -parser- libraries to own packages, according to
+    best practices (no transition needed since liborcus-0.15-0 will
+    depend on liborcus-parser-0.15-0 anyways.)
+  * make liborcus-dev recommend libixion-dev since spreadsheet-models .pc
+    Requires: it
+  * mention misc/gnumeric.xsd and misc/xls-xml-tokens.txt in
+    debian/copyright...
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 27 Mar 2020 21:46:46 +0100
+
+liborcus (0.15.3-3) unstable; urgency=medium
+
+  * update debian/tests/control (s/14/15/), thanks
+    Sebastien Bacher (closes: #945860)
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 30 Nov 2019 09:36:58 +0100
+
+liborcus (0.15.3-2) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Wed, 20 Nov 2019 12:58:15 +0100
+
+liborcus (0.15.3-1) experimental; urgency=medium
+
+  * New upstream version 0.15.3
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 11 Oct 2019 17:22:29 +0200
+
+liborcus (0.15.2-1) experimental; urgency=medium
+
+  * New upstream version 0.15.2
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 29 Aug 2019 18:48:31 +0200
+
+liborcus (0.15.1-1) experimental; urgency=medium
+
+  * New upstream version 0.15.1
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 23 Aug 2019 20:54:47 +0200
+
+liborcus (0.15.0-2) experimental; urgency=medium
+
+  * add upstream patch to fix build on 32bit archs
+
+ -- Rene Engelhard <rene@debian.org>  Wed, 14 Aug 2019 20:55:42 +0200
+
+liborcus (0.15.0-1) experimental; urgency=medium
+
+  * New upstream version 0.15.0
+
+  * update build dependencies
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 11 Aug 2019 11:16:06 +0000
+
+liborcus (0.14.1-6) unstable; urgency=medium
+
+  * Team upload.
+  * Update the unit autopkgtest to detect the soversion at test time, instead
+    of hardcoding it, to avoid testing the just built library instead of the
+    system-installed one.
+
+ -- Mattia Rizzolo <mattia@debian.org>  Tue, 08 Jan 2019 12:09:10 +0100
+
+liborcus (0.14.1-5) unstable; urgency=medium
+
+  * Team upload.
+  * Remove unneeded d/*.dirs file.
+  * wrap-and-sort -ast.
+  * Mark liborcus-doc as Multi-Arch:foreign.
+  * Update d/tests/control dependencies after the SONAME bump.  Closes: #918183
+  * Use HTTPS in d/copyright Format field.
+
+ -- Mattia Rizzolo <mattia@debian.org>  Tue, 08 Jan 2019 10:25:14 +0100
+
+liborcus (0.14.1-4) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 15 Dec 2018 13:58:37 +0000
+
+liborcus (0.14.1-3) experimental; urgency=medium
+
+  * fix spelling-error-in-description packacge package
+  * fix -bins Multi-Arch: field, s/same/foreign/
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 16 Nov 2018 18:08:46 +0000
+
+liborcus (0.14.1-2) experimental; urgency=medium
+
+  * package the binaries (closes: #912016)
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 28 Oct 2018 18:12:07 +0000
+
+liborcus (0.14.1-1) experimental; urgency=medium
+
+  * New upstream version 0.14.1
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 18 Sep 2018 19:22:36 +0200
+
+liborcus (0.14.0+really0.14.0-3) experimental; urgency=medium
+
+  * reupload to correct distribution
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 30 Aug 2018 11:00:38 +0200
+
+liborcus (0.14.0-2) unstable; urgency=medium
+
+  * add upstream patch to fix test failure on i386
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 30 Aug 2018 08:59:27 +0200
+
+liborcus (0.14.0-1) experimental; urgency=medium
+
+  * New upstream version 0.14.0
+  * remove upstreamed boost-1.67.diff
+  * rename libraries from 0.13-0 to 0.14-0 and bump mdds and ixion build-deps
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 27 Aug 2018 11:34:31 +0000
+
+liborcus (0.13.4-6) unstable; urgency=medium
+
+  * actually add debian/tests/unit...
+
+ -- Rene Engelhard <rene@cdebian.org>  Fri, 20 Jul 2018 07:53:22 +0200
+
+liborcus (0.13.4-5) unstable; urgency=medium
+
+  * fix typo in unit test Depends:
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 19 Jul 2018 08:52:59 +0200
+
+liborcus (0.13.4-4) unstable; urgency=medium
+
+  * add autopkgtest
+
+ -- Rene Engelhard <rene@debian.org>  Wed, 18 Jul 2018 23:07:15 +0200
+
+liborcus (0.13.4-3) unstable; urgency=medium
+
+  * debian/patches/boost-1.67.diff: as name says: fix build with boost 1.67;
+    from upstraem master
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 17 Jul 2018 23:50:13 +0200
+
+liborcus (0.13.4-2) unstable; urgency=medium
+
+  * add missing dh-python Build-Depends:
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 30 Mar 2018 11:37:50 +0200
+
+liborcus (0.13.4-1) unstable; urgency=medium
+
+  * New upstream version 0.13.4
+
+  * add Built-Using: ${sphinxdoc:Built-Using} to liborcus-doc
+  * fix debian/watch and remove trailing / from Files-Excluded
+  * add Vcs-*
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 27 Feb 2018 16:13:41 +0100
+
+liborcus (0.13.3-1) unstable; urgency=medium
+
+  * New upstream version 0.13.3
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 15 Feb 2018 07:19:57 +0100
+
+liborcus (0.13.2-1) unstable; urgency=medium
+
+  * New upstream version 0.13.2
+
+  * upload to unstable
+
+  * doesn't segfault anymore against a rebuilt libixion (closes: #887004=
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 30 Jan 2018 14:55:08 +0100
+
+liborcus (0.13.1-3) experimental; urgency=medium
+
+  * actually remove Files-Excluded: files...
+  * debian/copyright: mention Markus Morhard (src/parser/win_stdint.h)
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 04 Dec 2017 17:33:59 +0100
+
+liborcus (0.13.1-2) experimental; urgency=medium
+
+  * Build-dep on libboost-date-time-dev, thanks Rico Tzschichholz
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 20 Nov 2017 19:42:44 +0100
+
+liborcus (0.13.1-1) experimental; urgency=medium
+
+  * New upstream version 0.13.1
+  * add Build-Conflicts: python-sphinx to unconfuse sphinx-build
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 18 Nov 2017 20:59:20 +0000
+
+liborcus (0.12.1-3) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 28 May 2017 19:53:58 +0200
+
+liborcus (0.12.1-2) experimental; urgency=medium
+
+  * Files-Excluded: needs to be in the header of copyright...
+  * also use $(CURDIR)/src/python/orcus in PYTHONPATH
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 28 May 2017 12:30:26 +0200
+
+liborcus (0.12.1-1) experimental; urgency=medium
+
+  * [9eee68a] New upstream version 0.12.1
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 20 Sep 2016 22:52:13 +0200
+
+liborcus (0.12.0-4) experimental; urgency=medium
+
+  * [42b61ea] move Maintainer: to Debian LibreOffice Maintainers
+  * [8be5236] multiarchify (closes: #798608)
+
+ -- Rene Engelhard <rene@debian.org>  Wed, 07 Sep 2016 22:21:44 +0200
+
+liborcus (0.12.0-3) experimental; urgency=medium
+
+  * use PYTHONPATH=/src/python/.libs dh_auto_test (as for orcus) to fix
+    python tests on some archs
+
+ -- Rene Engelhard <rene@debian.org>  Wed, 24 Aug 2016 07:13:13 +0000
+
+liborcus (0.12.0-2) experimental; urgency=medium
+
+  * [451c793] add missing python3-sphinx-bootstrap-theme,python3-breathe to
+              Build-Depends-Indep
+  * [679dd09] add sphinx-common to Build-Depends for --with sphinxdoc
+  * [165fc02] use usr/lib/python*/*-packages in python3-orcus.install
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 23 Aug 2016 22:32:51 +0200
+
+liborcus (0.12.0-1) experimental; urgency=medium
+
+  * [b3d4c5f] Imported Upstream version 0.12.0
+  * [3f1c198] adapt for liborcus*-0.12.so.0
+  * [e564ab1] bump libixion-dev build-dep to (>= 0.12.0~)
+  * [18cc8ff] build liborcus-doc
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 21 Aug 2016 13:04:44 +0200
+
+liborcus (0.11.2-2) unstable; urgency=medium
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 14 May 2016 10:47:27 +0200
+
+liborcus (0.11.2-1) experimental; urgency=medium
+
+  * Imported Upstream version 0.11.2
+  * bump libmdds-dev build-dep to (>= 1.2)
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 13 May 2016 11:27:37 +0200
+
+liborcus (0.11.1+dfsg-1) unstable; urgency=medium
+
+  * upload to unstable
+
+  * *sigh*. remove misc/OpenDocument-v1.2-os-schema.rng and
+    AGAIN
+  * debian/copyright: add Files-Excluded: to prevent them sneaking in
+    again.
+  * debian/watch: fix filenamemangle
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 07 Apr 2016 21:57:51 +0200
+
+liborcus (0.11.1-1) experimental; urgency=medium
+
+  * New upstream release
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 12 Mar 2016 12:57:07 +0100
+
+liborcus (0.11.0-1) experimental; urgency=medium
+
+  * New upstream release
+  * add debian/watch
+  * add Homepage:, update Source:
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 06 Mar 2016 20:09:45 +0100
+
+liborcus (0.11.0~git20151122+dfsg-1) experimental; urgency=medium
+
+  * update debian/copyright
+  * remove misc/OpenDocument-v1.2-os-schema.rng and misc/ooxml-ecma-376/
+    again which was forgotten to get removed from the orig this time and
+    actually tell in README.source what was removed.
+  * remove now unneeded build-dependency: python
+  * package the python bindings; add python3-dev build-dep
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 08 Feb 2016 19:27:24 +0100
+
+liborcus (0.11.0~git20151122-1) experimental; urgency=medium
+
+  * New upstream snapshot
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 03 Jan 2016 19:18:26 +0100
+
+liborcus (0.9.2-4) unstable; urgency=medium
+
+  * merge parts of https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=798608:
+   - Enable parallel builds.
+   - Remove cruft in the debian directory.
+  * remove obsolete dependency on libzip-dev (closes: #798729)
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 03 Jan 2016 13:22:48 +0100
+
+liborcus (0.9.2-3) unstable; urgency=medium
+
+  * bump build-dep on ixion to 0.9.1-2 to ensure we have the v5 version...
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 04 Aug 2015 12:43:18 +0200
+
+liborcus (0.9.2-2) unstable; urgency=medium
+
+  * libstdc++6 transition: rename liborcus*0.10-0 to
+    liborcus*0.10-0v5
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 03 Aug 2015 17:14:54 +0000
+
+liborcus (0.9.2-1) unstable; urgency=medium
+
+  * New upstream release
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 20 Jun 2015 10:53:50 +0200
+
+liborcus (0.9.1-1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 02 Jun 2015 13:13:43 +0200
+
+liborcus (0.9.0-1) experimental; urgency=medium
+
+  * New upstream release
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 25 Apr 2015 18:44:41 +0200
+
+liborcus (0.7.1-1) experimental; urgency=medium
+
+  * New upstream release
+    - fixes build with gcc-5 (closes: #777963)
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 05 Apr 2015 13:59:50 +0200
+
+liborcus (0.7.0+dfsg-9) unstable; urgency=low
+
+  * sigh, fix control to remove [!ppc64el]s
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 10 Oct 2014 21:02:42 +0200
+
+liborcus (0.7.0+dfsg-8) unstable; urgency=medium
+
+  * enable spreadsheet-model on ppc64el for consistency as ixion built now
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 10 Oct 2014 18:12:33 +0000
+
+liborcus (0.7.0+dfsg-7) unstable; urgency=medium
+
+  * oops, forgot to remove the Depends on liborcus-spreadsheet-model-0.8-0
+    for liborcus-dev on ppc64el
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 13 Sep 2014 20:11:01 +0200
+
+liborcus (0.7.0+dfsg-6) unstable; urgency=low
+
+  * brown paper bag release.
+
+  * fix -N setting
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 31 Aug 2014 21:27:13 -0700
+
+liborcus (0.7.0+dfsg-5) unstable; urgency=low
+
+  * fix build without spreadsheet model enabled
+
+  * temporarily disable spreadsheet model on ppc64el until ixion is fixed.
+    (not used anywhere anyway)
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 30 Aug 2014 19:26:08 -0700
+
+liborcus (0.7.0+dfsg-4) unstable; urgency=low
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 31 Jul 2014 20:43:13 +0200
+
+liborcus (0.7.0+dfsg-3) experimental; urgency=low
+
+  * merge from liborcus 0.5.1-8:
+    - --disable-werror (closes: #746876)
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 05 May 2014 12:42:23 +0000
+
+liborcus (0.7.0+dfsg-2) experimental; urgency=low
+
+  * ENABLE_SPREADSHEET_MODEL=y; add build-dep on libixion-dev. split
+    spreadsheet-model lib out to extra package due to its extra ixion
+    dependency
+  * remove dh_auto_clean override (fixed) and manual dh_autoreconf, use
+    --with autoreconf
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 01 Apr 2014 22:22:00 +0200
+
+liborcus (0.7.0+dfsg-1) experimental; urgency=low
+
+  * remove misc/OpenDocument-schema-v1.2-cd04.rng, misc/ooxml-ecma-376/ and
+    doc/rfc4180-csv.txt from .orig again and mention misc/*.py in
+    debian/copyright (BSD) (closes: #741250)
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 10 Mar 2014 14:11:20 +0100
+
+liborcus (0.7.0-1) experimental; urgency=low
+
+  * New upstream release
+  * fix typo: s/snd/and/ (closes: #732765)
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 04 Mar 2014 21:59:39 +0100
+
+liborcus (0.5.1-7) unstable; urgency=medium
+
+  * --with-boost-libdir=/usr/lib/$(DEB_HOST_MULTIARCH) (closes: #737486)
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 03 Feb 2014 07:48:03 +0100
+
+liborcus (0.5.1-6) unstable; urgency=low
+
+  * disable tests on s390 (failure with newer boost, functionality not
+    used in LO, s390 to be removed anyways)
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 22 Sep 2013 15:25:41 +0200
+
+liborcus (0.5.1-5) unstable; urgency=low
+
+  * --disable-silent-rules
+  * libmdds-dev is only needed with spreadheet-model, thus remove from
+    Build-Depends: for now
+  * revert back to libboost-dev (1.49) as otherwise the tests fail on s390
+
+ -- Rene Engelhard <rene@debian.org>  Sat, 27 Jul 2013 16:50:22 +0200
+
+liborcus (0.5.1-4) unstable; urgency=low
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 23 Jul 2013 18:44:10 +0200
+
+liborcus (0.5.1-3) experimental; urgency=low
+
+  * merge liborcus 0.3.0-8:
+    + use libboost-system1.53-dev explicitly as libmdds-dev does, too - and
+      otherwise we have conflicting build-deps (closes: #713115)
+  * merge from 0.5.1-2ubuntu1:
+    + hotfix for autotools boost brokeness
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 01 Jul 2013 22:14:48 +0200
+
+liborcus (0.5.1-2) experimental; urgency=low
+
+  * merge liborcus 0.3.0-7:
+    + apparently builds with boost 1.53 need libboost-system-dev;
+      add to Build-Depends
+  * remove libzip-dev builddep (not needed anymore), replace by
+    zlib1g-dev
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 29 Apr 2013 14:03:46 +0000
+
+liborcus (0.5.1-1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 18 Apr 2013 23:44:39 +0200
+
+liborcus (0.3.0-5) unstable; urgency=low
+
+  * upload to unstable
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 18 Apr 2013 23:31:44 +0200
+
+liborcus (0.3.0-4) experimental; urgency=low
+
+  * remove misc/OpenDocument-schema-v1.2-cd04.rng, misc/ooxml-ecma-376/ and
+    doc/rfc4180-csv.txt from .orig..
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 09 Dec 2012 21:34:40 +0100
+
+liborcus (0.3.0-3) experimental; urgency=low
+
+  * add missing build-depend on pkg-config
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 07 Dec 2012 22:59:13 +0100
+
+liborcus (0.3.0-2) experimental; urgency=low
+
+  * add missing libzip-dev depends to -dev
+
+ -- Rene Engelhard <rene@debian.org>  Thu, 29 Nov 2012 21:34:52 +0100
+
+liborcus (0.3.0-1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Rene Engelhard <rene@debian.org>  Wed, 28 Nov 2012 15:25:51 +0100
+
+liborcus (0.1.0-1) experimental; urgency=low
+
+  * Initial release
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 23 Nov 2012 20:27:23 +0100

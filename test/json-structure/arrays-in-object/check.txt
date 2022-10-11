@@ -1,0 +1,4 @@
+$object['footnotes'].value
+$object['rows'].array[4].object(*)['age'].value
+$object['rows'].array[4].object(*)['error'].value
+$object['rows'].array[4].object(*)['name'].value

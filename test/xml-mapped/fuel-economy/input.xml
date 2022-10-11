@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<vehicles>
+  <vehicle>
+    <atvType/>
+    <barrels08>15</barrels08>
+  </vehicle>
+  <vehicle>
+    <atvType/>
+    <barrels08>29</barrels08>
+  </vehicle>
+</vehicles>

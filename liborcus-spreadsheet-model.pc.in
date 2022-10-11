@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: liborcus-spreadsheet-model-@ORCUS_API_VERSION@
+Description: Standalone file import filter library for spreadsheet documents.
+Currently under development are ODS, XLSX and CSV import filters.
+Version: @VERSION@
+Libs: -L${libdir} -lorcus-spreadsheet-model-@ORCUS_API_VERSION@ @LIBIXION_LIBS@
+Cflags: -I${includedir}/liborcus-spreadsheet-model-@ORCUS_API_VERSION@ @LIBIXION_CFLAGS@
+

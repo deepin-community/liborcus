@@ -1,0 +1,48 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+include /usr/share/dpkg/architecture.mk
+
+%:
+	dh $@  --with python3 --with sphinxdoc
+
+override_dh_auto_clean:
+	rm -rf src/python/orcus/__pycache__/
+	rm -rf test/python/__pycache__
+	dh_auto_clean
+	rm -rf doc/_doxygen doc/tmp
+
+override_dh_auto_configure-arch:
+	dh_auto_configure -- --disable-silent-rules --disable-werror --with-boost-libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
+
+override_dh_auto_build-indep:
+	cd doc && \
+		doxygen doxygen.conf && \
+		mkdir tmp && sphinx-build -v -a . tmp
+
+override_dh_auto_configure-indep:
+
+ifeq "$(DEB_HOST_ARCH)" "s390"
+override_dh_auto_test:
+
+else
+override_dh_auto_test:
+	dh_auto_test
+endif
+
+override_dh_auto_install:
+	# otherwise dh_auto_install -pliborcus-doc doesn't work because there's
+	# no debian/tmp it can cd from
+	mkdir -p debian/tmp
+	if [ -d src/.libs ]; then dh_auto_install; \
+	find debian/tmp/usr/lib/python* -name "*.*a" -exec rm {} \; ; \
+	chrpath -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/liborcus-0.16.so.0.0.0; \
+	else dh_auto_install -- -pliborcus-doc; fi
+
+override_dh_makeshlibs:
+	dh_makeshlibs -VNone
+
+override_dh_shlibdeps:
+	dh_shlibdeps

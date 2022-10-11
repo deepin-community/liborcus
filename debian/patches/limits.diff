@@ -1,0 +1,36 @@
+diff --git a/src/liborcus/orcus_xlsx.cpp b/src/liborcus/orcus_xlsx.cpp
+index d9e16ef..836ec91 100644
+--- a/src/liborcus/orcus_xlsx.cpp
++++ b/src/liborcus/orcus_xlsx.cpp
+@@ -32,6 +32,7 @@
+ 
+ #include <cstdlib>
+ #include <iostream>
++#include <limits>
+ #include <string>
+ #include <cstring>
+ #include <sstream>
+diff --git a/src/liborcus/xls_xml_context.cpp b/src/liborcus/xls_xml_context.cpp
+index 3ca72e5..7504b4c 100644
+--- a/src/liborcus/xls_xml_context.cpp
++++ b/src/liborcus/xls_xml_context.cpp
+@@ -16,6 +16,7 @@
+ #include <mdds/sorted_string_map.hpp>
+ 
+ #include <iostream>
++#include <limits>
+ 
+ using namespace std;
+ namespace ss = orcus::spreadsheet;
+diff --git a/src/liborcus/xlsx_revision_context.cpp b/src/liborcus/xlsx_revision_context.cpp
+index edfd9ee..0b6ec0a 100644
+--- a/src/liborcus/xlsx_revision_context.cpp
++++ b/src/liborcus/xlsx_revision_context.cpp
+@@ -16,6 +16,7 @@
+ #include "orcus/global.hpp"
+ 
+ #include <iostream>
++#include <limits>
+ 
+ using namespace std;
+ 

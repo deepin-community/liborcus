@@ -1,0 +1,5 @@
+ns0="http://test.test.org/"
+/ns0:root
+/ns0:root/ns0:entry
+/ns0:root/ns0:entry/ns0:name
+

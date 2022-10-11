@@ -1,0 +1,8 @@
+liborcus for Debian
+-------------------
+
+removed from the orig tarballs, because non-modifiable:
+
+- misc/OpenDocument-v1.2-os-schema.rng
+- misc/ooxml-ecma-376/
+
