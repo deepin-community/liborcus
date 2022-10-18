@@ -17,7 +17,6 @@ Build-Depends:
  libixion-dev (>= 0.16.0~),
  libixion-dev (<< 0.17.0~),
  libmdds-dev (>= 1.5),
- libmdds-dev (<< 2.0~),
  pkg-config,
  python3,
  python3-dev,
