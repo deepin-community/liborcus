@@ -8,8 +8,8 @@
 #ifndef INCLUDED_ORCUS_JSON_DOCUMENT_TREE_HPP
 #define INCLUDED_ORCUS_JSON_DOCUMENT_TREE_HPP
 
-#include "orcus/env.hpp"
-#include "orcus/exception.hpp"
+#include "env.hpp"
+#include "exception.hpp"
 
 #include <string>
 #include <memory>
@@ -17,7 +17,6 @@
 
 namespace orcus {
 
-class pstring;
 struct json_config;
 
 namespace json {
@@ -156,7 +155,7 @@ public:
      *                 type.
      * @return a list of keys.
      */
-    std::vector<pstring> keys() const;
+    std::vector<std::string_view> keys() const;
 
     /**
      * Get the key by index in a JSON object node.  This method works only
@@ -172,7 +171,7 @@ public:
      *
      * @return key value.
      */
-    pstring key(size_t index) const;
+    std::string_view key(size_t index) const;
 
     /**
      * Query whether or not a particular key exists in a JSON object node.
@@ -183,7 +182,7 @@ public:
      *         false.  If this node is not of a JSON object type, false is
      *         returned.
      */
-    bool has_key(const pstring& key) const;
+    bool has_key(std::string_view key) const;
     /**
      * Get a child node by index.
      *
@@ -209,7 +208,7 @@ public:
      *
      * @return child node instance.
      */
-    const_node child(const pstring& key) const;
+    const_node child(std::string_view key) const;
 
     /**
      * Get the parent node.
@@ -239,7 +238,7 @@ public:
      *
      * @return string value.
      */
-    pstring string_value() const;
+    std::string_view string_value() const;
 
     /**
      * Get the numeric value of a JSON number node.
@@ -252,6 +251,7 @@ public:
     double numeric_value() const;
 
     const_node& operator=(const const_node& other);
+    const_node& operator=(const_node&& other);
 
     /**
      * Return an indentifier of the JSON value object that the node
@@ -286,7 +286,7 @@ public:
 
     node& operator=(const node& other);
     node& operator=(const detail::init::node& v);
-    node operator[](const pstring& key);
+    node operator[](std::string_view key);
 
     /**
      * Get a child node by index.
@@ -313,7 +313,7 @@ public:
      *
      * @return child node instance.
      */
-    node child(const pstring& key);
+    node child(std::string_view key);
 
     /**
      * Get the parent node.
@@ -447,20 +447,10 @@ public:
      * Load raw string stream containing a JSON structure to populate the
      * document tree.
      *
-     * @param strm stream containing a JSON structure.
+     * @param stream stream containing a JSON structure.
      * @param config configuration object.
      */
-    void load(const std::string& strm, const json_config& config);
-
-    /**
-     * Load raw string stream containing a JSON structure to populate the
-     * document tree.
-     *
-     * @param p pointer to the stream containing a JSON structure.
-     * @param n size of the stream.
-     * @param config configuration object.
-     */
-    void load(const char* p, size_t n, const json_config& config);
+    void load(std::string_view stream, const json_config& config);
 
     /**
      * Get the root node of the document.
@@ -490,6 +480,14 @@ public:
      *         content.
      */
     std::string dump_xml() const;
+
+    /**
+     * Dump the JSON document tree as YAML output.
+     *
+     * @return string containing a YAML output representing the JSON document
+     *         tree structure.
+     */
+    std::string dump_yaml() const;
 
     /**
      * Swap the content of the document with another document instance.

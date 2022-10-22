@@ -23,7 +23,7 @@ namespace {
 
 class mock_ref_resolver : public import_reference_resolver
 {
-    virtual src_address_t resolve_address(const char* p, size_t n) override
+    virtual src_address_t resolve_address(std::string_view) override
     {
         src_address_t ret;
         ret.sheet = 0;
@@ -33,7 +33,7 @@ class mock_ref_resolver : public import_reference_resolver
         return ret;
     }
 
-    virtual src_range_t resolve_range(const char* p, size_t n) override
+    virtual src_range_t resolve_range(std::string_view) override
     {
         src_range_t ret;
         ret.first.sheet = 0;
@@ -58,25 +58,25 @@ public:
         assert(range.last.column == 1);
     }
 
-    virtual void set_formula(formula_grammar_t grammar, const char* p, size_t n) override
+    virtual void set_formula(formula_grammar_t grammar, std::string_view formula) override
     {
         assert(grammar == formula_grammar_t::xlsx);
-        assert(string(p, n) == "A1:A2");
+        assert(formula == "A1:A2");
     }
 
-    virtual void set_result_bool(row_t row, col_t col, bool value) override
+    virtual void set_result_bool(row_t, col_t, bool) override
     {
     }
 
-    virtual void set_result_empty(row_t row, col_t col) override
+    virtual void set_result_empty(row_t, col_t) override
     {
     }
 
-    virtual void set_result_string(row_t row, col_t col, size_t sindex) override
+    virtual void set_result_string(row_t, col_t, std::string_view) override
     {
     }
 
-    virtual void set_result_value(row_t row, col_t col, double value) override
+    virtual void set_result_value(row_t, col_t, double) override
     {
     }
 

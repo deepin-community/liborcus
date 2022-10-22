@@ -5,12 +5,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/orcus_json.hpp"
-#include "orcus/stream.hpp"
-#include "orcus/spreadsheet/document.hpp"
-#include "orcus/spreadsheet/factory.hpp"
-#include "orcus/exception.hpp"
-#include "orcus/global.hpp"
+#include <orcus/orcus_json.hpp>
+#include <orcus/stream.hpp>
+#include <orcus/spreadsheet/document.hpp>
+#include <orcus/spreadsheet/factory.hpp>
+#include <orcus/exception.hpp>
+#include <orcus/global.hpp>
+#include <orcus/parser_global.hpp>
 
 #include <iostream>
 #include <vector>
@@ -54,17 +55,17 @@ void test_mapped_json_import()
         spreadsheet::import_factory import_fact(doc);
 
         orcus_json app(&import_fact);
-        app.read_map_definition(map_content.data(), map_content.size());
-        app.read_stream(content.data(), content.size());
+        app.read_map_definition(map_content.str());
+        app.read_stream(content.str());
 
         std::ostringstream os;
         doc.dump_check(os);
 
         std::string actual_strm = os.str();
-        pstring actual(actual_strm);
-        pstring expected = check_content.str();
-        actual = actual.trim();
-        expected = expected.trim();
+        std::string_view actual(actual_strm);
+        std::string_view expected = check_content.str();
+        actual = trim(actual);
+        expected = trim(expected);
         assert(actual == expected);
     }
 }
@@ -78,7 +79,7 @@ void test_invalid_map_definition()
     orcus_json app(&import_fact);
     try
     {
-        app.read_map_definition(ORCUS_ASCII("asdfdasf"));
+        app.read_map_definition("asdfdasf");
         assert(false); // We were expecting an exception, but didn't get one.
     }
     catch (const invalid_map_error&)
@@ -87,7 +88,7 @@ void test_invalid_map_definition()
     }
 }
 
-int main(int argc, char** argv)
+int main()
 {
     test_mapped_json_import();
     test_invalid_map_definition();

@@ -33,11 +33,6 @@ text_para_context::~text_para_context()
 {
 }
 
-bool text_para_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
-
 xml_context_base* text_para_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return nullptr;
@@ -112,7 +107,7 @@ bool text_para_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void text_para_context::characters(const pstring& str, bool transient)
+void text_para_context::characters(std::string_view str, bool transient)
 {
     if (transient)
         m_contents.push_back(m_pool.intern(str).first);
@@ -163,12 +158,8 @@ void text_para_context::flush_segment()
             mp_sstrings->set_segment_font(data->font);
         }
 
-        vector<pstring>::const_iterator it = m_contents.begin(), it_end = m_contents.end();
-        for (; it != it_end; ++it)
-        {
-            const pstring& ps = *it;
-            mp_sstrings->append_segment(ps.get(), ps.size());
-        }
+        for (pstring ps : m_contents)
+            mp_sstrings->append_segment(ps);
     }
 
     m_contents.clear();

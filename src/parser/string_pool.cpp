@@ -5,11 +5,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/string_pool.hpp"
-
-#include "orcus/global.hpp"
-#include "orcus/pstring.hpp"
-#include "orcus/exception.hpp"
+#include <orcus/string_pool.hpp>
+#include <orcus/global.hpp>
+#include <orcus/exception.hpp>
 
 #include <iostream>
 #include <unordered_set>
@@ -17,6 +15,7 @@
 #include <memory>
 #include <cassert>
 #include <algorithm>
+#include <string_view>
 
 #include <boost/pool/object_pool.hpp>
 
@@ -25,7 +24,7 @@ namespace orcus {
 using std::cout;
 using std::endl;
 
-using string_set_type = std::unordered_set<pstring, pstring::hash>;
+using string_set_type = std::unordered_set<std::string_view>;
 using string_store_type = boost::object_pool<std::string>;
 using string_stores_type = std::vector<std::unique_ptr<string_store_type>>;
 
@@ -37,33 +36,28 @@ struct string_pool::impl
     impl()
     {
         // first element is the active store used for the current instance.
-        m_stores.push_back(orcus::make_unique<string_store_type>(256, 0));
+        m_stores.push_back(std::make_unique<string_store_type>(256, 0));
     }
 };
 
-string_pool::string_pool() : mp_impl(orcus::make_unique<impl>()) {}
+string_pool::string_pool() : mp_impl(std::make_unique<impl>()) {}
 
 string_pool::~string_pool()
 {
     clear();
 }
 
-std::pair<pstring, bool> string_pool::intern(const char* str)
+std::pair<std::string_view, bool> string_pool::intern(std::string_view str)
 {
-    return intern(str, strlen(str));
-}
+    if (str.empty())
+        return std::pair<std::string_view, bool>(std::string_view(), false);
 
-std::pair<pstring, bool> string_pool::intern(const char* str, size_t n)
-{
-    if (!n)
-        return std::pair<pstring, bool>(pstring(), false);
-
-    string_set_type::const_iterator itr = mp_impl->m_set.find(pstring(str, n));
+    string_set_type::const_iterator itr = mp_impl->m_set.find(str);
     if (itr == mp_impl->m_set.end())
     {
         // This string has not been interned.  Intern it.
         string_store_type& store = *mp_impl->m_stores[0];
-        std::string* p = store.construct(str, n);
+        std::string* p = store.construct(str);
         if (!p)
             throw general_error("failed to intern a new string instance.");
 
@@ -72,30 +66,25 @@ std::pair<pstring, bool> string_pool::intern(const char* str, size_t n)
         if (!r.second)
             throw general_error("failed to intern a new string instance.");
 
-        const pstring& ps = *r.first;
-        assert(ps.size() == n);
+        std::string_view ps = *r.first;
+        assert(ps == str);
 
-        return std::pair<pstring, bool>(ps, true);
+        return std::pair<std::string_view, bool>(ps, true);
     }
 
     // This string has already been interned.
 
-    const pstring& stored_str = *itr;
-    assert(stored_str.size() == n);
-    return std::pair<pstring, bool>(stored_str, false);
+    std::string_view stored_str = *itr;
+    assert(stored_str == str);
+    return std::pair<std::string_view, bool>(stored_str, false);
 }
 
-std::pair<pstring, bool> string_pool::intern(const pstring& str)
+std::vector<std::string_view> string_pool::get_interned_strings() const
 {
-    return intern(str.get(), str.size());
-}
-
-std::vector<pstring> string_pool::get_interned_strings() const
-{
-    std::vector<pstring> sorted;
+    std::vector<std::string_view> sorted;
     sorted.reserve(mp_impl->m_set.size());
 
-    for (const pstring& ps : mp_impl->m_set)
+    for (std::string_view ps : mp_impl->m_set)
         sorted.push_back(ps);
 
     std::sort(sorted.begin(), sorted.end());
@@ -111,7 +100,7 @@ void string_pool::dump() const
 
     // Dump them all to stdout.
     size_t counter = 0;
-    for (const pstring& s : sorted)
+    for (std::string_view s : sorted)
         cout << counter++ << ": '" << s << "'" << endl;
 }
 
@@ -140,7 +129,7 @@ void string_pool::merge(string_pool& other)
         other.mp_impl->m_stores.pop_back();
     }
 
-    for (const pstring& p : other.mp_impl->m_set)
+    for (std::string_view p : other.mp_impl->m_set)
         mp_impl->m_set.insert(p);
 
     other.mp_impl->m_set.clear();

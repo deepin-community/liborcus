@@ -5,10 +5,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/stream.hpp"
-#include "orcus/exception.hpp"
-#include "orcus/pstring.hpp"
-#include "orcus/global.hpp"
+#include <orcus/stream.hpp>
+#include <orcus/exception.hpp>
+#include <orcus/global.hpp>
 
 #include <sstream>
 #include <fstream>
@@ -100,10 +99,9 @@ std::string convert_utf16_to_utf8(const char* p, size_t n, unicode_t ut)
 #endif
 }
 
-std::tuple<pstring, size_t, size_t> find_line_with_offset(
-    const pstring& strm, std::ptrdiff_t offset)
+std::tuple<std::string_view, size_t, size_t> find_line_with_offset(std::string_view strm, std::ptrdiff_t offset)
 {
-    const char* p0 = strm.get();
+    const char* p0 = strm.data();
     const char* p_end = p0 + strm.size();
     const char* p_offset = p0 + offset;
 
@@ -143,8 +141,8 @@ std::tuple<pstring, size_t, size_t> find_line_with_offset(
     }
 
     assert(p_line_start <= p_offset);
-    size_t offset_on_line = std::distance(p_line_start, p_offset);
-    pstring line(p_line_start, p_line_end - p_line_start);
+    std::size_t offset_on_line = std::distance(p_line_start, p_offset);
+    std::string_view line(p_line_start, p_line_end - p_line_start);
 
     return std::make_tuple(line, line_num, offset_on_line);
 }
@@ -163,9 +161,9 @@ struct file_content::impl
 
     impl() : content_size(0), content(nullptr) {}
 
-    impl(const char* filepath) :
-        content_size(fs::file_size(filepath)),
-        mapped_file(filepath, bip::read_only),
+    impl(std::string_view filepath) :
+        content_size(fs::file_size(std::string{filepath}.c_str())),
+        mapped_file(std::string{filepath}.c_str(), bip::read_only),
         mapped_region(mapped_file, bip::read_only, 0, content_size),
         content(nullptr)
     {
@@ -174,16 +172,16 @@ struct file_content::impl
 };
 
 file_content::file_content() :
-    mp_impl(orcus::make_unique<impl>()) {}
+    mp_impl(std::make_unique<impl>()) {}
 
 file_content::file_content(file_content&& other) :
     mp_impl(std::move(other.mp_impl))
 {
-    other.mp_impl = orcus::make_unique<impl>();
+    other.mp_impl = std::make_unique<impl>();
 }
 
-file_content::file_content(const char* filepath) :
-    mp_impl(orcus::make_unique<impl>(filepath)) {}
+file_content::file_content(std::string_view filepath) :
+    mp_impl(std::make_unique<impl>(filepath)) {}
 
 file_content::~file_content() {}
 
@@ -207,7 +205,7 @@ void file_content::swap(file_content& other)
     std::swap(mp_impl, other.mp_impl);
 }
 
-void file_content::load(const char* filepath)
+void file_content::load(std::string_view filepath)
 {
     file_content tmp(filepath);
     swap(tmp);
@@ -233,47 +231,46 @@ void file_content::convert_to_utf8()
     }
 }
 
-pstring file_content::str() const
+std::string_view file_content::str() const
 {
-    return pstring(mp_impl->content, mp_impl->content_size);
+    return std::string_view(mp_impl->content, mp_impl->content_size);
 }
 
 struct memory_content::impl
 {
-    const char* content;
-    size_t content_size;
+    std::string_view content;
     std::string buffer; // its own buffer in case of stream conversion.
 
-    impl() : content(nullptr), content_size(0) {}
-    impl(const char* p, size_t n) : content(p), content_size(n) {}
+    impl() {}
+    impl(std::string_view s) : content(s) {}
 };
 
-memory_content::memory_content() : mp_impl(orcus::make_unique<impl>()) {}
+memory_content::memory_content() : mp_impl(std::make_unique<impl>()) {}
 
-memory_content::memory_content(const char* p, size_t n) :
-    mp_impl(orcus::make_unique<impl>(p, n)) {}
+memory_content::memory_content(std::string_view s) :
+    mp_impl(std::make_unique<impl>(s)) {}
 
 memory_content::memory_content(memory_content&& other) :
     mp_impl(std::move(other.mp_impl))
 {
-    other.mp_impl = orcus::make_unique<impl>();
+    other.mp_impl = std::make_unique<impl>();
 }
 
 memory_content::~memory_content() {}
 
 const char* memory_content::data() const
 {
-    return mp_impl->content;
+    return mp_impl->content.data();
 }
 
 size_t memory_content::size() const
 {
-    return mp_impl->content_size;
+    return mp_impl->content.size();
 }
 
 bool memory_content::empty() const
 {
-    return mp_impl->content_size == 0;
+    return mp_impl->content.empty();
 }
 
 void memory_content::swap(memory_content& other)
@@ -283,7 +280,7 @@ void memory_content::swap(memory_content& other)
 
 void memory_content::convert_to_utf8()
 {
-    unicode_t ut = check_unicode_type(mp_impl->content, mp_impl->content_size);
+    unicode_t ut = check_unicode_type(mp_impl->content.data(), mp_impl->content.size());
 
     switch (ut)
     {
@@ -291,9 +288,8 @@ void memory_content::convert_to_utf8()
         case unicode_t::utf16_le:
         {
             // Convert to utf-8 stream, and reset the content pointer and size.
-            mp_impl->buffer = convert_utf16_to_utf8(mp_impl->content, mp_impl->content_size, ut);
-            mp_impl->content = mp_impl->buffer.data();
-            mp_impl->content_size = mp_impl->buffer.size();
+            mp_impl->buffer = convert_utf16_to_utf8(mp_impl->content.data(), mp_impl->content.size(), ut);
+            mp_impl->content = mp_impl->buffer;
             break;
         }
         default:
@@ -301,9 +297,9 @@ void memory_content::convert_to_utf8()
     }
 }
 
-pstring memory_content::str() const
+std::string_view memory_content::str() const
 {
-    return pstring(mp_impl->content, mp_impl->content_size);
+    return mp_impl->content;
 }
 
 line_with_offset::line_with_offset(std::string _line, size_t _line_number, size_t _offset_on_line) :
@@ -326,7 +322,7 @@ line_with_offset::line_with_offset(line_with_offset&& other) :
 
 line_with_offset::~line_with_offset() {}
 
-std::string create_parse_error_output(const pstring& strm, std::ptrdiff_t offset)
+std::string create_parse_error_output(std::string_view strm, std::ptrdiff_t offset)
 {
     if (offset < 0)
         return std::string();
@@ -334,7 +330,7 @@ std::string create_parse_error_output(const pstring& strm, std::ptrdiff_t offset
     const size_t max_line_length = 60;
 
     auto line_info = find_line_with_offset(strm, offset);
-    pstring line = std::get<0>(line_info);
+    std::string_view line = std::get<0>(line_info);
     size_t line_num = std::get<1>(line_info);
     size_t offset_on_line = std::get<2>(line_info);
 
@@ -346,7 +342,7 @@ std::string create_parse_error_output(const pstring& strm, std::ptrdiff_t offset
 
         // Truncate line if it's too long.
         if (line.size() > max_line_length)
-            line.resize(max_line_length);
+            line = std::string_view(line.data(), max_line_length);
 
         os << line << std::endl;
 
@@ -368,7 +364,7 @@ std::string create_parse_error_output(const pstring& strm, std::ptrdiff_t offset
 
     size_t line_length = line_end - line_start;
 
-    line = pstring(line.get()+line_start, line_length);
+    line = std::string_view(line.data()+line_start, line_length);
 
     std::ostringstream os;
     os << line_num << ":" << (line_start+1) << ": ";
@@ -383,17 +379,17 @@ std::string create_parse_error_output(const pstring& strm, std::ptrdiff_t offset
     return os.str();
 }
 
-line_with_offset locate_line_with_offset(const pstring& strm, std::ptrdiff_t offset)
+line_with_offset locate_line_with_offset(std::string_view strm, std::ptrdiff_t offset)
 {
     auto line_info = find_line_with_offset(strm, offset);
-    pstring line = std::get<0>(line_info);
+    std::string_view line = std::get<0>(line_info);
     size_t line_num = std::get<1>(line_info);
     size_t offset_on_line = std::get<2>(line_info);
 
-    return line_with_offset(line.str(), line_num, offset_on_line);
+    return line_with_offset(std::string{line}, line_num, offset_on_line);
 }
 
-size_t locate_first_different_char(const pstring& left, const pstring& right)
+size_t locate_first_different_char(std::string_view left, std::string_view right)
 {
     if (left.empty() || right.empty())
         // If one of them is empty, then the first characters are considered

@@ -9,35 +9,21 @@
 #include "odf_namespace_types.hpp"
 #include "odf_token_constants.hpp"
 #include "odf_helper.hpp"
-#include "orcus/measurement.hpp"
-#include "orcus/spreadsheet/import_interface.hpp"
-#include "odf_number_formatting_context.hpp"
-#include <iostream>
+
+#include <orcus/measurement.hpp>
+#include <orcus/spreadsheet/import_interface.hpp>
 
 #include <mdds/sorted_string_map.hpp>
 #include <mdds/global.hpp>
 
-using namespace std;
+#include <iostream>
+#include <optional>
+
+namespace ss = orcus::spreadsheet;
 
 namespace orcus {
 
 namespace {
-
-class invalid_odf_styles : public std::exception
-{
-    std::string m_msg;
-public:
-    invalid_odf_styles(const std::string& msg):
-        std::exception(),
-        m_msg(msg)
-    {
-    }
-
-    virtual const char* what() const noexcept override
-    {
-        return m_msg.c_str();
-    }
-};
 
 typedef mdds::sorted_string_map<odf_style_family> style_family_map;
 
@@ -52,18 +38,18 @@ style_family_map::entry style_family_entries[] =
     { MDDS_ASCII("text"), style_family_text }
 };
 
-odf_style_family to_style_family(const pstring& val)
+odf_style_family to_style_family(std::string_view val)
 {
     static style_family_map map(style_family_entries, ORCUS_N_ELEMENTS(style_family_entries), style_family_unknown);
-    return map.find(val.get(), val.size());
+    return map.find(val.data(), val.size());
 }
 
-class style_attr_parser : public std::unary_function<xml_token_attr_t, void>
+class style_attr_parser
 {
-    pstring m_name;
+    std::string_view m_name;
     odf_style_family m_family;
 
-    pstring m_parent_name;
+    std::string_view m_parent_name;
 public:
     style_attr_parser() :
         m_family(style_family_unknown) {}
@@ -86,12 +72,12 @@ public:
         }
     }
 
-    const pstring& get_name() const { return m_name; }
+    std::string_view get_name() const { return m_name; }
     odf_style_family get_family() const { return m_family; }
-    const pstring& get_parent() const { return m_parent_name; }
+    std::string_view get_parent() const { return m_parent_name; }
 };
 
-class col_prop_attr_parser : public std::unary_function<xml_token_attr_t, void>
+class col_prop_attr_parser
 {
     length_t m_width;
 public:
@@ -111,376 +97,32 @@ public:
     const length_t& get_width() const { return m_width; }
 };
 
-typedef mdds::sorted_string_map<spreadsheet::strikethrough_style_t> strikethrough_style_map;
+namespace st_style {
 
-strikethrough_style_map::entry strikethrough_style_entries[] =
+typedef mdds::sorted_string_map<ss::strikethrough_style_t> map_type;
+
+// Keys must be sorted.
+const std::vector<map_type::entry> entries =
 {
-    { MDDS_ASCII("dash"), spreadsheet::strikethrough_style_t::dash },
-    { MDDS_ASCII("dot-dash"), spreadsheet::strikethrough_style_t::dot_dash },
-    { MDDS_ASCII("dot-dot-dash"), spreadsheet::strikethrough_style_t::dot_dot_dash },
-    { MDDS_ASCII("dotted"), spreadsheet::strikethrough_style_t::dotted },
-    { MDDS_ASCII("long-dash"), spreadsheet::strikethrough_style_t::long_dash},
-    { MDDS_ASCII("none"), spreadsheet::strikethrough_style_t::none },
-    { MDDS_ASCII("solid"), spreadsheet::strikethrough_style_t::solid },
-    { MDDS_ASCII("wave"), spreadsheet::strikethrough_style_t::wave },
+    { MDDS_ASCII("dash"), ss::strikethrough_style_t::dash },
+    { MDDS_ASCII("dot-dash"), ss::strikethrough_style_t::dot_dash },
+    { MDDS_ASCII("dot-dot-dash"), ss::strikethrough_style_t::dot_dot_dash },
+    { MDDS_ASCII("dotted"), ss::strikethrough_style_t::dotted },
+    { MDDS_ASCII("long-dash"), ss::strikethrough_style_t::long_dash},
+    { MDDS_ASCII("none"), ss::strikethrough_style_t::none },
+    { MDDS_ASCII("solid"), ss::strikethrough_style_t::solid },
+    { MDDS_ASCII("wave"), ss::strikethrough_style_t::wave },
 };
 
-class text_prop_attr_parser : std::unary_function<xml_token_attr_t, void>
+const map_type& get()
 {
-    pstring m_font_name;
-    length_t m_font_size;
-    bool m_bold;
-    bool m_italic;
-    bool m_color;
+    static map_type mt(entries.data(), entries.size(), ss::strikethrough_style_t::none);
+    return mt;
+}
 
-    spreadsheet::color_elem_t m_red;
-    spreadsheet::color_elem_t m_green;
-    spreadsheet::color_elem_t m_blue;
+} // namespace st_style
 
-    bool m_underline_is_text_color;
-    bool m_underline;
-
-    spreadsheet::color_elem_t m_underline_red;
-    spreadsheet::color_elem_t m_underline_green;
-    spreadsheet::color_elem_t m_underline_blue;
-
-    spreadsheet::underline_mode_t m_underline_mode;
-    spreadsheet::underline_width_t m_underline_width;
-    spreadsheet::underline_t m_underline_style;
-    spreadsheet::underline_type_t m_underline_type;
-
-    spreadsheet::strikethrough_style_t m_strikethrough_style;
-    spreadsheet::strikethrough_type_t m_strikethrough_type;
-    spreadsheet::strikethrough_width_t m_strikethrough_width;
-    spreadsheet::strikethrough_text_t m_strikethrough_text;
-
-public:
-    text_prop_attr_parser() : m_bold(false), m_italic(false), m_color(false),
-                            m_red(0), m_green(0), m_blue(0),
-                            m_underline_is_text_color(true), m_underline(false),
-                            m_underline_red(0), m_underline_green(0), m_underline_blue(0),
-                            m_underline_mode(spreadsheet::underline_mode_t::continuos),
-                            m_underline_width(spreadsheet::underline_width_t::none),
-                            m_underline_style(spreadsheet::underline_t::none),
-                            m_underline_type(spreadsheet::underline_type_t::none),
-                            m_strikethrough_style(spreadsheet::strikethrough_style_t::none),
-                            m_strikethrough_type(spreadsheet::strikethrough_type_t::unknown),
-                            m_strikethrough_width(spreadsheet::strikethrough_width_t::unknown),
-                            m_strikethrough_text(spreadsheet::strikethrough_text_t::unknown) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        if (attr.ns == NS_odf_style)
-        {
-            switch (attr.name)
-            {
-                case XML_font_name:
-                    m_font_name = attr.value;
-                break;
-                case XML_text_underline_color:
-                    if (!odf_helper::convert_fo_color(attr.value, m_underline_red, m_underline_green, m_underline_blue))
-                    {
-                        m_underline = true;
-                        m_underline_is_text_color = true;
-                    }
-                    else
-                    {
-                        m_underline_is_text_color = false;
-                    }
-                break;
-                case XML_text_underline_mode:
-                    m_underline = true;
-                    if (attr.value == "skip-white-space")
-                        m_underline_mode = spreadsheet::underline_mode_t::skip_white_space;
-                    else
-                        m_underline_mode = spreadsheet::underline_mode_t::continuos;
-                break;
-                case XML_text_underline_width:
-                {
-                    m_underline = true;
-                    m_underline_width = odf_helper::extract_underline_width(attr.value);
-                }
-                break;
-                case XML_text_underline_style:
-                {
-                    m_underline = true;
-                    m_underline_style = odf_helper::extract_underline_style(attr.value);
-                }
-                break;
-                case XML_text_underline_type:
-                {
-                    m_underline = true;
-                    if (attr.value == "none")
-                        m_underline_type = spreadsheet::underline_type_t::none;
-                    if (attr.value == "single")
-                        m_underline_type = spreadsheet::underline_type_t::single;
-                    if (attr.value == "double")
-                        m_underline_type = spreadsheet::underline_type_t::double_type;
-                }
-                break;
-                case XML_text_line_through_style:
-                {
-                    strikethrough_style_map style_map(strikethrough_style_entries, sizeof(strikethrough_style_entries)/sizeof(strikethrough_style_entries[0]), spreadsheet::strikethrough_style_t::none);
-                    m_strikethrough_style = style_map.find(attr.value.get(), attr.value.size());
-                }
-                break;
-                case XML_text_line_through_type:
-                {
-                    if (attr.value == "single")
-                        m_strikethrough_type = spreadsheet::strikethrough_type_t::single;
-                    else if (attr.value == "double")
-                        m_strikethrough_type = spreadsheet::strikethrough_type_t::double_type;
-                    else
-                        m_strikethrough_type = spreadsheet::strikethrough_type_t::unknown;
-                }
-                break;
-                case XML_text_line_through_width:
-                {
-                    if (attr.value == "bold")
-                        m_strikethrough_width = spreadsheet::strikethrough_width_t::bold;
-                    else
-                        m_strikethrough_width = spreadsheet::strikethrough_width_t::unknown;
-                }
-                break;
-                case XML_text_line_through_text:
-                {
-                    if (attr.value == "/")
-                        m_strikethrough_text = spreadsheet::strikethrough_text_t::slash;
-                    else if (attr.value == "X")
-                        m_strikethrough_text = spreadsheet::strikethrough_text_t::cross;
-                    else
-                        m_strikethrough_text = spreadsheet::strikethrough_text_t::unknown;
-                }
-                default:
-                    ;
-            }
-        }
-        else if (attr.ns == NS_odf_fo)
-        {
-            switch (attr.name)
-            {
-                case XML_font_size:
-                    m_font_size = to_length(attr.value);
-                break;
-                case XML_font_style:
-                    m_italic = attr.value == "italic";
-                break;
-                case XML_font_weight:
-                    m_bold = attr.value == "bold";
-                break;
-                case XML_color:
-                    m_color = odf_helper::convert_fo_color(attr.value,
-                            m_red, m_green, m_blue);
-                break;
-                default:
-                    ;
-            }
-        }
-    }
-
-    pstring get_font_name() const { return m_font_name; }
-    length_t get_font_size() const { return m_font_size; }
-    bool is_bold() const { return m_bold; }
-    bool is_italic() const { return m_italic; }
-    bool has_color() const { return m_color; }
-    void get_color(spreadsheet::color_elem_t& red, spreadsheet::color_elem_t& green,
-            spreadsheet::color_elem_t& blue)
-    {
-        red = m_red;
-        green = m_green;
-        blue = m_blue;
-    }
-    bool has_underline() const { return m_underline; }
-    bool underline_is_text_color() const { return m_underline_is_text_color; }
-    spreadsheet::underline_width_t get_underline_width() const { return m_underline_width; }
-    spreadsheet::underline_mode_t get_underline_mode() const { return m_underline_mode; }
-    spreadsheet::underline_type_t get_underline_type() const { return m_underline_type; }
-    spreadsheet::underline_t get_underline_style() const { return m_underline_style; }
-    void get_underline_color(spreadsheet::color_elem_t& red, spreadsheet::color_elem_t& green,
-            spreadsheet::color_elem_t& blue)
-    {
-        red = m_underline_red;
-        green = m_underline_green;
-        blue = m_underline_blue;
-    }
-    bool has_strikethrough() const { return m_strikethrough_style != spreadsheet::strikethrough_style_t::none;}
-    spreadsheet::strikethrough_style_t get_strikethrough_style() const { return m_strikethrough_style;}
-    spreadsheet::strikethrough_width_t get_strikethrough_width() const { return m_strikethrough_width;}
-    spreadsheet::strikethrough_type_t get_strikethrough_type() const { return m_strikethrough_type;}
-    spreadsheet::strikethrough_text_t get_strikethrough_text() const { return m_strikethrough_text;}
-};
-
-class cell_prop_attr_parser : std::unary_function<xml_token_attr_t, void>
-{
-public:
-    typedef std::map<spreadsheet::border_direction_t, odf_helper::odf_border_details> border_map_type;
-
-    cell_prop_attr_parser():
-        m_background_red(0),
-        m_background_green(0),
-        m_background_blue(0),
-        m_background_color(false),
-        m_locked(false),
-        m_hidden(false),
-        m_formula_hidden(false),
-        m_print_content(false),
-        m_cell_protection(false),
-        m_ver_alignment(spreadsheet::ver_alignment_t::unknown),
-        m_has_ver_alignment(false)
-    {}
-
-private:
-
-    spreadsheet::color_elem_t m_background_red;
-    spreadsheet::color_elem_t m_background_green;
-    spreadsheet::color_elem_t m_background_blue;
-
-    bool m_background_color;
-    bool m_locked;
-    bool m_hidden;
-    bool m_formula_hidden;
-    bool m_print_content;
-    bool m_cell_protection;
-
-    border_map_type m_border_style_dir_pair;
-
-    spreadsheet::ver_alignment_t m_ver_alignment;
-    bool m_has_ver_alignment;
-
-public:
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        if (attr.ns == NS_odf_fo)
-        {
-            switch (attr.name)
-            {
-                case XML_background_color:
-                    m_background_color = odf_helper::convert_fo_color(attr.value, m_background_red,
-                            m_background_green, m_background_blue);
-                break;
-
-                case XML_border:
-                {
-                    odf_helper::odf_border_details border_details = odf_helper::extract_border_details(attr.value);
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::top, border_details));
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::bottom, border_details));
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::left, border_details));
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::right, border_details));
-                }
-                break;
-
-                case XML_border_top:
-                {
-                    odf_helper::odf_border_details border_details = odf_helper::extract_border_details(attr.value);
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::top, border_details));
-                }
-                break;
-
-                case XML_border_bottom:
-                {
-                    odf_helper::odf_border_details border_details = odf_helper::extract_border_details(attr.value);
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::bottom, border_details));
-                }
-                break;
-
-                case XML_border_left:
-                {
-                    odf_helper::odf_border_details border_details = odf_helper::extract_border_details(attr.value);
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::left, border_details));
-                }
-                break;
-
-                case XML_border_right:
-                {
-                    odf_helper::odf_border_details border_details = odf_helper::extract_border_details(attr.value);
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::right, border_details));
-                }
-                break;
-                case XML_diagonal_bl_tr:
-                {
-                    odf_helper::odf_border_details border_details = odf_helper::extract_border_details(attr.value);
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::diagonal_bl_tr, border_details));
-                }
-                break;
-                case XML_diagonal_tl_br:
-                {
-                    odf_helper::odf_border_details border_details = odf_helper::extract_border_details(attr.value);
-                    m_border_style_dir_pair.insert(std::make_pair(spreadsheet::border_direction_t::diagonal_tl_br, border_details));
-                }
-                break;
-
-                default:
-                    ;
-            }
-        }
-
-        else if(attr.ns == NS_odf_style)
-        {
-            switch(attr.name)
-            {
-                case XML_print_content:
-                {
-                    m_cell_protection = true;
-                    m_print_content = attr.value == "true";
-                }
-                break;
-                case XML_cell_protect:
-                {
-                    m_cell_protection = true;
-                    if (attr.value == "protected")
-                        m_locked = true;
-                    else if (attr.value == "hidden-and-protected")
-                    {
-                        m_locked = true;
-                        m_hidden = true;
-                    }
-                    else if (attr.value == "formula-hidden")
-                        m_formula_hidden = true;
-                    else if (attr.value == "protected formula-hidden" || attr.value == "formula-hidden protected")
-                    {
-                        m_formula_hidden = true;
-                        m_locked = true;
-                    }
-                }
-                break;
-                case XML_vertical_align:
-                    m_has_ver_alignment = odf_helper::extract_ver_alignment_style(attr.value, m_ver_alignment);
-                break;
-                default:
-                    ;
-            }
-        }
-    }
-
-    bool has_background_color() const { return m_background_color; }
-
-    void get_background_color(spreadsheet::color_elem_t& red,
-            spreadsheet::color_elem_t& green, spreadsheet::color_elem_t& blue)
-    {
-        red = m_background_red;
-        green = m_background_green;
-        blue = m_background_blue;
-    }
-
-    bool has_border() const { return !m_border_style_dir_pair.empty(); }
-
-    bool has_protection() const { return m_cell_protection; }
-    bool is_locked() const { return m_locked; }
-    bool is_hidden() const { return m_hidden; }
-    bool is_formula_hidden() const { return m_formula_hidden; }
-    bool is_print_content() const { return m_print_content; }
-
-    const border_map_type& get_border_attrib() const
-    {
-        return m_border_style_dir_pair;
-    }
-    bool has_ver_alignment() const { return m_has_ver_alignment;}
-    const spreadsheet::ver_alignment_t& get_ver_alignment() const { return m_ver_alignment;}
-
-};
-
-class paragraph_prop_attr_parser : std::unary_function<xml_token_attr_t, void>
+class paragraph_prop_attr_parser
 {
     spreadsheet::hor_alignment_t m_hor_alignment;
     bool m_has_hor_alignment;
@@ -498,7 +140,7 @@ public:
             switch (attr.name)
             {
                 case XML_text_align:
-                    m_has_hor_alignment = odf_helper::extract_hor_alignment_style(attr.value, m_hor_alignment);
+                    m_has_hor_alignment = odf::extract_hor_alignment_style(attr.value, m_hor_alignment);
                 break;
                 default:
                     ;
@@ -517,26 +159,20 @@ styles_context::styles_context(
     xml_context_base(session_cxt, tk),
     mp_styles(iface_styles),
     m_styles(styles),
-    m_automatic_styles(false)
+    m_automatic_styles(false),
+    m_cxt_number_format(session_cxt, tk, m_styles, mp_styles)
 {
+    m_cxt_number_format.transfer_common(*this);
+
     commit_default_styles();
-}
-
-bool styles_context::can_handle_element(xmlns_id_t ns, xml_token_t /*name*/) const
-{
-    if (ns == NS_odf_number)
-        return false;
-
-    return true;
 }
 
 xml_context_base* styles_context::create_child_context(xmlns_id_t ns, xml_token_t /*name*/)
 {
     if (ns == NS_odf_number)
     {
-        mp_child.reset(new number_formatting_context(get_session_context(), get_tokens(), m_styles, mp_styles));
-        mp_child->transfer_common(*this);
-        return mp_child.get();
+        m_cxt_number_format.reset();
+        return &m_cxt_number_format;
     }
 
     return nullptr;
@@ -556,10 +192,10 @@ void styles_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_at
             case XML_automatic_styles:
                 xml_element_expected(parent, XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN);
                 m_automatic_styles = true;
-            break;
+                break;
             case XML_styles:
                 m_automatic_styles = false;
-            break;
+                break;
             default:
                 warn_unhandled();
         }
@@ -570,15 +206,17 @@ void styles_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_at
         {
             case XML_style:
             {
-                xml_elem_stack_t expected_parents;
-                expected_parents.push_back(std::pair<xmlns_id_t, xml_token_t>(NS_odf_office, XML_automatic_styles));
-                expected_parents.push_back(std::pair<xmlns_id_t, xml_token_t>(NS_odf_office, XML_styles));
+                const xml_elem_set_t expected_parents = {
+                    { NS_odf_office, XML_automatic_styles },
+                    { NS_odf_office, XML_styles },
+                };
                 xml_element_expected(parent, expected_parents);
+
                 style_attr_parser func;
                 func = std::for_each(attrs.begin(), attrs.end(), func);
                 m_current_style.reset(new odf_style(func.get_name(), func.get_family(), func.get_parent()));
+                break;
             }
-            break;
             case XML_table_column_properties:
             {
                 xml_element_expected(parent, NS_odf_style, XML_style);
@@ -586,8 +224,8 @@ void styles_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_at
                 func = std::for_each(attrs.begin(), attrs.end(), func);
                 assert(m_current_style->family == style_family_table_column);
                 m_current_style->column_data->width = func.get_width();
+                break;
             }
-            break;
             case XML_table_row_properties:
             {
                 xml_element_expected(parent, NS_odf_style, XML_style);
@@ -613,7 +251,7 @@ void styles_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_at
             }
             case XML_table_properties:
                 xml_element_expected(parent, NS_odf_style, XML_style);
-            break;
+                break;
             case XML_paragraph_properties:
             {
                 xml_element_expected(parent, NS_odf_style, XML_style);
@@ -622,73 +260,14 @@ void styles_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_at
                 if (func.has_hor_alignment())
                     mp_styles->set_xf_horizontal_alignment(func.get_hor_alignment());
 
+                break;
             }
-            break;
             case XML_text_properties:
                 start_text_properties(parent, attrs);
                 break;
             case XML_table_cell_properties:
-            {
-                xml_element_expected(parent, NS_odf_style, XML_style);
-                if (m_current_style->family != style_family_table_cell)
-                    throw invalid_odf_styles("expected table_cell family style in cell_properties element");
-
-                m_current_style->cell_data->automatic_style = m_automatic_styles;
-                if (mp_styles)
-                {
-                    cell_prop_attr_parser func;
-                    func = std::for_each(attrs.begin(), attrs.end(), func);
-                    if (func.has_background_color())
-                    {
-                        spreadsheet::color_elem_t red, green, blue;
-                        func.get_background_color(red, green, blue);
-                        mp_styles->set_fill_pattern_type(spreadsheet::fill_pattern_t::solid);
-                        mp_styles->set_fill_fg_color(255, red, green, blue);
-                    }
-
-                    size_t fill_id = mp_styles->commit_fill();
-
-                    if (func.has_border())
-                    {
-                        const cell_prop_attr_parser::border_map_type& border_map = func.get_border_attrib();
-                        for (cell_prop_attr_parser::border_map_type::const_iterator itr = border_map.begin(); itr != border_map.end(); ++itr)
-                        {
-                            mp_styles->set_border_color(itr->first, 0, itr->second.red, itr->second.green, itr->second.blue);
-                            mp_styles->set_border_style(itr->first, itr->second.border_style);
-                            mp_styles->set_border_width(itr->first, itr->second.border_width.value, itr->second.border_width.unit);
-                        }
-                    }
-
-                    size_t border_id = mp_styles->commit_border();
-
-                    if (func.has_protection())
-                    {
-                        mp_styles->set_cell_hidden(func.is_hidden());
-                        mp_styles->set_cell_locked(func.is_locked());
-                        mp_styles->set_cell_print_content(func.is_print_content());
-                        mp_styles->set_cell_formula_hidden(func.is_formula_hidden());
-                    }
-
-                    if (func.has_ver_alignment())
-                        mp_styles->set_xf_vertical_alignment(func.get_ver_alignment());
-
-                    size_t cell_protection_id = mp_styles->commit_cell_protection();
-                    switch (m_current_style->family)
-                    {
-                        case style_family_table_cell:
-                        {
-                            odf_style::cell* data = m_current_style->cell_data;
-                            data->fill = fill_id;
-                            data->border = border_id;
-                            data->protection = cell_protection_id;
-                        }
-                        break;
-                        default:
-                            ;
-                    }
-                }
-            }
-            break;
+                start_table_cell_properties(parent, attrs);
+                break;
             default:
                 warn_unhandled();
         }
@@ -720,38 +299,36 @@ bool styles_context::end_element(xmlns_id_t ns, xml_token_t name)
                         else
                         {
                             size_t style_xf_id = mp_styles->commit_cell_style_xf();
-                            mp_styles->set_cell_style_name(
-                                    m_current_style->name.get(), m_current_style->name.size());
+                            mp_styles->set_cell_style_name(m_current_style->name);
                             mp_styles->set_cell_style_xf(style_xf_id);
-                            mp_styles->set_cell_style_parent_name(
-                                    m_current_style->parent_name.get(), m_current_style->parent_name.size());
+                            mp_styles->set_cell_style_parent_name(m_current_style->parent_name);
 
                             xf_id = mp_styles->commit_cell_style();
                         }
                         cell.xf = xf_id;
                     }
 
-                    // ptr_map's first argument must be a non-const reference.
-                    pstring style_name = m_current_style->name;
+                    std::string_view style_name = m_current_style->name;
                     m_styles.insert(
                         odf_styles_map_type::value_type(
                             style_name, std::move(m_current_style)));
                     assert(!m_current_style);
                 }
+
+                break;
             }
-            break;
         }
     }
     return pop_stack(ns, name);
 }
 
-void styles_context::characters(const pstring& /*str*/, bool /*transient*/)
+void styles_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 
 void styles_context::start_text_properties(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
 {
-    static const xml_elem_stack_t expected = {
+    static const xml_elem_set_t expected = {
         { NS_odf_style, XML_style },
         { NS_odf_text, XML_list_level_style_number },
         { NS_odf_text, XML_list_level_style_bullet },
@@ -765,71 +342,169 @@ void styles_context::start_text_properties(const xml_token_pair_t& parent, const
         // TODO : handle this properly in the future.
         return;
 
-    text_prop_attr_parser func;
-    func = std::for_each(attrs.begin(), attrs.end(), func);
+    std::optional<std::string_view> font_name;
+    std::optional<length_t> font_size;
+    std::optional<bool> bold;
+    std::optional<bool> italic;
+    std::optional<ss::color_rgb_t> color;
+
+    bool underline_use_font_color = false;
+    std::optional<ss::color_rgb_t> underline_color;
+    std::optional<ss::underline_t> underline_style;
+    std::optional<ss::underline_type_t> underline_type;
+    std::optional<ss::underline_width_t> underline_width;
+    std::optional<ss::underline_mode_t> underline_mode;
+
+    std::optional<ss::strikethrough_style_t> strikethrough_style;
+    std::optional<ss::strikethrough_type_t> strikethrough_type;
+    std::optional<ss::strikethrough_width_t> strikethrough_width;
+    std::optional<ss::strikethrough_text_t> strikethrough_text;
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        if (attr.ns == NS_odf_style)
+        {
+            switch (attr.name)
+            {
+                case XML_font_name:
+                    font_name = attr.value;
+                    break;
+                case XML_text_underline_color:
+                    underline_use_font_color = (attr.value == "font-color");
+                    underline_color = odf::convert_fo_color(attr.value);
+                    break;
+                case XML_text_underline_mode:
+                    if (attr.value == "skip-white-space")
+                        underline_mode = ss::underline_mode_t::skip_white_space;
+                    else
+                        underline_mode = ss::underline_mode_t::continuos;
+                    break;
+                case XML_text_underline_width:
+                {
+                    underline_width = odf::extract_underline_width(attr.value);
+                    break;
+                }
+                case XML_text_underline_style:
+                {
+                    underline_style = odf::extract_underline_style(attr.value);
+                    break;
+                }
+                case XML_text_underline_type:
+                {
+                    if (attr.value == "none")
+                        underline_type = ss::underline_type_t::none;
+                    else if (attr.value == "single")
+                        underline_type = ss::underline_type_t::single;
+                    else if (attr.value == "double")
+                        underline_type = ss::underline_type_t::double_type;
+                    break;
+                }
+                case XML_text_line_through_style:
+                {
+                    strikethrough_style = st_style::get().find(attr.value.data(), attr.value.size());
+                    break;
+                }
+                case XML_text_line_through_type:
+                {
+                    if (attr.value == "single")
+                        strikethrough_type = ss::strikethrough_type_t::single;
+                    else if (attr.value == "double")
+                        strikethrough_type = ss::strikethrough_type_t::double_type;
+                    else
+                        strikethrough_type = ss::strikethrough_type_t::unknown;
+                    break;
+                }
+                case XML_text_line_through_width:
+                {
+                    if (attr.value == "bold")
+                        strikethrough_width = ss::strikethrough_width_t::bold;
+                    else
+                        strikethrough_width = ss::strikethrough_width_t::unknown;
+                    break;
+                }
+                case XML_text_line_through_text:
+                {
+                    if (attr.value == "/")
+                        strikethrough_text = ss::strikethrough_text_t::slash;
+                    else if (attr.value == "X")
+                        strikethrough_text = ss::strikethrough_text_t::cross;
+                    else
+                        strikethrough_text = ss::strikethrough_text_t::unknown;
+                    break;
+                }
+                default:
+                    ;
+            }
+        }
+        else if (attr.ns == NS_odf_fo)
+        {
+            switch (attr.name)
+            {
+                case XML_font_size:
+                    font_size = to_length(attr.value);
+                    break;
+                case XML_font_style:
+                    italic = attr.value == "italic";
+                    break;
+                case XML_font_weight:
+                    bold = attr.value == "bold";
+                    break;
+                case XML_color:
+                    color = odf::convert_fo_color(attr.value);
+                    break;
+                default:
+                    ;
+            }
+        }
+    }
 
     // Commit the font data.
-    pstring font_name = func.get_font_name();
-    if (!font_name.empty())
-        mp_styles->set_font_name(font_name.get(), font_name.size());
 
-    length_t font_size = func.get_font_size();
-    if (font_size.unit == length_unit_t::point)
-        mp_styles->set_font_size(font_size.value);
+    if (font_name)
+        mp_styles->set_font_name(*font_name);
 
-    if (func.is_bold())
-        mp_styles->set_font_bold(true);
+    if (font_size && font_size->unit == length_unit_t::point)
+        mp_styles->set_font_size(font_size->value);
 
-    if (func.is_italic())
-        mp_styles->set_font_italic(true);
+    if (bold)
+        mp_styles->set_font_bold(*bold);
 
-    if (func.has_color())
-    {
-        spreadsheet::color_elem_t red, green, blue;
-        func.get_color(red, green, blue);
-        mp_styles->set_font_color(0, red, green, blue);
-    }
+    if (italic)
+        mp_styles->set_font_italic(*italic);
 
-    if (func.has_underline())
-    {
-        if (func.underline_is_text_color() && func.has_color())
-        {
-            spreadsheet::color_elem_t red, green, blue;
-            func.get_color(red, green, blue);
-            mp_styles->set_font_underline_color(0, red, green, blue);
-        }
-        else
-        {
-            spreadsheet::color_elem_t red, green, blue;
-            func.get_underline_color(red, green, blue);
-            mp_styles->set_font_underline_color(0, red, green, blue);
-        }
-        spreadsheet::underline_width_t width = func.get_underline_width();
-        mp_styles->set_font_underline_width(width);
+    if (color)
+        mp_styles->set_font_color(255, color->red, color->green, color->blue);
 
-        spreadsheet::underline_t style = func.get_underline_style();
-        mp_styles->set_font_underline(style);
+    if (underline_color)
+        // Separate underline color is specified.
+        mp_styles->set_font_underline_color(255, underline_color->red, underline_color->green, underline_color->blue);
+    else if (color && underline_use_font_color)
+        // Use the same color as the font.
+        mp_styles->set_font_underline_color(255, color->red, color->green, color->blue);
 
-        spreadsheet::underline_type_t type = func.get_underline_type();
-        mp_styles->set_font_underline_type(type);
+    if (underline_width)
+        mp_styles->set_font_underline_width(*underline_width);
 
-        spreadsheet::underline_mode_t mode = func.get_underline_mode();
-        mp_styles->set_font_underline_mode(mode);
-    }
-    if (func.has_strikethrough())
-    {
-        spreadsheet::strikethrough_style_t style = func.get_strikethrough_style();
-        mp_styles->set_strikethrough_style(style);
+    if (underline_style)
+        mp_styles->set_font_underline(*underline_style);
 
-        spreadsheet::strikethrough_width_t width = func.get_strikethrough_width();
-        mp_styles->set_strikethrough_width(width);
+    if (underline_type)
+        mp_styles->set_font_underline_type(*underline_type);
 
-        spreadsheet::strikethrough_type_t type = func.get_strikethrough_type();
-        mp_styles->set_strikethrough_type(type);
+    if (underline_mode)
+        mp_styles->set_font_underline_mode(*underline_mode);
 
-        spreadsheet::strikethrough_text_t text = func.get_strikethrough_text();
-        mp_styles->set_strikethrough_text(text);
-    }
+    if (strikethrough_style)
+        mp_styles->set_strikethrough_style(*strikethrough_style);
+
+    if (strikethrough_type)
+        mp_styles->set_strikethrough_type(*strikethrough_type);
+
+    if (strikethrough_width)
+        mp_styles->set_strikethrough_width(*strikethrough_width);
+
+    if (strikethrough_text)
+        mp_styles->set_strikethrough_text(*strikethrough_text);
 
     size_t font_id = mp_styles->commit_font();
 
@@ -839,14 +514,223 @@ void styles_context::start_text_properties(const xml_token_pair_t& parent, const
         {
             odf_style::cell* data = m_current_style->cell_data;
             data->font = font_id;
+            break;
         }
-        break;
         case style_family_text:
         {
             odf_style::text* data = m_current_style->text_data;
             data->font = font_id;
+            break;
         }
-        break;
+        default:
+            ;
+    }
+}
+
+void styles_context::start_table_cell_properties(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+{
+    xml_element_expected(parent, NS_odf_style, XML_style);
+
+    if (m_current_style->family != style_family_table_cell)
+        throw xml_structure_error("expected table_cell family style in cell_properties element");
+
+    if (!mp_styles)
+        return;
+
+    m_current_style->cell_data->automatic_style = m_automatic_styles;
+
+    std::optional<spreadsheet::color_rgb_t> bg_color;
+
+    std::optional<bool> locked;
+    std::optional<bool> hidden;
+    std::optional<bool> formula_hidden;
+    std::optional<bool> print_content;
+
+    bool cell_protection = false;
+
+    using border_map_type = std::map<ss::border_direction_t, odf::border_details_t>;
+    border_map_type border_styles;
+
+    ss::ver_alignment_t ver_alignment = ss::ver_alignment_t::unknown;
+    bool has_ver_alignment = false;
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        if (attr.ns == NS_odf_fo)
+        {
+            switch (attr.name)
+            {
+                case XML_background_color:
+                    bg_color = odf::convert_fo_color(attr.value);
+                    break;
+                case XML_border:
+                {
+                    odf::border_details_t border_details = odf::extract_border_details(attr.value);
+
+                    const ss::border_direction_t dirs[] =
+                    {
+                        ss::border_direction_t::top,
+                        ss::border_direction_t::bottom,
+                        ss::border_direction_t::left,
+                        ss::border_direction_t::right
+                    };
+
+                    for (const auto dir : dirs)
+                        border_styles.insert(border_map_type::value_type(dir, border_details));
+
+                    break;
+                }
+                case XML_border_top:
+                {
+                    odf::border_details_t border_details = odf::extract_border_details(attr.value);
+                    border_styles.insert(
+                        border_map_type::value_type(ss::border_direction_t::top, border_details));
+                    break;
+                }
+                case XML_border_bottom:
+                {
+                    odf::border_details_t border_details = odf::extract_border_details(attr.value);
+                    border_styles.insert(
+                        border_map_type::value_type(ss::border_direction_t::bottom, border_details));
+                    break;
+                }
+                case XML_border_left:
+                {
+                    odf::border_details_t border_details = odf::extract_border_details(attr.value);
+                    border_styles.insert(
+                        border_map_type::value_type(ss::border_direction_t::left, border_details));
+                    break;
+                }
+                case XML_border_right:
+                {
+                    odf::border_details_t border_details = odf::extract_border_details(attr.value);
+                    border_styles.insert(
+                        border_map_type::value_type(ss::border_direction_t::right, border_details));
+                    break;
+                }
+                case XML_diagonal_bl_tr:
+                {
+                    odf::border_details_t border_details = odf::extract_border_details(attr.value);
+                    border_styles.insert(
+                        border_map_type::value_type(ss::border_direction_t::diagonal_bl_tr, border_details));
+                    break;
+                }
+                case XML_diagonal_tl_br:
+                {
+                    odf::border_details_t border_details = odf::extract_border_details(attr.value);
+                    border_styles.insert(
+                        border_map_type::value_type(ss::border_direction_t::diagonal_tl_br, border_details));
+                    break;
+                }
+                default:
+                    ;
+            }
+        }
+        else if (attr.ns == NS_odf_style)
+        {
+            switch(attr.name)
+            {
+                case XML_print_content:
+                {
+                    cell_protection = true;
+                    print_content = to_bool(attr.value);
+                    break;
+                }
+                case XML_cell_protect:
+                {
+                    if (attr.value == "protected")
+                    {
+                        cell_protection = true;
+                        locked = true;
+                    }
+                    else if (attr.value == "hidden-and-protected")
+                    {
+                        cell_protection = true;
+                        locked = true;
+                        hidden = true;
+                    }
+                    else if (attr.value == "formula-hidden")
+                    {
+                        cell_protection = true;
+                        formula_hidden = true;
+                    }
+                    else if (attr.value == "protected formula-hidden" || attr.value == "formula-hidden protected")
+                    {
+                        cell_protection = true;
+                        formula_hidden = true;
+                        locked = true;
+                    }
+                    else if (attr.value == "none")
+                    {
+                        cell_protection = true;
+                        locked = false;
+                        hidden = false;
+                        formula_hidden = false;
+                    }
+                    break;
+                }
+                case XML_vertical_align:
+                    has_ver_alignment = odf::extract_ver_alignment_style(attr.value, ver_alignment);
+                    break;
+                default:
+                    ;
+            }
+        }
+    }
+
+    std::size_t fill_id = 0;
+    std::size_t border_id = 0;
+    std::size_t cell_protection_id = 0;
+
+    if (bg_color)
+    {
+        mp_styles->set_fill_pattern_type(ss::fill_pattern_t::solid);
+        mp_styles->set_fill_fg_color(255, bg_color->red, bg_color->green, bg_color->blue);
+        fill_id = mp_styles->commit_fill();
+    }
+
+    if (!border_styles.empty())
+    {
+        for (const auto& [dir, details] : border_styles)
+        {
+            mp_styles->set_border_color(dir, 255, details.red, details.green, details.blue);
+            mp_styles->set_border_style(dir, details.border_style);
+            mp_styles->set_border_width(dir, details.border_width.value, details.border_width.unit);
+        }
+
+        border_id = mp_styles->commit_border();
+    }
+
+    if (cell_protection)
+    {
+        if (hidden)
+            mp_styles->set_cell_hidden(*hidden);
+
+        if (locked)
+            mp_styles->set_cell_locked(*locked);
+
+        if (print_content)
+            mp_styles->set_cell_print_content(*print_content);
+
+        if (formula_hidden)
+            mp_styles->set_cell_formula_hidden(*formula_hidden);
+
+        cell_protection_id = mp_styles->commit_cell_protection();
+    }
+
+    if (has_ver_alignment)
+        mp_styles->set_xf_vertical_alignment(ver_alignment);
+
+    switch (m_current_style->family)
+    {
+        case style_family_table_cell:
+        {
+            odf_style::cell* data = m_current_style->cell_data;
+            data->fill = fill_id;
+            data->border = border_id;
+            data->protection = cell_protection_id;
+            break;
+        }
         default:
             ;
     }

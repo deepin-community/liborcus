@@ -74,13 +74,13 @@ PyObject* csv_read(PyObject* /*module*/, PyObject* args, PyObject* kwargs)
     try
     {
         spreadsheet::range_size_t ss{1048576, 16384};
-        std::unique_ptr<spreadsheet::document> doc = orcus::make_unique<spreadsheet::document>(ss);
+        std::unique_ptr<spreadsheet::document> doc = std::make_unique<spreadsheet::document>(ss);
         spreadsheet::import_factory fact(*doc);
         orcus_csv app(&fact);
 
         Py_ssize_t n = 0;
         const char* p = PyUnicode_AsUTF8AndSize(str.get(), &n);
-        app.read_stream(p, n);
+        app.read_stream({p, n});
 
         return create_document(std::move(doc));
     }

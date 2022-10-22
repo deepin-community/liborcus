@@ -5,12 +5,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/types.hpp"
-#include "orcus/global.hpp"
-#include "orcus/xml_namespace.hpp"
+#include <orcus/types.hpp>
+#include <orcus/global.hpp>
+#include <orcus/xml_namespace.hpp>
 
 #include <limits>
 #include <sstream>
+#include <string_view>
 #include <mdds/sorted_string_map.hpp>
 
 namespace orcus {
@@ -25,8 +26,28 @@ size_t xml_token_pair_hash::operator()(const xml_token_pair_t& v) const
 
 const size_t index_not_found = std::numeric_limits<size_t>::max();
 
+parse_error_value_t::parse_error_value_t() :
+    offset(0)
+{
+}
+
+parse_error_value_t::parse_error_value_t(std::string_view _str, std::ptrdiff_t _offset) :
+    str(_str), offset(_offset)
+{
+}
+
+bool parse_error_value_t::operator==(const parse_error_value_t& other) const
+{
+    return str == other.str && offset == other.offset;
+}
+
+bool parse_error_value_t::operator!=(const parse_error_value_t& other) const
+{
+    return !operator==(other);
+}
+
 xml_name_t::xml_name_t() : ns(XMLNS_UNKNOWN_ID), name() {}
-xml_name_t::xml_name_t(xmlns_id_t _ns, const pstring& _name) : ns(_ns), name(_name) {}
+xml_name_t::xml_name_t(xmlns_id_t _ns, std::string_view _name) : ns(_ns), name(_name) {}
 xml_name_t::xml_name_t(const xml_name_t& r) : ns(r.ns), name(r.name) {}
 
 xml_name_t& xml_name_t::operator= (const xml_name_t& other)
@@ -52,7 +73,7 @@ std::string xml_name_t::to_string(const xmlns_context& cxt, to_string_type type)
 
     if (ns)
     {
-        pstring ns_str;
+        std::string_view ns_str;
         switch (type)
         {
             case use_alias:
@@ -77,7 +98,7 @@ std::string xml_name_t::to_string(const xmlns_repository& repo) const
 
     if (ns)
     {
-        pstring ns_str = repo.get_short_name(ns);
+        std::string ns_str = repo.get_short_name(ns);
         if (!ns_str.empty())
             os << ns_str << ':';
     }
@@ -90,17 +111,17 @@ xml_token_attr_t::xml_token_attr_t() :
     ns(XMLNS_UNKNOWN_ID), name(XML_UNKNOWN_TOKEN), transient(false) {}
 
 xml_token_attr_t::xml_token_attr_t(
-    xmlns_id_t _ns, xml_token_t _name, const pstring& _value, bool _transient) :
+    xmlns_id_t _ns, xml_token_t _name, std::string_view _value, bool _transient) :
     ns(_ns), name(_name), value(_value), transient(_transient) {}
 
 xml_token_attr_t::xml_token_attr_t(
-    xmlns_id_t _ns, xml_token_t _name, const pstring& _raw_name, const pstring& _value, bool _transient) :
+    xmlns_id_t _ns, xml_token_t _name, std::string_view _raw_name, std::string_view _value, bool _transient) :
     ns(_ns), name(_name), raw_name(_raw_name), value(_value), transient(_transient) {}
 
 xml_token_element_t::xml_token_element_t() : ns(nullptr), name(XML_UNKNOWN_TOKEN) {}
 
 xml_token_element_t::xml_token_element_t(
-    xmlns_id_t _ns, xml_token_t _name, const pstring& _raw_name, std::vector<xml_token_attr_t>&& _attrs)  :
+    xmlns_id_t _ns, xml_token_t _name, std::string_view _raw_name, std::vector<xml_token_attr_t>&& _attrs)  :
     ns(_ns), name(_name), raw_name(_raw_name), attrs(std::move(_attrs)) {}
 
 xml_token_element_t::xml_token_element_t(const xml_token_element_t& other) :
@@ -175,6 +196,16 @@ std::string length_t::to_string() const
     return os.str();
 }
 
+bool length_t::operator== (const length_t& other) const noexcept
+{
+    return value == other.value && unit == other.unit;
+}
+
+bool length_t::operator!= (const length_t& other) const noexcept
+{
+    return !operator== (other);
+}
+
 date_time_t::date_time_t() :
     year(0), month(0), day(0), hour(0), minute(0), second(0.0) {}
 
@@ -221,6 +252,26 @@ bool date_time_t::operator!= (const date_time_t& other) const
     return !operator== (other);
 }
 
+bool date_time_t::operator< (const date_time_t& other) const
+{
+    if (year != other.year)
+        return year < other.year;
+
+    if (month != other.month)
+        return month < other.month;
+
+    if (day != other.day)
+        return day < other.day;
+
+    if (hour != other.hour)
+        return hour < other.hour;
+
+    if (minute != other.minute)
+        return minute < other.minute;
+
+    return second < other.second;
+}
+
 std::string date_time_t::to_string() const
 {
     std::ostringstream os;
@@ -244,6 +295,7 @@ const std::vector<map_type::entry> entries =
     { ORCUS_ASCII("json"),  dump_format_t::json  },
     { ORCUS_ASCII("none"),  dump_format_t::none  },
     { ORCUS_ASCII("xml"),   dump_format_t::xml   },
+    { ORCUS_ASCII("yaml"),  dump_format_t::yaml  },
 };
 
 const map_type& get()
@@ -256,16 +308,16 @@ const map_type& get()
 
 } // anonymous namespace
 
-dump_format_t to_dump_format_enum(const char* p, size_t n)
+dump_format_t to_dump_format_enum(std::string_view s)
 {
-    return dump_format::get().find(p, n);
+    return dump_format::get().find(s.data(), s.size());
 }
 
-std::vector<std::pair<pstring, dump_format_t>> get_dump_format_entries()
+std::vector<std::pair<std::string_view, dump_format_t>> get_dump_format_entries()
 {
-    std::vector<std::pair<pstring, dump_format_t>> ret;
+    std::vector<std::pair<std::string_view, dump_format_t>> ret;
     for (const auto& e : dump_format::entries)
-        ret.emplace_back(pstring(e.key, e.keylen), e.value);
+        ret.emplace_back(std::string_view{e.key, e.keylen}, e.value);
 
     return ret;
 }

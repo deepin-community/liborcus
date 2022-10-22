@@ -6,10 +6,11 @@
  */
 
 #include "orcus_test_global.hpp"
-#include "orcus/spreadsheet/document.hpp"
-#include "orcus/spreadsheet/sheet.hpp"
-#include "orcus/pstring.hpp"
-#include "orcus/stream.hpp"
+
+#include <orcus/spreadsheet/document.hpp>
+#include <orcus/spreadsheet/sheet.hpp>
+#include <orcus/stream.hpp>
+#include <orcus/parser_global.hpp>
 
 #include <sstream>
 #include <cmath>
@@ -17,37 +18,6 @@
 #include <chrono>
 
 namespace orcus { namespace test {
-
-stack_printer::stack_printer(const char* msg) :
-    m_msg(msg)
-{
-    std::cerr << m_msg << ": --begin" << std::endl;
-    m_start_time = get_time();
-}
-
-stack_printer::~stack_printer()
-{
-    double end_time = get_time();
-    std::cerr << m_msg << ": --end (duration: " << (end_time-m_start_time) << " sec)" << std::endl;
-}
-
-double stack_printer::get_time() const
-{
-    double v = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
-    return v / 1000.0;
-}
-
-assert_error::assert_error(const char* filename, size_t line_no, const char* msg)
-{
-    std::ostringstream os;
-    os << filename << ":" << line_no << ": " << msg;
-    m_msg = os.str();
-}
-
-const char* assert_error::what() const noexcept
-{
-    return m_msg.data();
-}
 
 std::string get_content_check(const spreadsheet::document& doc)
 {
@@ -68,34 +38,7 @@ std::string get_content_as_csv(const spreadsheet::document& doc, spreadsheet::sh
 }
 
 void verify_content(
-    const char* filename, size_t line_no, const pstring& expected, const std::string& actual)
-{
-    pstring s1 = expected;
-    pstring s2(actual.data(), actual.size());
-    s1 = s1.trim();
-    s2 = s2.trim();
-
-    if (s1 != s2)
-    {
-        // TODO : improve the error message to make it more viewer-friendly.
-
-        size_t diff_pos = locate_first_different_char(s1, s2);
-        std::string msg_s1 = create_parse_error_output(s1, diff_pos);
-        std::string msg_s2 = create_parse_error_output(s2, diff_pos);
-
-        std::ostringstream os;
-        os << "content is not as expected: " << std::endl << std::endl
-            << "* expected:" << std::endl << std::endl
-            << msg_s1 << std::endl
-            << "* actual:" << std::endl << std::endl
-            << msg_s2;
-
-        throw assert_error(filename, line_no, os.str().data());
-    }
-}
-
-void verify_content(
-    const char* filename, size_t line_no, const spreadsheet::document& doc, const pstring& expected)
+    const char* filename, size_t line_no, const spreadsheet::document& doc, std::string_view expected)
 {
     std::string actual = get_content_check(doc);
     verify_content(filename, line_no, expected, actual);
@@ -130,7 +73,7 @@ void verify_value_to_decimals(
     throw assert_error(filename, line_no, os.str().data());
 }
 
-std::string prefix_multiline_string(const pstring& str, const pstring& prefix)
+std::string prefix_multiline_string(std::string_view str, std::string_view prefix)
 {
     std::ostringstream os;
 
@@ -145,13 +88,13 @@ std::string prefix_multiline_string(const pstring& str, const pstring& prefix)
 
         if (*p == '\n')
         {
-            os << prefix << pstring(p0, std::distance(p0, p)) << '\n';
+            os << prefix << std::string_view(p0, std::distance(p0, p)) << '\n';
             p0 = nullptr;
         }
     }
 
     if (p0)
-        os << prefix << pstring(p0, std::distance(p0, p));
+        os << prefix << std::string_view(p0, std::distance(p0, p));
 
     return os.str();
 }

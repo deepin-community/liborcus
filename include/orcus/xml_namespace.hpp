@@ -16,7 +16,6 @@
 namespace orcus {
 
 class xmlns_context;
-class pstring;
 struct xmlns_repository_impl;
 struct xmlns_context_impl;
 
@@ -31,7 +30,7 @@ class ORCUS_PSR_DLLPUBLIC xmlns_repository
     struct impl;
     std::unique_ptr<impl> mp_impl;
 
-    xmlns_id_t intern(const pstring& uri);
+    xmlns_id_t intern(std::string_view uri);
 
     xmlns_repository(const xmlns_repository&); // disabled
     xmlns_repository& operator= (const xmlns_repository&); // disabled
@@ -86,14 +85,18 @@ class ORCUS_PSR_DLLPUBLIC xmlns_context
     struct impl;
     std::unique_ptr<impl> mp_impl;
 
-    xmlns_context(); // disabled
     xmlns_context(xmlns_repository& repo);
 public:
+    xmlns_context();
+    xmlns_context(xmlns_context&&);
     xmlns_context(const xmlns_context& r);
     ~xmlns_context();
 
-    xmlns_id_t push(const pstring& key, const pstring& uri);
-    void pop(const pstring& key);
+    xmlns_context& operator= (const xmlns_context& r);
+    xmlns_context& operator= (xmlns_context&& r);
+
+    xmlns_id_t push(std::string_view key, std::string_view uri);
+    void pop(std::string_view key);
 
     /**
      * Get the currnet namespace identifier for a specified namespace alias.
@@ -102,7 +105,7 @@ public:
      *
      * @return current namespace identifier associated with the alias.
      */
-    xmlns_id_t get(const pstring& key) const;
+    xmlns_id_t get(std::string_view key) const;
 
     /**
      * Get a unique index value associated with a specified identifier.  An
@@ -138,11 +141,18 @@ public:
      *         identifier, or an empty string if the given namespace is
      *         currently not associated with any aliases.
      */
-    pstring get_alias(xmlns_id_t ns_id) const;
+    std::string_view get_alias(xmlns_id_t ns_id) const;
 
     std::vector<xmlns_id_t> get_all_namespaces() const;
 
     void dump(std::ostream& os) const;
+
+    /**
+     * Dump the internal state for debugging in YAML format.
+     */
+    void dump_state(std::ostream& os) const;
+
+    void swap(xmlns_context& other) noexcept;
 };
 
 }

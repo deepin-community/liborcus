@@ -7,15 +7,15 @@ AC_PREREQ([2.65])
 # Version information
 # ===================
 m4_define([orcus_major_version], [0])
-m4_define([orcus_minor_version], [16])
-m4_define([orcus_micro_version], [1])
+m4_define([orcus_minor_version], [17])
+m4_define([orcus_micro_version], [2])
 m4_define([orcus_version], [orcus_major_version.orcus_minor_version.orcus_micro_version])
 
 # ===============
 # API information
 # ===============
 m4_define([orcus_major_api_version], [0])
-m4_define([orcus_minor_api_version], [16])
+m4_define([orcus_minor_api_version], [17])
 m4_define([orcus_api_version], [orcus_major_version.orcus_minor_api_version])
 
 # =============
@@ -28,7 +28,7 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.11 foreign dist-bzip2 dist-xz])
 AM_SILENT_RULES([yes])
 AC_LANG([C++])
-AX_CXX_COMPILE_STDCXX_11
+AX_CXX_COMPILE_STDCXX_17([noext], [mandatory])
 CXXFLAGS="-fvisibility=hidden $CXXFLAGS -Wall -pthread -Wshadow"
 
 # ===========================
@@ -69,7 +69,7 @@ AC_DEFINE([BOOST_ALL_NO_LIB], [], [Disable boost's evil autolink.])
 # ======================
 # Set required ixion api
 # ======================
-IXION_REQUIRED_API_VERSION=0.16
+IXION_REQUIRED_API_VERSION=0.17
 AC_SUBST(IXION_REQUIRED_API_VERSION)
 
 # =============
@@ -217,7 +217,7 @@ AS_IF([test "x$with_tools" != "xno"], [
 # ============
 # mdds support
 # ============
-PKG_CHECK_MODULES([MDDS],[mdds-1.5 >= 1.4.99])
+PKG_CHECK_MODULES([MDDS],[mdds-2.0 >= 1.9.99])
 CXXFLAGS="$CXXFLAGS $MDDS_CFLAGS"
 
 # =================
@@ -230,7 +230,7 @@ AC_ARG_ENABLE(spreadsheet-model,
         [enable_spreadsheet_model=yes]
 )
 AS_IF([test "x$enable_spreadsheet_model" != "xno"], [
-        PKG_CHECK_MODULES([LIBIXION],[libixion-$IXION_REQUIRED_API_VERSION >= 0.16.0])
+        PKG_CHECK_MODULES([LIBIXION],[libixion-$IXION_REQUIRED_API_VERSION >= 0.16.99])
         CXXFLAGS="$CXXFLAGS -D__ORCUS_SPREADSHEET_MODEL"
         BOOST_DATE_TIME
 ])
@@ -335,16 +335,17 @@ AC_CONFIG_FILES([Makefile
         include/Makefile
         include/orcus/Makefile
         include/orcus/detail/Makefile
-        include/orcus/mso/Makefile
         include/orcus/spreadsheet/Makefile
         src/Makefile
         src/include/Makefile
+        src/include/mso/Makefile
         src/liborcus/Makefile
         src/liborcus/constants.inl
         src/mso/Makefile
         src/parser/Makefile
         src/python/Makefile
         src/spreadsheet/Makefile
+        src/test/Makefile
         test/python/env.json
         benchmark/Makefile
         doc_example/Makefile

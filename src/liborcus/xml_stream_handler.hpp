@@ -8,30 +8,40 @@
 #ifndef ORCUS_XML_STREAM_HANDLER_HPP
 #define ORCUS_XML_STREAM_HANDLER_HPP
 
-#include "orcus/sax_token_parser.hpp"
-#include "orcus/config.hpp"
+#include <orcus/sax_token_parser.hpp>
+#include <orcus/config.hpp>
+
+#include "xml_util.hpp"
 
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace orcus {
 
 class xml_context_base;
 class xmlns_context;
+struct session_context;
 
 class xml_stream_handler
 {
+    session_context& m_session_cxt;
+    const tokens& m_tokens;
+
     config m_config;
-    const xmlns_context* mp_ns_cxt;
-    xml_context_base* mp_root_context;
+    xml_element_printer m_elem_printer;
+    std::unique_ptr<xml_context_base> mp_root_context;
+    std::unique_ptr<xml_context_base> mp_invalid_context;
     typedef std::vector<xml_context_base*> context_stack_type;
     context_stack_type m_context_stack;
 
-    xml_stream_handler(); // disabled
 public:
-    xml_stream_handler(xml_context_base* root_context);
-    virtual ~xml_stream_handler() ;
+    xml_stream_handler() = delete;
+    xml_stream_handler(const xml_stream_handler&) = delete;
+
+    xml_stream_handler(session_context& session_cxt, const tokens& t, std::unique_ptr<xml_context_base> root_context);
+    virtual ~xml_stream_handler();
 
     virtual void start_document();
     virtual void end_document();
@@ -39,7 +49,7 @@ public:
     virtual void declaration(const xml_declaration_t& decl);
     virtual void start_element(const xml_token_element_t& elem);
     virtual void end_element(const xml_token_element_t& elem);
-    virtual void characters(const pstring& str, bool transient);
+    virtual void characters(std::string_view str, bool transient);
 
     void set_ns_context(const xmlns_context* p);
     void set_config(const config& opt);
@@ -47,6 +57,7 @@ public:
 protected:
     xml_context_base& get_current_context();
     xml_context_base& get_root_context();
+    xml_context_base& get_invalid_context();
 };
 
 }

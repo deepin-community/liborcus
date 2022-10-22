@@ -10,50 +10,46 @@
 
 #include <ixion/formula_name_resolver.hpp>
 #include <ixion/formula_result.hpp>
+#include <ixion/cell.hpp>
 
 namespace orcus { namespace spreadsheet { namespace detail {
 
 void dump_cell_value(
-    std::ostream& os, const ixion::model_context& cxt,
-    const columns_type::const_iterator::value_type& node,
+    std::ostream& os, const ixion::model_context& cxt, const ixion::model_iterator::cell& cell,
     func_str_handler str_handler,
     func_empty_handler empty_handler)
 {
-    switch (node.type)
+    switch (cell.type)
     {
-        case ixion::element_type_empty:
+        case ixion::celltype_t::empty:
             empty_handler(os);
             break;
-        case ixion::element_type_boolean:
+        case ixion::celltype_t::boolean:
         {
-            auto b = node.get<ixion::boolean_element_block>();
-            os << (b ? "true" : "false");
+            os << (std::get<bool>(cell.value) ? "true" : "false");
             break;
         }
-        case ixion::element_type_numeric:
+        case ixion::celltype_t::numeric:
         {
-            auto v = node.get<ixion::numeric_element_block>();
-            format_to_file_output(os, v);
+            format_to_file_output(os, std::get<double>(cell.value));
             break;
         }
-        case ixion::element_type_string:
+        case ixion::celltype_t::string:
         {
-            ixion::string_id_t sindex = node.get<ixion::string_element_block>();
-            const std::string* p = cxt.get_string(sindex);
+            const std::string* p = cxt.get_string(std::get<ixion::string_id_t>(cell.value));
             assert(p);
             str_handler(os, *p);
             break;
         }
-        case ixion::element_type_formula:
+        case ixion::celltype_t::formula:
         {
-            const ixion::formula_cell* cell = node.get<ixion::formula_element_block>();
-            assert(cell);
-
+            const ixion::formula_cell* fc = std::get<const ixion::formula_cell*>(cell.value);
+            assert(fc);
             ixion::formula_result res;
 
             try
             {
-                res = cell->get_result_cache(
+                res = fc->get_result_cache(
                     ixion::formula_result_wait_policy_t::throw_exception);
             }
             catch (const std::exception&)

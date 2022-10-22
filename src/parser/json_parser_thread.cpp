@@ -5,85 +5,48 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/json_parser_thread.hpp"
-#include "orcus/global.hpp"
-#include "orcus/json_parser.hpp"
-#include "orcus/string_pool.hpp"
-#include "orcus/detail/parser_token_buffer.hpp"
+#include <orcus/json_parser_thread.hpp>
+#include <orcus/global.hpp>
+#include <orcus/json_parser.hpp>
+#include <orcus/string_pool.hpp>
+#include <orcus/detail/parser_token_buffer.hpp>
+#include "pstring.hpp"
 
 #include <sstream>
+#include <string_view>
 #include <algorithm>
 #include <limits>
 
 namespace orcus { namespace json {
 
-parse_token::parse_token() : type(parse_token_t::unknown) {}
+parse_token::parse_token() : type(parse_token_t::unknown), value(0.0) {}
 
-parse_token::parse_token(parse_token_t _type) : type(_type) {}
+parse_token::parse_token(parse_token_t _type) : type(_type), value(0.0) {}
 
-parse_token::parse_token(parse_token_t _type, const char* p, size_t len) :
-    type(_type)
+parse_token::parse_token(parse_token_t _type, std::string_view s) :
+    type(_type), value(s)
 {
-    string_value.p = p;
-    string_value.len = len;
 }
 
-parse_token::parse_token(parse_token_t _type, const char* p, size_t len, std::ptrdiff_t offset) :
-    type(_type)
+parse_token::parse_token(std::string_view s, std::ptrdiff_t offset) :
+    type(parse_token_t::parse_error), value(parse_error_value_t{s, offset})
 {
-    error_value.p = p;
-    error_value.len = len;
-    error_value.offset = offset;
+    assert(type == parse_token_t::parse_error);
 }
 
-parse_token::parse_token(double value) :
-    type(parse_token_t::number), numeric_value(value) {}
+parse_token::parse_token(double v) :
+    type(parse_token_t::number), value(v)
+{
+}
 
 parse_token::parse_token(const parse_token& other) :
-    type(other.type)
+    type(other.type), value(other.value)
 {
-    switch (type)
-    {
-        case parse_token_t::object_key:
-        case parse_token_t::string:
-            string_value.p = other.string_value.p;
-            string_value.len = other.string_value.len;
-            break;
-        case parse_token_t::number:
-            numeric_value = other.numeric_value;
-            break;
-        case parse_token_t::parse_error:
-            error_value.p = other.error_value.p;
-            error_value.len = other.error_value.len;
-            error_value.offset = other.error_value.offset;
-            break;
-        default:
-            ;
-    }
 }
 
 bool parse_token::operator== (const parse_token& other) const
 {
-    if (type != other.type)
-        return false;
-
-    switch (type)
-    {
-        case parse_token_t::object_key:
-        case parse_token_t::string:
-            return pstring(string_value.p, string_value.len) == pstring(other.string_value.p, other.string_value.len);
-        case parse_token_t::number:
-            return numeric_value == other.numeric_value;
-        case parse_token_t::parse_error:
-            if (pstring(error_value.p, error_value.len) != pstring(other.error_value.p, other.error_value.len))
-                return false;
-            if (error_value.offset != other.error_value.offset)
-                return false;
-            break;
-        default:
-            ;
-    }
-    return true;
+    return type == other.type && value == other.value;
 }
 
 bool parse_token::operator!= (const parse_token& other) const
@@ -120,8 +83,8 @@ struct parser_thread::impl
         }
         catch (const parse_error& e)
         {
-            pstring s = m_pool.intern(e.what()).first;
-            m_parser_tokens.emplace_back(parse_token_t::parse_error, s.get(), s.size(), e.offset());
+            std::string_view s = m_pool.intern(e.what()).first;
+            m_parser_tokens.emplace_back(s, e.offset());
         }
 
         notify_and_finish();
@@ -159,14 +122,11 @@ struct parser_thread::impl
 
     void object_key(const char* p, size_t len, bool transient)
     {
+        std::string_view s{p, len};
         if (transient)
-        {
-            pstring s = m_pool.intern(p, len).first;
-            p = s.get();
-            len = s.size();
-        }
+            s = m_pool.intern(s).first;
 
-        m_parser_tokens.emplace_back(parse_token_t::object_key, p, len);
+        m_parser_tokens.emplace_back(parse_token_t::object_key, s);
         check_and_notify();
     }
 
@@ -196,14 +156,11 @@ struct parser_thread::impl
 
     void string(const char* p, size_t len, bool transient)
     {
+        std::string_view s{p, len};
         if (transient)
-        {
-            pstring s = m_pool.intern(p, len).first;
-            p = s.get();
-            len = s.size();
-        }
+            s = m_pool.intern(s).first;
 
-        m_parser_tokens.emplace_back(parse_token_t::string, p, len);
+        m_parser_tokens.emplace_back(parse_token_t::string, s);
         check_and_notify();
     }
 
@@ -280,16 +237,19 @@ std::ostream& operator<< (std::ostream& os, const parse_tokens_t& tokens)
                     os << "- null" << endl;
                     break;
                 case parse_token_t::number:
-                    os << "- number (v=" << t.numeric_value << ")" << endl;
+                    os << "- number (v=" << std::get<double>(t.value) << ")" << endl;
                     break;
                 case parse_token_t::object_key:
-                    os << "- object_key (v=" << pstring(t.string_value.p, t.string_value.len) << ")" << endl;
+                    os << "- object_key (v=" << std::get<std::string_view>(t.value) << ")" << endl;
                     break;
                 case parse_token_t::parse_error:
-                    os << "- parse_error (v=" << pstring(t.error_value.p, t.error_value.len) << ", offset=" << t.error_value.offset << ")" << endl;
+                {
+                    auto v = std::get<parse_error_value_t>(t.value);
+                    os << "- parse_error (v=" << v.str << ", offset=" << v.offset << ")" << endl;
                     break;
+                }
                 case parse_token_t::string:
-                    os << "- string (" << pstring(t.string_value.p, t.string_value.len) << ")" << endl;
+                    os << "- string (" << std::get<std::string_view>(t.value) << ")" << endl;
                     break;
                 case parse_token_t::unknown:
                     os << "- unknown" << endl;
@@ -304,11 +264,11 @@ std::ostream& operator<< (std::ostream& os, const parse_tokens_t& tokens)
 }
 
 parser_thread::parser_thread(const char* p, size_t n, size_t min_token_size) :
-    mp_impl(orcus::make_unique<parser_thread::impl>(
+    mp_impl(std::make_unique<parser_thread::impl>(
         p, n, min_token_size, std::numeric_limits<size_t>::max()/2)) {}
 
 parser_thread::parser_thread(const char* p, size_t n, size_t min_token_size, size_t max_token_size) :
-    mp_impl(orcus::make_unique<parser_thread::impl>(
+    mp_impl(std::make_unique<parser_thread::impl>(
         p, n, min_token_size, max_token_size)) {}
 
 parser_thread::~parser_thread() {}

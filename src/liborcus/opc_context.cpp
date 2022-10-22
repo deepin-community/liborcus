@@ -25,7 +25,7 @@ namespace orcus {
 
 namespace {
 
-class part_ext_attr_parser : public unary_function<void, xml_token_attr_t>
+class part_ext_attr_parser
 {
 public:
     part_ext_attr_parser(
@@ -90,17 +90,12 @@ opc_content_types_context::~opc_content_types_context()
 {
 }
 
-bool opc_content_types_context::can_handle_element(xmlns_id_t ns, xml_token_t name) const
-{
-    return true;
-}
-
-xml_context_base* opc_content_types_context::create_child_context(xmlns_id_t ns, xml_token_t name)
+xml_context_base* opc_content_types_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return nullptr;
 }
 
-void opc_content_types_context::end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base *child)
+void opc_content_types_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/, xml_context_base* /*child*/)
 {
 }
 
@@ -153,7 +148,7 @@ bool opc_content_types_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void opc_content_types_context::characters(const pstring &str, bool transient)
+void opc_content_types_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 
@@ -171,7 +166,7 @@ void opc_content_types_context::pop_ext_defaults(vector<xml_part_t>& ext_default
 
 namespace {
 
-class rel_attr_parser : public unary_function<void, xml_token_attr_t>
+class rel_attr_parser
 {
 public:
     rel_attr_parser(session_context* cxt, const opc_relations_context::schema_cache_type* cache, const config* conf) :
@@ -223,7 +218,7 @@ private:
 /**
  * Compare relations by the rId.
  */
-struct compare_rels : binary_function<bool, opc_rel_t, opc_rel_t>
+struct compare_rels
 {
     bool operator() (const opc_rel_t& r1, const opc_rel_t& r2) const
     {
@@ -256,17 +251,12 @@ opc_relations_context::~opc_relations_context()
 {
 }
 
-bool opc_relations_context::can_handle_element(xmlns_id_t ns, xml_token_t name) const
-{
-    return true;
-}
-
-xml_context_base* opc_relations_context::create_child_context(xmlns_id_t ns, xml_token_t name)
+xml_context_base* opc_relations_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return nullptr;
 }
 
-void opc_relations_context::end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base *child)
+void opc_relations_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/, xml_context_base* /*child*/)
 {
 }
 
@@ -302,7 +292,7 @@ bool opc_relations_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void opc_relations_context::characters(const pstring &str, bool transient)
+void opc_relations_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 

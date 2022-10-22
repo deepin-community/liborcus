@@ -42,13 +42,12 @@ public:
             spreadsheet::iface::import_conditional_format& import_cond_format);
     virtual ~xlsx_conditional_format_context();
 
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const;
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(const pstring& str, bool transient);
+    virtual void characters(std::string_view str, bool transient);
 
 private:
     spreadsheet::iface::import_conditional_format& m_cond_format;

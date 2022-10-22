@@ -5,12 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/spreadsheet/shared_strings.hpp"
-#include "orcus/spreadsheet/styles.hpp"
+#include <orcus/spreadsheet/shared_strings.hpp>
+#include <orcus/spreadsheet/styles.hpp>
 
-#include "orcus/pstring.hpp"
-#include "orcus/global.hpp"
-#include "orcus/string_pool.hpp"
+#include <orcus/global.hpp>
+#include <orcus/string_pool.hpp>
 
 #include <ixion/model_context.hpp>
 
@@ -31,7 +30,7 @@ void format_run::reset()
 {
     pos = 0;
     size = 0;
-    font.clear();
+    font = std::string_view{};
     font_size = 0;
     bold = false;
     italic = false;
@@ -68,14 +67,14 @@ import_shared_strings::~import_shared_strings()
     delete mp_cur_format_runs;
 }
 
-size_t import_shared_strings::append(const char* s, size_t n)
+size_t import_shared_strings::append(std::string_view s)
 {
-    return m_cxt.append_string(s, n);
+    return m_cxt.append_string(s);
 }
 
-size_t import_shared_strings::add(const char* s, size_t n)
+size_t import_shared_strings::add(std::string_view s)
 {
-    return m_cxt.add_string(s, n);
+    return m_cxt.add_string(s);
 }
 
 const format_runs_t* import_shared_strings::get_format_runs(size_t index) const
@@ -114,9 +113,9 @@ void import_shared_strings::set_segment_italic(bool b)
     m_cur_format.italic = b;
 }
 
-void import_shared_strings::set_segment_font_name(const char* s, size_t n)
+void import_shared_strings::set_segment_font_name(std::string_view s)
 {
-    m_cur_format.font = m_string_pool.intern(s, n).first;
+    m_cur_format.font = m_string_pool.intern(s).first;
 }
 
 void import_shared_strings::set_segment_font_size(double point)
@@ -130,20 +129,20 @@ void import_shared_strings::set_segment_font_color(
     m_cur_format.color = color_t(alpha, red, green, blue);
 }
 
-void import_shared_strings::append_segment(const char* s, size_t n)
+void import_shared_strings::append_segment(std::string_view s)
 {
-    if (!n)
+    if (s.empty())
         return;
 
     size_t start_pos = m_cur_segment_string.size();
-    m_cur_segment_string += string(s, n);
+    m_cur_segment_string += s;
 
     if (m_cur_format.formatted())
     {
         // This segment is formatted.
         // Record the position and size of the format run.
         m_cur_format.pos = start_pos;
-        m_cur_format.size = n;
+        m_cur_format.size = s.size();
 
         if (!mp_cur_format_runs)
             mp_cur_format_runs = new format_runs_t;
@@ -155,7 +154,7 @@ void import_shared_strings::append_segment(const char* s, size_t n)
 
 size_t import_shared_strings::commit_segments()
 {
-    size_t sindex = m_cxt.append_string(m_cur_segment_string.data(), m_cur_segment_string.size());
+    ixion::string_id_t sindex = m_cxt.append_string(m_cur_segment_string);
     m_cur_segment_string.clear();
     m_formats.insert(format_runs_map_type::value_type(sindex, mp_cur_format_runs));
     mp_cur_format_runs = nullptr;
@@ -164,12 +163,12 @@ size_t import_shared_strings::commit_segments()
 
 namespace {
 
-struct print_string : public unary_function<void, pstring>
+struct print_string
 {
     size_t m_count;
 public:
     print_string() : m_count(1) {}
-    void operator() (const pstring& ps)
+    void operator() (std::string_view ps)
     {
         cout << m_count++ << ": '" << ps << "'" << endl;
     }

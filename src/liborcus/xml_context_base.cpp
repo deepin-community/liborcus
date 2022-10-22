@@ -48,7 +48,10 @@ void print_stack(const tokens& tokens, const xml_elem_stack_t& elem_stack, const
 
 xml_context_base::xml_context_base(session_context& session_cxt, const tokens& tokens) :
     m_config(format_t::unknown),
-    mp_ns_cxt(nullptr), m_session_cxt(session_cxt), m_tokens(tokens) {}
+    mp_ns_cxt(nullptr), m_session_cxt(session_cxt), m_tokens(tokens),
+    m_elem_printer(m_tokens)
+{
+}
 
 xml_context_base::~xml_context_base()
 {
@@ -58,9 +61,53 @@ void xml_context_base::declaration(const xml_declaration_t& /*decl*/)
 {
 }
 
+bool xml_context_base::evaluate_child_element(xmlns_id_t ns, xml_token_t name) const
+{
+    const xml_token_pair_t parent = get_current_element();
+
+    if (xml_element_always_allowed(parent))
+        return true;
+
+    const xml_token_pair_t child(ns, name);
+
+    xml_element_validator::result res = m_elem_validator.validate(parent, child);
+
+    if (get_config().debug)
+    {
+        switch (res)
+        {
+            case xml_element_validator::result::child_invalid:
+            {
+                std::ostringstream os;
+                print_element(os, child);
+                os << " cannot be a child element of ";
+                print_element(os, parent);
+                warn(os.str());
+                break;
+            }
+            case xml_element_validator::result::parent_unknown:
+            {
+                std::ostringstream os;
+                os << "parent ";
+                print_element(os, parent);
+                os << " does not have any rules defined (child: ";
+                print_element(os, child);
+                os << ')';
+                warn(os.str());
+                break;
+            }
+            case xml_element_validator::result::child_valid:
+                break;
+        }
+    }
+
+    return res != xml_element_validator::result::child_invalid;
+}
+
 void xml_context_base::set_ns_context(const xmlns_context* p)
 {
     mp_ns_cxt = p;
+    m_elem_printer.set_ns_context(p);
 }
 
 void xml_context_base::set_config(const config& opt)
@@ -70,13 +117,19 @@ void xml_context_base::set_config(const config& opt)
 
 void xml_context_base::transfer_common(const xml_context_base& parent)
 {
-    m_config = parent.m_config;
-    mp_ns_cxt = parent.mp_ns_cxt;
+    set_config(parent.m_config);
+    set_ns_context(parent.mp_ns_cxt);
 }
 
 void xml_context_base::set_always_allowed_elements(xml_elem_set_t elems)
 {
     m_always_allowed_elements = std::move(elems);
+}
+
+void xml_context_base::init_element_validator(
+    const xml_element_validator::rule* rules, std::size_t n_rules)
+{
+    m_elem_validator.init(rules, n_rules);
 }
 
 session_context& xml_context_base::get_session_context()
@@ -91,8 +144,8 @@ const tokens& xml_context_base::get_tokens() const
 
 xml_token_pair_t xml_context_base::push_stack(xmlns_id_t ns, xml_token_t name)
 {
-    xml_token_pair_t parent = m_stack.empty() ? xml_token_pair_t(XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN) : m_stack.back();
-    m_stack.push_back(xml_token_pair_t(ns, name));
+    xml_token_pair_t parent = get_current_element();
+    m_stack.emplace_back(ns, name);
     return parent;
 }
 
@@ -107,31 +160,14 @@ bool xml_context_base::pop_stack(xmlns_id_t ns, xml_token_t name)
     return m_stack.empty();
 }
 
-xml_token_pair_t& xml_context_base::get_current_element()
+xml_token_pair_t xml_context_base::get_current_element() const
 {
-    if (m_stack.empty())
-        throw general_error("element stack is empty!");
-    return m_stack.back();
-}
-
-const xml_token_pair_t& xml_context_base::get_current_element() const
-{
-    if (m_stack.empty())
-        throw general_error("element stack is empty!");
-    return m_stack.back();
-}
-
-xml_token_pair_t& xml_context_base::get_parent_element()
-{
-    if(m_stack.size() < 2)
-        throw general_error("element stack has no parent element");
-
-    return m_stack[m_stack.size() - 2];
+    return m_stack.empty() ? xml_token_pair_t(XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN) : m_stack.back();
 }
 
 const xml_token_pair_t& xml_context_base::get_parent_element() const
 {
-    if(m_stack.size() < 2)
+    if (m_stack.size() < 2)
         throw general_error("element stack has no parent element");
 
     return m_stack[m_stack.size() - 2];
@@ -157,7 +193,7 @@ void xml_context_base::warn_unexpected() const
     cerr << endl;
 }
 
-void xml_context_base::warn(const char* msg) const
+void xml_context_base::warn(std::string_view msg) const
 {
     if (!m_config.debug)
         return;
@@ -185,9 +221,14 @@ void xml_context_base::xml_element_expected(
     }
 
     // Create a generic error message.
-    ostringstream os;
-    os << "element '" << (ns ? ns : "" )<< ":" << m_tokens.get_token_name(name) << "' expected, but '";
-    os << elem.first << ":" << m_tokens.get_token_name(elem.second) << "' encountered.";
+    std::ostringstream os;
+    os << "element ";
+    print_element(os, {ns, name});
+    os << " expected, but ";
+    print_element(os, elem);
+    os << " encountered." << std::endl << std::endl;
+
+    print_current_element_stack(os);
     throw xml_structure_error(os.str());
 }
 
@@ -206,10 +247,7 @@ void xml_context_base::xml_element_expected(
     if (m_always_allowed_elements.count(elem))
         return;
 
-    // Create a generic error message.
-    ostringstream os;
-    os << "unexpected element encountered: " << elem.first << ":" << m_tokens.get_token_name(elem.second);
-    throw xml_structure_error(os.str());
+    throw_unknown_element_error(elem);
 }
 
 void xml_context_base::xml_element_expected(
@@ -224,9 +262,45 @@ void xml_context_base::xml_element_expected(
     if (m_always_allowed_elements.count(elem))
         return;
 
+    throw_unknown_element_error(elem);
+}
+
+bool xml_context_base::xml_element_always_allowed(const xml_token_pair_t& elem) const
+{
+    return m_always_allowed_elements.count(elem) > 0;
+}
+
+void xml_context_base::print_namespace(std::ostream& os, xmlns_id_t ns) const
+{
+    m_elem_printer.print_namespace(os, ns);
+}
+
+void xml_context_base::print_element(std::ostream& os, const xml_token_pair_t& elem) const
+{
+    m_elem_printer.print_element(os, elem.first, elem.second);
+}
+
+void xml_context_base::print_current_element_stack(std::ostream& os) const
+{
+    os << "current element stack:" << std::endl << std::endl;
+
+    for (const auto& [ns, name] : m_stack)
+    {
+        os << "  - ";
+        print_element(os, {ns, name});
+        os << std::endl;
+    }
+}
+
+void xml_context_base::throw_unknown_element_error(const xml_token_pair_t& elem) const
+{
     // Create a generic error message.
-    ostringstream os;
-    os << "unexpected element encountered: " << elem.first << ":" << m_tokens.get_token_name(elem.second);
+    std::ostringstream os;
+    os << "unexpected element encountered: ";
+    print_element(os, elem);
+    os << std::endl << std::endl;
+
+    print_current_element_stack(os);
     throw xml_structure_error(os.str());
 }
 
@@ -235,12 +309,12 @@ const config& xml_context_base::get_config() const
     return m_config;
 }
 
-pstring xml_context_base::intern(const xml_token_attr_t& attr)
+std::string_view xml_context_base::intern(const xml_token_attr_t& attr)
 {
     return m_session_cxt.intern(attr);
 }
 
-pstring xml_context_base::intern(const pstring& s)
+std::string_view xml_context_base::intern(std::string_view s)
 {
     return m_session_cxt.intern(s);
 }

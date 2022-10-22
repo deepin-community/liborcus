@@ -29,196 +29,26 @@ namespace orcus {
 
 namespace {
 
-typedef mdds::sorted_string_map<ods_content_xml_context::cell_value_type> cell_value_map_type;
+namespace cell_value {
+
+typedef mdds::sorted_string_map<ods_content_xml_context::cell_value_type> map_type;
 
 // Keys must be sorted.
-cell_value_map_type::entry cell_value_entries[] = {
+map_type::entry entries[] = {
     { ORCUS_ASCII("date"),   ods_content_xml_context::vt_date },
     { ORCUS_ASCII("float"),  ods_content_xml_context::vt_float },
     { ORCUS_ASCII("string"), ods_content_xml_context::vt_string }
 };
 
-const cell_value_map_type& get_cell_value_map()
+const map_type& get()
 {
-    static cell_value_map_type cv_map(
-        cell_value_entries,
-        sizeof(cell_value_entries)/sizeof(cell_value_entries[0]),
-        ods_content_xml_context::vt_unknown);
+    static map_type cv_map(
+        entries, std::size(entries), ods_content_xml_context::vt_unknown);
 
     return cv_map;
 }
 
-class null_date_attr_parser : public unary_function<xml_token_attr_t, void>
-{
-public:
-    null_date_attr_parser() {}
-    null_date_attr_parser(const null_date_attr_parser& r) :
-        m_date_value(r.m_date_value)
-    {
-    }
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        if (attr.ns == NS_odf_table && attr.name == XML_date_value)
-            m_date_value = attr.value;
-    }
-
-    const pstring& get_date_value() const { return m_date_value; }
-private:
-    pstring m_date_value;
-};
-
-class table_attr_parser : public unary_function<xml_token_attr_t, void>
-{
-public:
-    table_attr_parser() {}
-    table_attr_parser(const table_attr_parser& r) :
-        m_name(r.m_name)
-    {
-    }
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        if (attr.ns == NS_odf_table && attr.name == XML_name)
-            m_name = attr.value;
-    }
-
-    const pstring& get_name() const { return m_name; }
-private:
-    pstring m_name;
-};
-
-class cell_attr_parser
-{
-public:
-    cell_attr_parser(session_context& cxt, ods_content_xml_context::cell_attr& attr) :
-        m_cxt(cxt), m_attr(attr) {}
-    cell_attr_parser(const cell_attr_parser& r) :
-        m_cxt(r.m_cxt), m_attr(r.m_attr) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        if (attr.value.empty())
-            return;
-
-        if (attr.ns == NS_odf_table)
-            process_ns_table(attr);
-
-        if (attr.ns == NS_odf_office)
-            process_ns_office(attr);
-    }
-
-private:
-
-    void process_formula(const pstring& str, bool transient)
-    {
-        if (str.empty())
-            return;
-
-        // Formula is prefixed with formula type, followed by a ':'
-        // then the actual formula content.
-
-        // First, detect prefix if any.  Only try up to the first 5 characters.
-        const char* p0 = str.get();
-        const char* end = p0 + std::min<size_t>(str.size(), 5);
-        size_t prefix_size = 0;
-        for (const char* p = p0; p != end; ++p)
-        {
-            if (*p == ':')
-            {
-                // Prefix separator found.
-                prefix_size = p - p0;
-                break;
-            }
-
-            if (!is_alpha(*p))
-                // Only alphabets are allowed in the prefix space.
-                break;
-        }
-
-        pstring prefix, formula;
-        if (prefix_size)
-        {
-            prefix = pstring(p0, prefix_size);
-            const char* p = p0;
-            p += prefix_size + 1;
-            end = p0 + str.size();
-            formula = pstring(p, end - p);
-        }
-        else
-        {
-            // TODO : Handle cases where a formula doesn't have a prefix.
-        }
-
-        // Formula needs to begin with '='.
-        if (formula.empty() || formula[0] != '=')
-            return;
-
-        // Remove the '='.
-        formula = pstring(formula.get()+1, formula.size()-1);
-
-        if (prefix == "of")
-        {
-            // ODF formula.  No action needed.
-        }
-
-        m_attr.formula = formula;
-        if (transient)
-            m_attr.formula = m_cxt.m_string_pool.intern(m_attr.formula).first;
-    }
-
-    void process_ns_table(const xml_token_attr_t &attr)
-    {
-        switch (attr.name)
-        {
-            case XML_style_name:
-            {
-                m_attr.style_name = attr.value;
-                if (attr.transient)
-                    m_attr.style_name = m_cxt.m_string_pool.intern(m_attr.style_name).first;
-                break;
-            }
-            case XML_number_columns_repeated:
-                m_attr.number_columns_repeated = to_long(attr.value);
-                break;
-            case XML_formula:
-                process_formula(attr.value, attr.transient);
-                break;
-            default:
-                ;
-        }
-    }
-
-    void process_ns_office(const xml_token_attr_t &attr)
-    {
-        switch (attr.name)
-        {
-            case XML_value:
-            {
-                const char* end = attr.value.get() + attr.value.size();
-                char* endptr;
-                double val = strtod(attr.value.get(), &endptr);
-                if (endptr == end)
-                    m_attr.value = val;
-            }
-            break;
-            case XML_value_type:
-            {
-                const cell_value_map_type& cv_map = get_cell_value_map();
-                m_attr.type = cv_map.find(attr.value.get(), attr.value.size());
-            }
-            break;
-            case XML_date_value:
-                m_attr.date_value = attr.value;
-            break;
-            default:
-                ;
-        }
-    }
-
-    session_context& m_cxt;
-    ods_content_xml_context::cell_attr& m_attr;
-};
+} // namespace cell_value
 
 void pick_up_named_range_or_expression(
     session_context& cxt, const xml_attrs_t& attrs, xmlns_id_t exp_attr_ns, xml_token_t exp_attr_name,
@@ -253,7 +83,7 @@ void pick_up_named_range_or_expression(
         ods_data.m_named_exps.emplace_back(name, expression, base, name_type, scope);
 }
 
-}
+} // anonymous namespace
 
 // ============================================================================
 
@@ -301,20 +131,6 @@ ods_content_xml_context::ods_content_xml_context(session_context& session_cxt, c
 
 ods_content_xml_context::~ods_content_xml_context()
 {
-}
-
-bool ods_content_xml_context::can_handle_element(xmlns_id_t ns, xml_token_t name) const
-{
-    if (ns == NS_odf_text && name == XML_p)
-        return false;
-
-    if (ns == NS_odf_office && name == XML_automatic_styles)
-        return false;
-
-    if (ns == NS_odf_table && name == XML_dde_links)
-        return false;
-
-    return true;
 }
 
 xml_context_base* ods_content_xml_context::create_child_context(xmlns_id_t ns, xml_token_t name)
@@ -543,7 +359,7 @@ bool ods_content_xml_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void ods_content_xml_context::characters(const pstring& /*str*/, bool /*transient*/)
+void ods_content_xml_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 
@@ -554,7 +370,14 @@ void ods_content_xml_context::start_null_date(const xml_attrs_t& attrs)
         // Global settings not available. No point going further.
         return;
 
-    pstring null_date = for_each(attrs.begin(), attrs.end(), null_date_attr_parser()).get_date_value();
+    std::string_view null_date;
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        if (attr.ns == NS_odf_table && attr.name == XML_date_value)
+            null_date = attr.value;
+    }
+
     date_time_t val = to_date_time(null_date);
 
     gs->set_origin_date(val.year, val.month, val.day);
@@ -570,9 +393,15 @@ void ods_content_xml_context::start_table(const xml_token_pair_t& parent, const 
 
     if (parent == xml_token_pair_t(NS_odf_office, XML_spreadsheet))
     {
-        table_attr_parser parser = for_each(attrs.begin(), attrs.end(), table_attr_parser());
-        const pstring& name = parser.get_name();
-        m_tables.push_back(mp_factory->append_sheet(m_tables.size(), name.get(), name.size()));
+        std::string_view name;
+
+        for (const xml_token_attr_t& attr : attrs)
+        {
+            if (attr.ns == NS_odf_table && attr.name == XML_name)
+                name = attr.value;
+        }
+
+        m_tables.push_back(mp_factory->append_sheet(m_tables.size(), name));
         m_cur_sheet.sheet = m_tables.back();
         m_cur_sheet.index = m_tables.size() - 1;
 
@@ -636,20 +465,18 @@ void ods_content_xml_context::start_column(const xml_attrs_t& attrs)
     if (!sheet_props)
         return;
 
-    pstring style_name;
+    std::string_view style_name;
 
-    std::for_each(attrs.begin(), attrs.end(),
-        [&style_name](const xml_token_attr_t& attr)
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        if (attr.ns == NS_odf_table)
         {
-            if (attr.ns == NS_odf_table)
-            {
-                if (attr.name == XML_style_name)
-                    style_name = attr.value;
-            }
+            if (attr.name == XML_style_name)
+                style_name = attr.value;
         }
-    );
+    }
 
-    odf_styles_map_type::const_iterator it = m_styles.find(style_name);
+    auto it = m_styles.find(style_name);
     if (it == m_styles.end())
         // Style by this name not found.
         return;
@@ -668,28 +495,26 @@ void ods_content_xml_context::start_row(const xml_attrs_t& attrs)
     m_col = 0;
     m_row_attr = row_attr();
 
-    pstring style_name;
+    std::string_view style_name;
 
-    std::for_each(attrs.begin(), attrs.end(),
-        [&](const xml_token_attr_t& attr)
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        if (attr.ns == NS_odf_table)
         {
-            if (attr.ns == NS_odf_table)
+            switch (attr.name)
             {
-                switch (attr.name)
-                {
-                    case XML_number_rows_repeated:
-                        m_row_attr.number_rows_repeated = to_long(attr.value);
-                        break;
-                    case XML_style_name:
-                        style_name = attr.value;
-                        break;
-                }
+                case XML_number_rows_repeated:
+                    m_row_attr.number_rows_repeated = to_long(attr.value);
+                    break;
+                case XML_style_name:
+                    style_name = attr.value;
+                    break;
             }
         }
-    );
+    }
 
     if (get_config().debug)
-        cout << "row: (style='" << style_name << "')" << endl;
+        std::cout << "row: (style='" << style_name << "')" << std::endl;
 
     if (!m_cur_sheet.sheet)
         return;
@@ -700,8 +525,7 @@ void ods_content_xml_context::start_row(const xml_attrs_t& attrs)
 
     if (sheet_props)
     {
-        odf_styles_map_type::const_iterator it = m_styles.find(style_name);
-        if (it != m_styles.end())
+        if (auto it = m_styles.find(style_name); it != m_styles.end())
         {
             const odf_style& style = *it->second;
             if (style.family == style_family_table_row)
@@ -728,7 +552,115 @@ void ods_content_xml_context::end_row()
 void ods_content_xml_context::start_cell(const xml_attrs_t& attrs)
 {
     m_cell_attr = cell_attr();
-    for_each(attrs.begin(), attrs.end(), cell_attr_parser(get_session_context(), m_cell_attr));
+
+    /**
+     * Process the prefixed raw formula string stored as attribute value.
+     */
+    auto process_formula = [](std::string_view str) -> std::string_view
+    {
+        if (str.empty())
+            return {};
+
+        // Formula is prefixed with formula type, followed by a ':'
+        // then the actual formula content.
+
+        // First, detect prefix if any.  Only try up to the first 5 characters.
+        const char* p0 = str.data();
+        const char* end = p0 + std::min<size_t>(str.size(), 5);
+        size_t prefix_size = 0;
+        for (const char* p = p0; p != end; ++p)
+        {
+            if (*p == ':')
+            {
+                // Prefix separator found.
+                prefix_size = p - p0;
+                break;
+            }
+
+            if (!is_alpha(*p))
+                // Only alphabets are allowed in the prefix space.
+                break;
+        }
+
+        std::string_view prefix, formula;
+        if (prefix_size)
+        {
+            prefix = std::string_view(p0, prefix_size);
+            const char* p = p0;
+            p += prefix_size + 1;
+            end = p0 + str.size();
+            formula = std::string_view(p, end - p);
+        }
+        else
+        {
+            // TODO : Handle cases where a formula doesn't have a prefix.
+        }
+
+        // Formula needs to begin with '='.
+        if (formula.empty() || formula[0] != '=')
+            return {};
+
+        // Remove the '='.
+        formula = std::string_view(formula.data()+1, formula.size()-1);
+
+        if (prefix == "of")
+        {
+            // ODF formula.  No action needed.
+        }
+
+        return formula;
+    };
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        if (attr.value.empty())
+            continue;
+
+        if (attr.ns == NS_odf_table)
+        {
+            switch (attr.name)
+            {
+                case XML_style_name:
+                {
+                    m_cell_attr.style_name = intern(attr);
+                    break;
+                }
+                case XML_number_columns_repeated:
+                    m_cell_attr.number_columns_repeated = to_long(attr.value);
+                    break;
+                case XML_formula:
+                    m_cell_attr.formula = process_formula(attr.value);
+                    m_cell_attr.formula = intern(m_cell_attr.formula);
+                    break;
+                default:
+                    ;
+            }
+        }
+
+        if (attr.ns == NS_odf_office)
+        {
+            switch (attr.name)
+            {
+                case XML_value:
+                {
+                    const char* end = attr.value.data() + attr.value.size();
+                    char* endptr;
+                    double val = strtod(attr.value.data(), &endptr);
+                    if (endptr == end)
+                        m_cell_attr.value = val;
+                    break;
+                }
+                case XML_value_type:
+                    m_cell_attr.type = cell_value::get().find(attr.value.data(), attr.value.size());
+                    break;
+                case XML_date_value:
+                    m_cell_attr.date_value = attr.value;
+                    break;
+                default:
+                    ;
+            }
+        }
+    }
 }
 
 void ods_content_xml_context::end_cell()
@@ -828,7 +760,7 @@ void ods_content_xml_context::end_spreadsheet()
                      << endl;
             }
 
-            ss::src_address_t base = resolver->resolve_address(data.base.data(), data.base.size());
+            ss::src_address_t base = resolver->resolve_address(data.base);
 
             ss::iface::import_named_expression* named_exp = nullptr;
 
@@ -850,12 +782,10 @@ void ods_content_xml_context::end_spreadsheet()
                 switch (data.type)
                 {
                     case ods_session_data::ne_range:
-                        named_exp->set_named_range(
-                            data.name.data(), data.name.size(), data.expression.data(), data.expression.size());
+                        named_exp->set_named_range(data.name, data.expression);
                         break;
                     case ods_session_data::ne_expression:
-                        named_exp->set_named_expression(
-                            data.name.data(), data.name.size(), data.expression.data(), data.expression.size());
+                        named_exp->set_named_expression(data.name, data.expression);
                         break;
                     default:
                         ;
@@ -881,7 +811,7 @@ void ods_content_xml_context::end_spreadsheet()
             if (formula)
             {
                 formula->set_position(data.row, data.column);
-                formula->set_formula(data.grammar, data.exp.data(), data.exp.size());
+                formula->set_formula(data.grammar, data.exp);
 
                 switch (data.result.type)
                 {

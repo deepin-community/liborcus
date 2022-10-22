@@ -10,11 +10,12 @@
 
 #define ORCUS_DEBUG_CSS 0
 
-#include "orcus/parser_global.hpp"
-#include "orcus/css_parser_base.hpp"
-#include "orcus/global.hpp"
+#include "parser_global.hpp"
+#include "css_parser_base.hpp"
+#include "global.hpp"
 
 #include <cassert>
+#include <algorithm>
 
 #if ORCUS_DEBUG_CSS
 #include <iostream>
@@ -209,7 +210,7 @@ private:
     void property();
     void quoted_value(char c);
     void value();
-    void function_value(const char* p, size_t len);
+    void function_value(std::string_view v);
     void function_rgb(bool alpha);
     void function_hsl(bool alpha);
     void function_url();
@@ -381,7 +382,7 @@ void css_parser<_Handler>::simple_selector_name()
                     // pseudo element.
                     next();
                     identifier(p, n);
-                    css::pseudo_element_t elem = css::to_pseudo_element(p, n);
+                    css::pseudo_element_t elem = css::to_pseudo_element({p, n});
                     if (!elem)
                         css::parse_error::throw_with(
                             "selector_name: unknown pseudo element '", p, n, "'");
@@ -392,7 +393,7 @@ void css_parser<_Handler>::simple_selector_name()
                 {
                     // pseudo class (or pseudo element in the older version of CSS).
                     identifier(p, n);
-                    css::pseudo_class_t pc = css::to_pseudo_class(p, n);
+                    css::pseudo_class_t pc = css::to_pseudo_class({p, n});
                     if (!pc)
                         css::parse_error::throw_with(
                             "selector_name: unknown pseudo class '", p, n, "'");
@@ -506,35 +507,32 @@ void css_parser<_Handler>::value()
         return;
     }
 
-    if (!is_alpha(c) && !is_numeric(c) && !is_in(c, ORCUS_ASCII("-+.#")))
-        css::parse_error::throw_with("value:: illegal first character of a value '", c, "'");
+    std::string_view v = parse_value();
+    if (v.empty())
+        return;
 
-    const char* p = nullptr;
-    size_t len = 0;
-    identifier(p, len, ORCUS_ASCII(".%"));
     if (cur_char() == '(')
     {
-        function_value(p, len);
+        function_value(v);
         return;
     }
 
-    m_handler.value(p, len);
+    m_handler.value(v.data(), v.size());
 
     skip_comments_and_blanks();
 
 #if ORCUS_DEBUG_CSS
-    std::string foo(p, len);
-    std::cout << "value: " << foo.c_str() << std::endl;
+    std::cout << "value: " << v << std::endl;
 #endif
 }
 
 template<typename _Handler>
-void css_parser<_Handler>::function_value(const char* p, size_t len)
+void css_parser<_Handler>::function_value(std::string_view v)
 {
     assert(cur_char() == '(');
-    css::property_function_t func = css::to_property_function(p, len);
+    css::property_function_t func = css::to_property_function(v);
     if (func == css::property_function_t::unknown)
-        css::parse_error::throw_with("function_value: unknown function '", p, len, "'");
+        css::parse_error::throw_with("function_value: unknown function '", v, "'");
 
     // Move to the first character of the first argument.
     next();
@@ -558,7 +556,7 @@ void css_parser<_Handler>::function_value(const char* p, size_t len)
             function_url();
         break;
         default:
-            css::parse_error::throw_with("function_value: unhandled function '", p, len, "'");
+            css::parse_error::throw_with("function_value: unhandled function '", v, "'");
     }
 
     char c = cur_char();
@@ -608,7 +606,7 @@ void css_parser<_Handler>::function_rgb(bool alpha)
 
         double alpha_val = parse_double_or_throw();
 
-        alpha_val = clip(alpha_val, 0.0, 1.0);
+        alpha_val = std::clamp(alpha_val, 0.0, 1.0);
         m_handler.rgba(vals[0], vals[1], vals[2], alpha_val);
     }
     else
@@ -633,7 +631,7 @@ void css_parser<_Handler>::function_hsl(bool alpha)
     // hsl(num, percent, percent)  hsla(num, percent, percent, float)
 
     double hue = parse_double_or_throw(); // casted to uint8_t eventually.
-    hue = clip(hue, 0.0, 360.0);
+    hue = std::clamp(hue, 0.0, 360.0);
     skip_comments_and_blanks();
 
     char c = cur_char();
@@ -644,7 +642,7 @@ void css_parser<_Handler>::function_hsl(bool alpha)
     skip_comments_and_blanks();
 
     double sat = parse_percent();
-    sat = clip(sat, 0.0, 100.0);
+    sat = std::clamp(sat, 0.0, 100.0);
     skip_comments_and_blanks();
 
     c = cur_char();
@@ -655,7 +653,7 @@ void css_parser<_Handler>::function_hsl(bool alpha)
     skip_comments_and_blanks();
 
     double light = parse_percent();
-    light = clip(light, 0.0, 100.0);
+    light = std::clamp(light, 0.0, 100.0);
     skip_comments_and_blanks();
 
     if (!alpha)
@@ -672,7 +670,7 @@ void css_parser<_Handler>::function_hsl(bool alpha)
     skip_comments_and_blanks();
 
     double alpha_val = parse_double_or_throw();
-    alpha_val = clip(alpha_val, 0.0, 1.0);
+    alpha_val = std::clamp(alpha_val, 0.0, 1.0);
     skip_comments_and_blanks();
     m_handler.hsla(hue, sat, light, alpha_val);
 }

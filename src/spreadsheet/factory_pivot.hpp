@@ -30,9 +30,9 @@ class import_pivot_cache_def : public iface::import_pivot_cache_definition
     pivot_cache_id_t m_cache_id = 0;
 
     source_type m_src_type = unknown;
-    pstring m_src_sheet_name;
+    std::string_view m_src_sheet_name;
     ixion::abs_range_t m_src_range;
-    pstring m_src_table_name;
+    std::string_view m_src_table_name;
 
     std::unique_ptr<pivot_cache> m_cache;
     pivot_cache::fields_type m_current_fields;
@@ -42,7 +42,7 @@ class import_pivot_cache_def : public iface::import_pivot_cache_definition
     std::unique_ptr<import_pc_field_group> m_current_field_group;
 
 private:
-    pstring intern(const char* p, size_t n);
+    std::string_view intern(std::string_view s);
 
 public:
     import_pivot_cache_def(document& doc);
@@ -50,14 +50,13 @@ public:
 
     void create_cache(pivot_cache_id_t cache_id);
 
-    virtual void set_worksheet_source(
-        const char* ref, size_t n_ref, const char* sheet_name, size_t n_sheet_name) override;
+    virtual void set_worksheet_source(std::string_view ref, std::string_view sheet_name) override;
 
-    virtual void set_worksheet_source(const char* table_name, size_t n_table_name) override;
+    virtual void set_worksheet_source(std::string_view table_name) override;
 
     virtual void set_field_count(size_t n) override;
 
-    virtual void set_field_name(const char* p, size_t n) override;
+    virtual void set_field_name(std::string_view name) override;
 
     virtual iface::import_pivot_cache_field_group* create_field_group(size_t base_index) override;
 
@@ -71,7 +70,7 @@ public:
 
     virtual void commit_field() override;
 
-    virtual void set_field_item_string(const char* p, size_t n) override;
+    virtual void set_field_item_string(std::string_view value) override;
 
     virtual void set_field_item_numeric(double v) override;
 
@@ -105,7 +104,7 @@ public:
 
     virtual void append_record_value_numeric(double v) override;
 
-    virtual void append_record_value_character(const char* p, size_t n) override;
+    virtual void append_record_value_character(std::string_view s) override;
 
     virtual void append_record_value_shared_item(size_t index) override;
 

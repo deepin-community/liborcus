@@ -5,10 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/xml_structure_tree.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/global.hpp"
-#include "orcus/stream.hpp"
+#include <orcus/xml_structure_tree.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/global.hpp>
+#include <orcus/stream.hpp>
+#include <orcus/parser_global.hpp>
 
 #include <cstdlib>
 #include <cassert>
@@ -42,22 +43,17 @@ struct loaded_tree
         cxt(repo.create_context()),
         tree(cxt) {}
 
-    loaded_tree(loaded_tree&& other) :
-        cxt(std::move(other.cxt)),
-        strm(std::move(other.strm)),
-        tree(std::move(other.tree))
-    {
-    }
+    loaded_tree(const loaded_tree&) = delete;
 };
 
-loaded_tree load_tree(xmlns_repository& repo, fs::path& filepath)
+std::unique_ptr<loaded_tree> load_tree(xmlns_repository& repo, fs::path& filepath)
 {
-    loaded_tree ret(repo);
-    ret.strm.load(filepath.string().data());
-    assert(!ret.strm.empty());
-    xml_structure_tree tree(ret.cxt);
-    tree.parse(ret.strm.data(), ret.strm.size());
-    ret.tree.swap(tree);
+    auto ret = std::make_unique<loaded_tree>(repo);
+    ret->strm.load(filepath.string().data());
+    assert(!ret->strm.empty());
+    xml_structure_tree tree(ret->cxt);
+    tree.parse(ret->strm.str());
+    ret->tree.swap(tree);
 
     return ret;
 }
@@ -73,7 +69,7 @@ void test_basic()
         auto lt = load_tree(xmlns_repo, filepath);
 
         std::ostringstream os;
-        lt.tree.dump_compact(os);
+        lt->tree.dump_compact(os);
         string data_content = os.str();
         cout << "--" << endl;
         cout << data_content;
@@ -84,9 +80,9 @@ void test_basic()
         assert(!strm_check.empty());
 
         // They should be identical, plus or minus leading/trailing whitespaces.
-        pstring s1(data_content.data(), data_content.size());
-        pstring s2 = strm_check.str();
-        assert(s1.trim() == s2.trim());
+        std::string_view s1(data_content.data(), data_content.size());
+        std::string_view s2 = strm_check.str();
+        assert(trim(s1) == trim(s2));
     }
 }
 
@@ -100,7 +96,7 @@ void test_walker()
 
         // Get walker from the tree.
         xml_structure_tree::entity_names_type elem_names;
-        xml_structure_tree::walker wkr = lt.tree.get_walker();
+        xml_structure_tree::walker wkr = lt->tree.get_walker();
 
         // Root element.
         xml_structure_tree::element elem = wkr.root();
@@ -161,7 +157,7 @@ void test_walker()
 
         // Get walker from the tree.
         xml_structure_tree::entity_names_type elem_names;
-        xml_structure_tree::walker wkr = lt.tree.get_walker();
+        xml_structure_tree::walker wkr = lt->tree.get_walker();
 
         // Root element.
         xml_structure_tree::element elem = wkr.root();
@@ -199,7 +195,7 @@ void test_walker_path()
 
     // Get walker from the tree.
     xml_structure_tree::entity_names_type elem_names;
-    xml_structure_tree::walker wkr = lt.tree.get_walker();
+    xml_structure_tree::walker wkr = lt->tree.get_walker();
     wkr.root();
     assert("/root" == wkr.get_path());
 
@@ -246,7 +242,7 @@ void test_element_contents()
     {
         fs::path filepath = test_base_dir / "attribute-1" / "input.xml";
         auto lt = load_tree(xmlns_repo, filepath);
-        auto wkr = lt.tree.get_walker();
+        auto wkr = lt->tree.get_walker();
         auto elem = wkr.move_to("/root/entry");
         assert(wkr.to_string(elem.name) == "entry");
         assert(elem.repeat);
@@ -256,7 +252,7 @@ void test_element_contents()
     {
         fs::path filepath = test_base_dir / "basic-1" / "input.xml";
         auto lt = load_tree(xmlns_repo, filepath);
-        auto wkr = lt.tree.get_walker();
+        auto wkr = lt->tree.get_walker();
         auto elem = wkr.move_to("/root/entry/name");
         assert(wkr.to_string(elem.name) == "name");
         assert(!elem.repeat);
@@ -271,7 +267,7 @@ void test_element_contents()
     {
         fs::path filepath = test_base_dir / "nested-repeat-1" / "input.xml";
         auto lt = load_tree(xmlns_repo, filepath);
-        auto wkr = lt.tree.get_walker();
+        auto wkr = lt->tree.get_walker();
         auto elem = wkr.move_to("/root/mode/insert/command");
         assert(wkr.to_string(elem.name) == "command");
         assert(!elem.repeat);

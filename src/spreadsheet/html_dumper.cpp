@@ -19,6 +19,7 @@
 #include <ixion/model_context.hpp>
 #include <ixion/formula.hpp>
 #include <ixion/formula_result.hpp>
+#include <ixion/cell.hpp>
 
 #include <sstream>
 
@@ -69,7 +70,7 @@ const char* css_style_global =
 "}\n"
 
 "td { "
-    "width : 1in; "
+    "width : 1in; border: 1px solid lightgray; "
 "}\n"
 
 "td.empty { "
@@ -158,7 +159,11 @@ void print_formatted_text(std::ostream& strm, const std::string& text, const for
             style += "font-style: normal;";
 
         if (!run.font.empty())
-            style += "font-family: " + run.font.str() + ";";
+        {
+            style += "font-family: ";
+            style += run.font;
+            style += ";";
+        }
 
         if (run.font_size)
         {
@@ -473,9 +478,9 @@ void html_dumper::dump(std::ostream& os) const
                 if (!p_merge_size && p_overlapped)
                 {
                     // Check if this cell is overlapped by a merged cell.
-                    bool overlapped = false;
-                    col_t last_col;
-                    if (p_overlapped->search_tree(col, overlapped, nullptr, &last_col).second && overlapped)
+                    col_t overlapped_origin = -1;
+                    col_t last_col = -1;
+                    if (p_overlapped->search_tree(col, overlapped_origin, nullptr, &last_col).second && overlapped_origin >= 0)
                     {
                         // Skip all overlapped cells on this row.
                         col = last_col - 1;
@@ -641,7 +646,7 @@ void html_dumper::build_overlapped_ranges()
                 detail::overlapped_cells_type::iterator it_cont = m_overlapped_ranges.find(row);
                 if (it_cont == m_overlapped_ranges.end())
                 {
-                    auto p = orcus::make_unique<detail::overlapped_col_index_type>(0, sheet_size.columns, false);
+                    auto p = std::make_unique<detail::overlapped_col_index_type>(0, sheet_size.columns, -1);
                     std::pair<detail::overlapped_cells_type::iterator, bool> r =
                         m_overlapped_ranges.insert(detail::overlapped_cells_type::value_type(row, std::move(p)));
 
@@ -655,7 +660,7 @@ void html_dumper::build_overlapped_ranges()
                 }
 
                 detail::overlapped_col_index_type& cont = *it_cont->second;
-                cont.insert_back(col, col+item.width, true);
+                cont.insert_back(col, col+item.width, col);
             }
         }
     }

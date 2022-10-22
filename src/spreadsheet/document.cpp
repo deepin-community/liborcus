@@ -14,7 +14,7 @@
 #include "orcus/spreadsheet/pivot.hpp"
 #include "orcus/spreadsheet/config.hpp"
 
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/types.hpp"
 #include "orcus/string_pool.hpp"
 #include "orcus/global.hpp"
@@ -40,16 +40,6 @@ namespace orcus { namespace spreadsheet {
 
 namespace {
 
-void init_once()
-{
-    static bool initialized = false;
-    if (initialized)
-        return;
-
-    ixion::init();
-    initialized = true;
-}
-
 /**
  * Single sheet entry which consists of a sheet name and a sheet data.
  */
@@ -60,30 +50,30 @@ struct sheet_item
 
     pstring name;
     sheet   data;
-    sheet_item(document& doc, const pstring& _name, sheet_t sheet_index);
+    sheet_item(document& doc, std::string_view _name, sheet_t sheet_index);
 };
 
 typedef std::map<pstring, std::unique_ptr<table_t>> table_store_type;
 
-sheet_item::sheet_item(document& doc, const pstring& _name, sheet_t sheet_index) :
+sheet_item::sheet_item(document& doc, std::string_view _name, sheet_t sheet_index) :
     name(_name), data(doc, sheet_index) {}
 
-class find_sheet_by_name : std::unary_function<std::unique_ptr<sheet_item> , bool>
+class find_sheet_by_name
 {
-    const pstring& m_name;
+    std::string_view m_name;
 public:
-    find_sheet_by_name(const pstring& name) : m_name(name) {}
+    find_sheet_by_name(std::string_view name) : m_name(name) {}
     bool operator() (const std::unique_ptr<sheet_item>& v) const
     {
         return v->name == m_name;
     }
 };
 
-class find_column_by_name : std::unary_function<table_column_t, bool>
+class find_column_by_name
 {
-    const pstring& m_name;
+    std::string_view m_name;
 public:
-    find_column_by_name(const pstring& name) : m_name(name) {}
+    find_column_by_name(std::string_view name) : m_name(name) {}
 
     bool operator() (const table_column_t& col) const
     {
@@ -187,7 +177,7 @@ class table_handler : public ixion::iface::table_handler
         return pstring(&(*p)[0], p->size());
     }
 
-    col_t find_column(const table_t& tab, const pstring& name, size_t offset) const
+    col_t find_column(const table_t& tab, std::string_view name, size_t offset) const
     {
         if (offset >= tab.columns.size())
             return -1;
@@ -321,7 +311,6 @@ struct document_impl
         m_grammar(formula_grammar_t::xlsx),
         m_table_handler(m_context, m_tables)
     {
-        init_once();
         m_context.set_table_handler(&m_table_handler);
     }
 
@@ -403,7 +392,7 @@ void document::insert_table(table_t* p)
         table_store_type::value_type(name, std::unique_ptr<table_t>(p)));
 }
 
-const table_t* document::get_table(const pstring& name) const
+const table_t* document::get_table(std::string_view name) const
 {
     auto it = mp_impl->m_tables.find(name);
     return it == mp_impl->m_tables.end() ? nullptr : it->second.get();
@@ -419,26 +408,26 @@ void document::finalize()
     );
 }
 
-sheet* document::append_sheet(const pstring& sheet_name)
+sheet* document::append_sheet(std::string_view sheet_name)
 {
     pstring sheet_name_safe = mp_impl->m_string_pool.intern(sheet_name).first;
     sheet_t sheet_index = static_cast<sheet_t>(mp_impl->m_sheets.size());
 
     mp_impl->m_sheets.push_back(
-        orcus::make_unique<sheet_item>(*this, sheet_name_safe, sheet_index));
+        std::make_unique<sheet_item>(*this, sheet_name_safe, sheet_index));
 
-    mp_impl->m_context.append_sheet(sheet_name_safe.get(), sheet_name_safe.size());
+    mp_impl->m_context.append_sheet(sheet_name_safe.str());
 
     return &mp_impl->m_sheets.back()->data;
 }
 
-sheet* document::get_sheet(const pstring& sheet_name)
+sheet* document::get_sheet(std::string_view sheet_name)
 {
     const sheet* sh = const_cast<const document*>(this)->get_sheet(sheet_name);
     return const_cast<sheet*>(sh);
 }
 
-const sheet* document::get_sheet(const pstring& sheet_name) const
+const sheet* document::get_sheet(std::string_view sheet_name) const
 {
     auto it = std::find_if(
         mp_impl->m_sheets.begin(), mp_impl->m_sheets.end(), find_sheet_by_name(sheet_name));
@@ -499,7 +488,7 @@ void document::dump(dump_format_t format, const std::string& output) const
             }
 
             // Output to stdout when output path is not given.
-            fs = orcus::make_unique<std::ofstream>(output.data());
+            fs = std::make_unique<std::ofstream>(output.data());
             ostrm = fs.get();
         }
 
@@ -536,6 +525,7 @@ void document::dump(dump_format_t format, const std::string& output) const
         case dump_format_t::json:
             dump_json(output);
             break;
+        // coverity[dead_error_line] - following conditions exist to avoid compiler warning
         case dump_format_t::none:
         case dump_format_t::unknown:
             break;
@@ -553,93 +543,81 @@ void document::dump_flat(const string& outdir) const
 
     cout << "number of sheets: " << mp_impl->m_sheets.size() << endl;
 
-    for_each(mp_impl->m_sheets.begin(), mp_impl->m_sheets.end(),
-        [&outdir](const std::unique_ptr<sheet_item>& item)
+    for (const std::unique_ptr<sheet_item>& sheet : mp_impl->m_sheets)
+    {
+        string this_file = outdir + '/' + sheet->name.str() + ".txt";
+
+        ofstream file(this_file.c_str());
+        if (!file)
         {
-            string this_file = outdir + '/' + item->name.str() + ".txt";
-
-            ofstream file(this_file.c_str());
-            if (!file)
-            {
-                cerr << "failed to create file: " << this_file << endl;
-                return;
-            }
-
-            file << "---" << endl;
-            file << "Sheet name: " << item->name << endl;
-            item->data.dump_flat(file);
+            cerr << "failed to create file: " << this_file << endl;
+            return;
         }
-    );
+
+        file << "---" << endl;
+        file << "Sheet name: " << sheet->name << endl;
+        sheet->data.dump_flat(file);
+    }
 }
 
 void document::dump_check(ostream& os) const
 {
-    for_each(mp_impl->m_sheets.begin(), mp_impl->m_sheets.end(),
-        [&os](const std::unique_ptr<sheet_item>& item)
-        {
-            item->data.dump_check(os, item->name);
-        }
-    );
+    for (const std::unique_ptr<sheet_item>& sheet : mp_impl->m_sheets)
+        sheet->data.dump_check(os, sheet->name);
 }
 
 void document::dump_html(const string& outdir) const
 {
-    for_each(mp_impl->m_sheets.begin(), mp_impl->m_sheets.end(),
-        [&outdir](const std::unique_ptr<sheet_item>& item)
+    for (const std::unique_ptr<sheet_item>& sheet : mp_impl->m_sheets)
+    {
+        string this_file = outdir + '/' + sheet->name.str() + ".html";
+
+        ofstream file(this_file.c_str());
+        if (!file)
         {
-            string this_file = outdir + '/' + item->name.str() + ".html";
-
-            ofstream file(this_file.c_str());
-            if (!file)
-            {
-                cerr << "failed to create file: " << this_file << endl;
-                return;
-            }
-
-            item->data.dump_html(file);
+            cerr << "failed to create file: " << this_file << endl;
+            return;
         }
-    );
+
+        sheet->data.dump_html(file);
+    }
 }
 
 void document::dump_json(const string& outdir) const
 {
-    for_each(mp_impl->m_sheets.begin(), mp_impl->m_sheets.end(),
-        [&outdir](const std::unique_ptr<sheet_item>& item)
+    for (const std::unique_ptr<sheet_item>& sheet : mp_impl->m_sheets)
+    {
+        string this_file = outdir + '/' + sheet->name.str() + ".json";
+
+        ofstream file(this_file.c_str());
+        if (!file)
         {
-            string this_file = outdir + '/' + item->name.str() + ".json";
-
-            ofstream file(this_file.c_str());
-            if (!file)
-            {
-                cerr << "failed to create file: " << this_file << endl;
-                return;
-            }
-
-            item->data.dump_json(file);
+            cerr << "failed to create file: " << this_file << endl;
+            return;
         }
-    );
+
+        sheet->data.dump_json(file);
+    }
 }
 
 void document::dump_csv(const std::string& outdir) const
 {
-    for_each(mp_impl->m_sheets.begin(), mp_impl->m_sheets.end(),
-        [&outdir](const std::unique_ptr<sheet_item>& item)
+    for (const std::unique_ptr<sheet_item>& sheet : mp_impl->m_sheets)
+    {
+        string this_file = outdir + '/' + sheet->name.str() + ".csv";
+
+        ofstream file(this_file.c_str());
+        if (!file)
         {
-            string this_file = outdir + '/' + item->name.str() + ".csv";
-
-            ofstream file(this_file.c_str());
-            if (!file)
-            {
-                cerr << "failed to create file: " << this_file << endl;
-                return;
-            }
-
-            item->data.dump_csv(file);
+            cerr << "failed to create file: " << this_file << endl;
+            return;
         }
-    );
+
+        sheet->data.dump_csv(file);
+    }
 }
 
-sheet_t document::get_sheet_index(const pstring& name) const
+sheet_t document::get_sheet_index(std::string_view name) const
 {
     auto it = std::find_if(
         mp_impl->m_sheets.begin(), mp_impl->m_sheets.end(), find_sheet_by_name(name));
@@ -652,14 +630,14 @@ sheet_t document::get_sheet_index(const pstring& name) const
     return static_cast<sheet_t>(pos);
 }
 
-pstring document::get_sheet_name(sheet_t sheet_pos) const
+std::string_view document::get_sheet_name(sheet_t sheet_pos) const
 {
     if (sheet_pos < 0)
-        return pstring();
+        return std::string_view{};
 
     size_t pos = static_cast<size_t>(sheet_pos);
     if (pos >= mp_impl->m_sheets.size())
-        return pstring();
+        return std::string_view{};
 
     return mp_impl->m_sheets[pos]->name;
 }

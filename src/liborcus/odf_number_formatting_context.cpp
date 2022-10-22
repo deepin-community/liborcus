@@ -9,8 +9,9 @@
 #include "odf_namespace_types.hpp"
 #include "odf_token_constants.hpp"
 #include "odf_helper.hpp"
-#include "orcus/measurement.hpp"
-#include "orcus/spreadsheet/import_interface.hpp"
+
+#include <orcus/measurement.hpp>
+#include <orcus/spreadsheet/import_interface.hpp>
 #include <orcus/spreadsheet/styles.hpp>
 
 #include <iostream>
@@ -23,11 +24,11 @@ namespace orcus {
 
 namespace {
 
-class number_style_attr_parser : std::unary_function<xml_token_attr_t, void>
+class number_style_attr_parser
 {
-    pstring m_country_code;
-    pstring m_style_name;
-    pstring m_language;
+    std::string_view m_country_code;
+    std::string_view m_style_name;
+    std::string_view m_language;
     bool m_volatile;
 
 public:
@@ -68,13 +69,13 @@ public:
         }
     }
 
-    pstring get_style_name() const { return m_style_name;}
-    pstring get_country_code() const { return m_country_code;}
+    std::string_view get_style_name() const { return m_style_name;}
+    std::string_view get_country_code() const { return m_country_code;}
     bool is_volatile() const { return m_volatile;}
-    pstring get_language() const { return m_language;}
+    std::string_view get_language() const { return m_language;}
 };
 
-class number_attr_parser : std::unary_function<xml_token_attr_t, void>
+class number_attr_parser
 {
     size_t m_decimal_places;
     size_t m_min_int_digits;
@@ -117,7 +118,7 @@ public:
     bool has_decimal_places() const { return m_decimal_places > 0;}
 };
 
-class scientific_number_attr_parser : std::unary_function<xml_token_attr_t, void>
+class scientific_number_attr_parser
 {
     size_t m_decimal_places;
     bool m_grouping;
@@ -163,9 +164,9 @@ public:
     size_t get_min_int_digits() const { return m_min_int_digits;}
 };
 
-class generic_style_attr_parser : std::unary_function<xml_token_attr_t, void>
+class generic_style_attr_parser
 {
-    pstring m_style_name;
+    std::string_view m_style_name;
     bool m_volatile;
     bool m_long;
 
@@ -196,12 +197,12 @@ public:
                 m_long = attr.value == "long";
     }
 
-    pstring get_style_name() const { return m_style_name;}
+    std::string_view get_style_name() const { return m_style_name;}
     bool is_volatile() const { return m_volatile;}
     bool has_long() const { return m_long;}
 };
 
-class month_attr_parser : std::unary_function<xml_token_attr_t, void>
+class month_attr_parser
 {
     bool m_style_name;
     bool m_textual;
@@ -227,7 +228,7 @@ public:
     bool is_textual() const { return m_textual;}
 };
 
-class seconds_attr_parser : std::unary_function<xml_token_attr_t, void>
+class seconds_attr_parser
 {
     size_t m_decimal_places;
     bool m_style_name;
@@ -256,12 +257,12 @@ public:
     bool has_decimal_places() const { return m_decimal_places > 0;}
 };
 
-class fraction_attr_parser : std::unary_function<xml_token_attr_t, void>
+class fraction_attr_parser
 {
     size_t m_min_int_digits;
     size_t m_min_deno_digits;
     size_t m_min_num_digits;
-    pstring m_deno_value;
+    std::string_view m_deno_value;
 
     bool m_predefined_deno;
 
@@ -303,13 +304,13 @@ public:
     size_t get_min_int_digits() const { return m_min_int_digits;}
     size_t get_min_num_digits() const { return m_min_num_digits;}
     size_t get_min_deno_digits() const { return m_min_deno_digits;}
-    pstring get_deno_value() const { return m_deno_value;}
+    std::string_view get_deno_value() const { return m_deno_value;}
     bool has_predefined_deno() const { return m_predefined_deno;}
 };
 
-class text_properties_attr_parser : std::unary_function<xml_token_attr_t, void>
+class text_properties_attr_parser
 {
-    pstring m_color;
+    std::string_view m_color;
     bool color_absent;
 
 public:
@@ -348,11 +349,11 @@ public:
         }
     }
 
-    pstring get_color() const { return m_color;}
+    std::string_view get_color() const { return m_color;}
     bool has_color() const { return !color_absent;}
 };
 
-class map_attr_parser : std::unary_function<xml_token_attr_t, void>
+class map_attr_parser
 {
     string m_value;
     string m_sign;
@@ -395,11 +396,6 @@ number_formatting_context::number_formatting_context(
     m_styles(styles)
 {}
 
-bool number_formatting_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
-
 xml_context_base* number_formatting_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return nullptr;
@@ -411,7 +407,8 @@ void number_formatting_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t
 
 void number_formatting_context::start_element(xmlns_id_t ns, xml_token_t name, const std::vector<xml_token_attr_t>& attrs)
 {
-    m_current_style.character_stream.clear();
+    m_current_style.character_stream = std::string_view{};
+
     if (ns == NS_odf_number)
     {
         switch(name)
@@ -444,7 +441,7 @@ void number_formatting_context::start_element(xmlns_id_t ns, xml_token_t name, c
                     }
                     else
                     {
-                        std:: string temporary_code;
+                        std::string temporary_code;
                         for(size_t i = 0; i < func.get_min_int_digits(); i++)
                         {
                             if (i % 3 == 0 && i != 0)
@@ -684,7 +681,11 @@ void number_formatting_context::start_element(xmlns_id_t ns, xml_token_t name, c
                 text_properties_attr_parser func;
                 func = std::for_each(attrs.begin(), attrs.end(), func);
                 if (func.has_color())
-                    m_current_style.number_formatting_code = m_current_style.number_formatting_code + "[" + func.get_color() + "]";
+                {
+                    std::ostringstream os;
+                    os << m_current_style.number_formatting_code << '[' << func.get_color() << ']';
+                    m_current_style.number_formatting_code = os.str();
+                }
             }
             break;
             case XML_map:
@@ -693,8 +694,9 @@ void number_formatting_context::start_element(xmlns_id_t ns, xml_token_t name, c
                 func = std::for_each(attrs.begin(), attrs.end(), func);
                 if (func.has_map())
                 {
-                    m_current_style.number_formatting_code = "[" + func.get_sign() + func.get_value() + "]"
-                        + m_current_style.number_formatting_code;
+                    std::ostringstream os;
+                    os << '[' << func.get_sign() << func.get_value() << ']' << m_current_style.number_formatting_code;
+                    m_current_style.number_formatting_code = os.str();
                 }
             }
             break;
@@ -706,7 +708,8 @@ void number_formatting_context::start_element(xmlns_id_t ns, xml_token_t name, c
 
 bool number_formatting_context::end_element(xmlns_id_t ns, xml_token_t name)
 {
-    pstring character_content = m_current_style.character_stream;
+    std::string_view character_content = m_current_style.character_stream;
+
     if (ns == NS_odf_number)
     {
         if (name == XML_number_style || name == XML_currency_style || name == XML_percentage_style
@@ -719,20 +722,28 @@ bool number_formatting_context::end_element(xmlns_id_t ns, xml_token_t name)
             }
             else
             {
-                mp_styles->set_number_format_code(m_current_style.number_formatting_code.c_str(),
-                        m_current_style.number_formatting_code.size());
-                mp_styles->set_xf_number_format(mp_styles->commit_number_format());
+                size_t id_number_format = 0;
 
-                mp_styles->set_cell_style_name( m_current_style.name.get(), m_current_style.name.size());
+                if (!m_current_style.number_formatting_code.empty())
+                {
+                    mp_styles->set_number_format_code(m_current_style.number_formatting_code);
+                    id_number_format = mp_styles->commit_number_format();
+                }
+
+                mp_styles->set_xf_number_format(id_number_format);
+
+                mp_styles->set_cell_style_name(m_current_style.name);
                 mp_styles->set_cell_style_xf(mp_styles->commit_cell_style_xf());
                 mp_styles->commit_cell_style();
                 return true;
             }
         }
         else if (name == XML_currency_symbol)
-            m_current_style.number_formatting_code = m_current_style.number_formatting_code + "[$"
-                + character_content + "]";
-
+        {
+            std::ostringstream os;
+            os << m_current_style.number_formatting_code << "[$" << character_content << ']';
+            m_current_style.number_formatting_code = os.str();
+        }
         else if (name == XML_text)
         {
             m_current_style.number_formatting_code += character_content;
@@ -742,7 +753,7 @@ bool number_formatting_context::end_element(xmlns_id_t ns, xml_token_t name)
 }
 
 
-void number_formatting_context::characters(const pstring& str, bool transient)
+void number_formatting_context::characters(std::string_view str, bool transient)
 {
     if (str != "\n")
     {
@@ -751,6 +762,11 @@ void number_formatting_context::characters(const pstring& str, bool transient)
         else
             m_current_style.character_stream = str;
     }
+}
+
+void number_formatting_context::reset()
+{
+    m_current_style = number_formatting_style{};
 }
 
 }

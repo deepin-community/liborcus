@@ -29,9 +29,11 @@
 #include "opc_context.hpp"
 #include "ooxml_global.hpp"
 #include "spreadsheet_iface_util.hpp"
+#include "ooxml_content_types.hpp"
 
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -130,7 +132,7 @@ struct orcus_xlsx::impl
 
 orcus_xlsx::orcus_xlsx(spreadsheet::iface::import_factory* factory) :
     iface::import_filter(format_t::xlsx),
-    mp_impl(orcus::make_unique<impl>(factory, *this))
+    mp_impl(std::make_unique<impl>(factory, *this))
 {
     if (!factory)
         throw std::invalid_argument("factory instance is required.");
@@ -179,7 +181,9 @@ bool orcus_xlsx::detect(const unsigned char* blob, size_t size)
     xml_stream_parser parser(
         opt, ns_repo, opc_tokens, reinterpret_cast<const char*>(&buf[0]), buf.size());
 
-    xml_simple_stream_handler handler(new opc_content_types_context(session_cxt, opc_tokens));
+    xml_simple_stream_handler handler(
+        session_cxt, opc_tokens,
+        std::make_unique<opc_content_types_context>(session_cxt, opc_tokens));
     parser.set_handler(&handler);
     parser.parse();
 
@@ -193,7 +197,7 @@ bool orcus_xlsx::detect(const unsigned char* blob, size_t size)
         return false;
 
     // See if we can find the workbook stream.
-    xml_part_t workbook_part("/xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
+    xml_part_t workbook_part("/xl/workbook.xml", CT_ooxml_xlsx_sheet_main);
     return std::find(parts.begin(), parts.end(), workbook_part) != parts.end();
 }
 
@@ -210,11 +214,12 @@ void orcus_xlsx::read_file(const string& filepath)
     mp_impl->mp_factory->finalize();
 }
 
-void orcus_xlsx::read_stream(const char* content, size_t len)
+void orcus_xlsx::read_stream(std::string_view stream)
 {
-    std::unique_ptr<zip_archive_stream> stream(new zip_archive_stream_blob(
-                reinterpret_cast<const unsigned char*>(content), len));
-    mp_impl->m_opc_reader.read_file(std::move(stream));
+    std::unique_ptr<zip_archive_stream> blob(
+        new zip_archive_stream_blob(
+            reinterpret_cast<const uint8_t*>(stream.data()), stream.size()));
+    mp_impl->m_opc_reader.read_file(std::move(blob));
 
     // Formulas need to be inserted to the document after the shared string
     // table get imported, because tokenization of formulas may add new shared
@@ -224,14 +229,33 @@ void orcus_xlsx::read_stream(const char* content, size_t len)
     mp_impl->mp_factory->finalize();
 }
 
-const char* orcus_xlsx::get_name() const
+std::string_view orcus_xlsx::get_name() const
 {
-    static const char* name = "xlsx";
-    return name;
+    return "xlsx";
 }
 
 void orcus_xlsx::set_formulas_to_doc()
 {
+    auto push_formula_result = [this](spreadsheet::iface::import_formula* formula, const formula_result& res)
+    {
+        switch (res.type)
+        {
+            case formula_result::result_type::numeric:
+                formula->set_result_value(res.value_numeric);
+                break;
+            case formula_result::result_type::string:
+                formula->set_result_string({res.value_string.p, res.value_string.n});
+                break;
+            case formula_result::result_type::empty:
+                break;
+            default:
+            {
+                if (get_config().debug)
+                    std::cerr << "warning: unhandled formula result (orcus_xlsx::set_formulas_to_doc)" << std::endl;
+            }
+        }
+    };
+
     xlsx_session_data& sdata = static_cast<xlsx_session_data&>(*mp_impl->m_cxt.mp_data);
 
     // Insert shared formulas first.
@@ -248,8 +272,10 @@ void orcus_xlsx::set_formulas_to_doc()
 
         formula->set_position(sf.row, sf.column);
         if (sf.master)
-            formula->set_formula(orcus::spreadsheet::formula_grammar_t::xlsx, sf.formula.data(), sf.formula.size());
+            formula->set_formula(orcus::spreadsheet::formula_grammar_t::xlsx, sf.formula);
         formula->set_shared_formula_index(sf.identifier);
+
+        push_formula_result(formula, sf.result);
         formula->commit();
     }
 
@@ -266,7 +292,9 @@ void orcus_xlsx::set_formulas_to_doc()
             continue;
 
         formula->set_position(f.ref.row, f.ref.column);
-        formula->set_formula(orcus::spreadsheet::formula_grammar_t::xlsx, f.exp.data(), f.exp.size());
+        formula->set_formula(orcus::spreadsheet::formula_grammar_t::xlsx, f.exp);
+
+        push_formula_result(formula, f.result);
         formula->commit();
     }
 
@@ -328,8 +356,9 @@ void orcus_xlsx::read_workbook(const string& dir_path, const string& file_name)
     if (buffer.empty())
         return;
 
-    auto handler = orcus::make_unique<xml_simple_stream_handler>(
-        new xlsx_workbook_context(mp_impl->m_cxt, ooxml_tokens, *mp_impl->mp_factory));
+    auto handler = std::make_unique<xml_simple_stream_handler>(
+        mp_impl->m_cxt, ooxml_tokens,
+        std::make_unique<xlsx_workbook_context>(mp_impl->m_cxt, ooxml_tokens, *mp_impl->mp_factory));
 
     xml_stream_parser parser(
         get_config(), mp_impl->m_ns_repo, ooxml_tokens,
@@ -421,7 +450,7 @@ void orcus_xlsx::read_sheet(const string& dir_path, const string& file_name, xls
         cout << "  sheet name: " << data->name << "  sheet ID: " << data->id << endl;
     }
 
-    spreadsheet::iface::import_sheet* sheet = mp_impl->mp_factory->get_sheet(data->name.get(), data->name.size());
+    spreadsheet::iface::import_sheet* sheet = mp_impl->mp_factory->get_sheet(data->name);
     if (!sheet)
     {
         std::ostringstream os;
@@ -439,7 +468,7 @@ void orcus_xlsx::read_sheet(const string& dir_path, const string& file_name, xls
         get_config(), mp_impl->m_ns_repo, ooxml_tokens,
         reinterpret_cast<const char*>(&buffer[0]), buffer.size());
 
-    auto handler = orcus::make_unique<xlsx_sheet_xml_handler>(
+    auto handler = std::make_unique<xlsx_sheet_xml_handler>(
         mp_impl->m_cxt, ooxml_tokens, data->id-1, *resolver, *sheet);
 
     parser.set_handler(handler.get());
@@ -471,8 +500,9 @@ void orcus_xlsx::read_shared_strings(const string& dir_path, const string& file_
         get_config(), mp_impl->m_ns_repo, ooxml_tokens,
         reinterpret_cast<const char*>(&buffer[0]), buffer.size());
 
-    auto handler = orcus::make_unique<xml_simple_stream_handler>(
-        new xlsx_shared_strings_context(
+    auto handler = std::make_unique<xml_simple_stream_handler>(
+        mp_impl->m_cxt, ooxml_tokens,
+        std::make_unique<xlsx_shared_strings_context>(
             mp_impl->m_cxt, ooxml_tokens, mp_impl->mp_factory->get_shared_strings()));
 
     parser.set_handler(handler.get());
@@ -504,8 +534,9 @@ void orcus_xlsx::read_styles(const string& dir_path, const string& file_name)
         get_config(), mp_impl->m_ns_repo, ooxml_tokens,
         reinterpret_cast<const char*>(&buffer[0]), buffer.size());
 
-    auto handler = orcus::make_unique<xml_simple_stream_handler>(
-        new xlsx_styles_context(
+    auto handler = std::make_unique<xml_simple_stream_handler>(
+        mp_impl->m_cxt, ooxml_tokens,
+        std::make_unique<xlsx_styles_context>(
             mp_impl->m_cxt, ooxml_tokens, mp_impl->mp_factory->get_styles()));
 
     parser.set_handler(handler.get());
@@ -546,7 +577,7 @@ void orcus_xlsx::read_table(const std::string& dir_path, const std::string& file
     if (buffer.empty())
         return;
 
-    auto handler = orcus::make_unique<xlsx_table_xml_handler>(
+    auto handler = std::make_unique<xlsx_table_xml_handler>(
         mp_impl->m_cxt, ooxml_tokens, *table, *resolver);
 
     xml_stream_parser parser(
@@ -597,7 +628,7 @@ void orcus_xlsx::read_pivot_cache_def(
         // failed to create a cache instance for whatever reason.
         return;
 
-    auto handler = orcus::make_unique<xlsx_pivot_cache_def_xml_handler>(
+    auto handler = std::make_unique<xlsx_pivot_cache_def_xml_handler>(
         mp_impl->m_cxt, ooxml_tokens, *pcache, data->id);
 
     xml_stream_parser parser(
@@ -649,7 +680,7 @@ void orcus_xlsx::read_pivot_cache_rec(
     if (!pcache_records)
         return;
 
-    auto handler = orcus::make_unique<xlsx_pivot_cache_rec_xml_handler>(
+    auto handler = std::make_unique<xlsx_pivot_cache_rec_xml_handler>(
         mp_impl->m_cxt, ooxml_tokens, *pcache_records);
 
     xml_stream_parser parser(
@@ -680,7 +711,7 @@ void orcus_xlsx::read_pivot_table(const std::string& dir_path, const std::string
     if (buffer.empty())
         return;
 
-    auto handler = orcus::make_unique<xlsx_pivot_table_xml_handler>(mp_impl->m_cxt, ooxml_tokens);
+    auto handler = std::make_unique<xlsx_pivot_table_xml_handler>(mp_impl->m_cxt, ooxml_tokens);
 
     xml_stream_parser parser(
         get_config(), mp_impl->m_ns_repo, ooxml_tokens,
@@ -715,8 +746,9 @@ void orcus_xlsx::read_rev_headers(const std::string& dir_path, const std::string
         get_config(), mp_impl->m_ns_repo, ooxml_tokens,
         reinterpret_cast<const char*>(&buffer[0]), buffer.size());
 
-    auto handler = orcus::make_unique<xml_simple_stream_handler>(
-        new xlsx_revheaders_context(mp_impl->m_cxt, ooxml_tokens));
+    auto handler = std::make_unique<xml_simple_stream_handler>(
+        mp_impl->m_cxt, ooxml_tokens,
+        std::make_unique<xlsx_revheaders_context>(mp_impl->m_cxt, ooxml_tokens));
 
     parser.set_handler(handler.get());
     parser.parse();
@@ -748,8 +780,9 @@ void orcus_xlsx::read_rev_log(const std::string& dir_path, const std::string& fi
         get_config(), mp_impl->m_ns_repo, ooxml_tokens,
         reinterpret_cast<const char*>(&buffer[0]), buffer.size());
 
-    auto handler = orcus::make_unique<xml_simple_stream_handler>(
-        new xlsx_revlog_context(mp_impl->m_cxt, ooxml_tokens));
+    auto handler = std::make_unique<xml_simple_stream_handler>(
+        mp_impl->m_cxt, ooxml_tokens,
+        std::make_unique<xlsx_revlog_context>(mp_impl->m_cxt, ooxml_tokens));
 
     parser.set_handler(handler.get());
     parser.parse();
@@ -776,7 +809,7 @@ void orcus_xlsx::read_drawing(const std::string& dir_path, const std::string& fi
     if (buffer.empty())
         return;
 
-    auto handler = orcus::make_unique<xlsx_drawing_xml_handler>(
+    auto handler = std::make_unique<xlsx_drawing_xml_handler>(
         mp_impl->m_cxt, ooxml_tokens);
 
     xml_stream_parser parser(

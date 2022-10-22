@@ -8,13 +8,16 @@
 #ifndef INCLUDED_ORCUS_XML_CONTEXT_BASE_HPP
 #define INCLUDED_ORCUS_XML_CONTEXT_BASE_HPP
 
+#include "xml_element_validator.hpp"
 #include "xml_stream_handler.hpp"
+#include "xml_util.hpp"
 
 namespace orcus {
 
 struct session_context;
 class tokens;
 class xmlns_context;
+class xml_element_validator;
 
 class xml_context_base
 {
@@ -25,35 +28,31 @@ public:
     xml_context_base(session_context& session_cxt, const tokens& tokens);
     virtual ~xml_context_base() = 0;
 
+    /**
+     * This gets called at the end of the initial XML declaration block i.e.
+     * &lt;?xml ... ?&gt;.  Obviously this gets called only on the root context.
+     *
+     * @param decl XML declaration attributes
+     */
     virtual void declaration(const xml_declaration_t& decl);
 
     /**
-     * Whether or not the current context object can handle the specified
-     * element.  This method is used by the caller to determine whether to use
-     * a child context to handle the specified element and its child elements.
-     * If a child context needs to be used, the caller will call the
-     * create_child_context method to obtain the child context object.
-     *
-     * @param ns namespace value for the element.
-     * @param name name of the element.
-     *
-     * @return true if the current context object can handle this element,
-     *         false if the caller needs to create a child context to handle
-     *         the element.
-     */
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const = 0;
-
-    /**
      * This method gets called by the stream handler to fetch a child context
-     * object when the call to can_handle_element() returns false.  The caller
-     * is not responsible for managing the life cycle of the returned context
-     * object; the current context object must manage the life cycle of the
-     * context object it returns.
+     * object if applicable. If the current context can handle the specified
+     * element, it should return nullptr.  If the current context should spawn a
+     * new context to handle the specified element and its sub structure, then
+     * it should return a pointer to a child context.
+     *
+     * @note The caller is not responsible for managing the life cycle of the
+     * returned context object; the current context object must manage the life
+     * cycle of the context object it returns.
      *
      * @param ns namespace value for the element.
      * @param name name of the element.
      *
-     * @return pointer to the context object that should handle the element.
+     * @return pointer to the context object that should handle the specified
+     *         element, or nullptr if the current context can handle the
+     *         element.
      */
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) = 0;
 
@@ -69,10 +68,17 @@ public:
      */
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child) = 0;
 
-    virtual void start_element(xmlns_id_t ns, xml_token_t name, const ::std::vector<xml_token_attr_t>& attrs) = 0;
+    /**
+     * Called on the opening of each element.
+     *
+     * @param ns namespace token
+     * @param name element name
+     * @param attrs attributes
+     */
+    virtual void start_element(xmlns_id_t ns, xml_token_t name, const std::vector<xml_token_attr_t>& attrs) = 0;
 
     /**
-     * Called on closing element.
+     * Called on the closing of each element.
      *
      * @param ns namespace token
      * @param name element name
@@ -89,7 +95,9 @@ public:
      * @param str content value.
      * @param transient whether or not the value is transient.
      */
-    virtual void characters(const pstring& str, bool transient) = 0;
+    virtual void characters(std::string_view str, bool transient) = 0;
+
+    bool evaluate_child_element(xmlns_id_t ns, xml_token_t name) const;
 
     void set_ns_context(const xmlns_context* p);
 
@@ -102,17 +110,18 @@ public:
     void set_always_allowed_elements(xml_elem_set_t elems);
 
 protected:
+    void init_element_validator(const xml_element_validator::rule* rules, std::size_t n_rules);
+
     session_context& get_session_context();
     const tokens& get_tokens() const;
     xml_token_pair_t push_stack(xmlns_id_t ns, xml_token_t name);
     bool pop_stack(xmlns_id_t ns, xml_token_t name);
-    xml_token_pair_t& get_current_element();
-    const xml_token_pair_t& get_current_element() const;
-    xml_token_pair_t& get_parent_element();
+    xml_token_pair_t get_current_stack(xmlns_id_t ns, xml_token_t name);
+    xml_token_pair_t get_current_element() const;
     const xml_token_pair_t& get_parent_element() const;
     void warn_unhandled() const;
     void warn_unexpected() const;
-    void warn(const char* msg) const;
+    void warn(std::string_view msg) const;
 
     /**
      * Check if observed element equals expected element.  If not, it throws an
@@ -133,14 +142,32 @@ protected:
     void xml_element_expected(
         const xml_token_pair_t& elem, const xml_elem_set_t& expected_elems) const;
 
-    pstring intern(const xml_token_attr_t& attr);
-    pstring intern(const pstring& s);
+    bool xml_element_always_allowed(const xml_token_pair_t& elem) const;
+
+    void print_namespace(std::ostream& os, xmlns_id_t ns) const;
+
+    void print_element(std::ostream& os, const xml_token_pair_t& elem) const;
+
+    void print_current_element_stack(std::ostream& os) const;
+
+    /**
+     * Throw a viewer-friendly XML structure error with the information about an
+     * unknown element encountered.
+     *
+     * @param elem unknown element encountered.
+     */
+    void throw_unknown_element_error(const xml_token_pair_t& elem) const;
+
+    std::string_view intern(const xml_token_attr_t& attr);
+    std::string_view intern(std::string_view s);
 
 private:
     config m_config;
     const xmlns_context* mp_ns_cxt;
     session_context& m_session_cxt;
     const tokens& m_tokens;
+    xml_element_printer m_elem_printer;
+    xml_element_validator m_elem_validator;
     xml_elem_stack_t m_stack;
     xml_elem_set_t m_always_allowed_elements;
 };

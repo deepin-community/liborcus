@@ -10,9 +10,10 @@
 #include "named_expression.hpp"
 #include "named_expressions.hpp"
 
-#include "orcus/spreadsheet/types.hpp"
-#include "orcus/spreadsheet/sheet.hpp"
-#include "orcus/spreadsheet/document.hpp"
+#include <orcus/spreadsheet/types.hpp>
+#include <orcus/spreadsheet/sheet.hpp>
+#include <orcus/spreadsheet/document.hpp>
+#include "pstring.hpp"
 
 #include <ixion/model_context.hpp>
 #include <ixion/named_expressions_iterator.hpp>
@@ -20,6 +21,7 @@
 #include <structmember.h>
 #include <bytesobject.h>
 #include <iostream>
+#include <sstream>
 #include <cstring>
 
 namespace ss = orcus::spreadsheet;
@@ -83,12 +85,12 @@ PyObject* tp_new(PyTypeObject* type, PyObject* /*args*/, PyObject* /*kwargs*/)
     return reinterpret_cast<PyObject*>(self);
 }
 
-int tp_init(pyobj_sheet* self, PyObject* /*args*/, PyObject* /*kwargs*/)
+int tp_init(pyobj_sheet* /*self*/, PyObject* /*args*/, PyObject* /*kwargs*/)
 {
     return 0;
 }
 
-PyObject* sheet_get_rows(PyObject* self, PyObject* args, PyObject* kwargs)
+PyObject* sheet_get_rows(PyObject* self, PyObject* /*args*/, PyObject* /*kwargs*/)
 {
     PyTypeObject* sr_type = get_sheet_rows_type();
 
@@ -112,29 +114,29 @@ format_t to_format_type_enum(PyObject* format)
     static const char* err_not_format_type = "An enum value of 'orcus.FormatType' was expected.";
     static const char* err_format_not_supported = "Unsupported format type.";
 
-    PyObject* format_s = PyObject_Str(format); // new reference
+    // Check the type name.
+
+    PyTypeObject* type = Py_TYPE(format);
+    if (!type || strncmp(type->tp_name, "FormatType", 10u) != 0)
+    {
+        PyErr_SetString(PyExc_RuntimeError, err_not_format_type);
+        return format_t::unknown;
+    }
+
+    // Now check the member name.
+
+    PyObject* format_s = PyObject_GetAttrString(format, "name"); // new reference
     if (!format_s)
     {
         PyErr_SetString(PyExc_RuntimeError, err_not_format_type);
         return format_t::unknown;
     }
 
-    const char* p = PyUnicode_AsUTF8(format_s);
-
-    // Make sure that the string starts with 'FormatType.'.
-    if (!p || strnlen(p, 11u) < 11u || strncmp(p, "FormatType.", 11u))
-    {
-        PyErr_SetString(PyExc_RuntimeError, err_not_format_type);
-        Py_DECREF(format_s);
-        return format_t::unknown;
-    }
-
-    p += 11; // Move it to the char past the '.'.
-
     // TODO : currently we only support csv format.  Change this code when we
     // add more format type(s) to support.
 
-    if (strncmp(p, "CSV", 3u))
+    const char* p = PyUnicode_AsUTF8(format_s);
+    if (!p || strncmp(p, "CSV", 3u) != 0)
     {
         PyErr_SetString(PyExc_RuntimeError, err_format_not_supported);
         Py_DECREF(format_s);
@@ -208,7 +210,7 @@ PyObject* sheet_write(PyObject* self, PyObject* args, PyObject* kwargs)
     return Py_None;
 }
 
-PyObject* sheet_get_named_expressions(PyObject* self, PyObject* args, PyObject* kwargs)
+PyObject* sheet_get_named_expressions(PyObject* self, PyObject* /*args*/, PyObject* /*kwargs*/)
 {
     const ss::document& doc = *t(self)->data->m_doc;
     ss::sheet_t si = t(self)->data->m_sheet->get_index();

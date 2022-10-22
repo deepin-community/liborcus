@@ -250,7 +250,8 @@ TESTS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric-helper-test
 subdir = src/liborcus
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_17.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
 	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
@@ -314,12 +315,15 @@ am__liborcus_@ORCUS_API_VERSION@_la_SOURCES_DIST = config.cpp \
 	orcus_csv.cpp orcus_json.cpp orcus_xml.cpp orcus_xml_impl.hpp \
 	orcus_xml_impl.cpp orcus_xml_map_def.cpp measurement.cpp \
 	xml_context_base.hpp xml_context_base.cpp \
-	xml_context_global.hpp xml_context_global.cpp xml_map_tree.hpp \
+	xml_context_global.hpp xml_context_global.cpp \
+	xml_element_validator.hpp xml_element_validator.cpp \
+	xml_empty_context.hpp xml_empty_context.cpp xml_map_tree.hpp \
 	xml_map_tree.cpp xml_stream_handler.hpp xml_stream_handler.cpp \
 	xml_stream_parser.hpp xml_stream_parser.cpp \
 	xml_simple_stream_handler.hpp xml_simple_stream_handler.cpp \
 	xml_structure_mapper.hpp xml_structure_mapper.cpp \
-	xml_structure_tree.cpp xpath_parser.cpp yaml_document_tree.cpp \
+	xml_structure_tree.cpp xml_util.hpp xml_util.cpp \
+	xpath_parser.cpp yaml_document_tree.cpp \
 	ooxml_namespace_types.cpp ooxml_namespace_types.hpp \
 	odf_namespace_types.hpp odf_namespace_types_hpp.inl \
 	odf_namespace_types.cpp odf_namespace_types_cpp.inl \
@@ -444,12 +448,15 @@ am_liborcus_@ORCUS_API_VERSION@_la_OBJECTS =  \
 	liborcus_@ORCUS_API_VERSION@_la-measurement.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_context_base.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_context_global.lo \
+	liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.lo \
+	liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_stream_handler.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_stream_parser.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_simple_stream_handler.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_structure_mapper.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.lo \
+	liborcus_@ORCUS_API_VERSION@_la-xml_util.lo \
 	liborcus_@ORCUS_API_VERSION@_la-xpath_parser.lo \
 	liborcus_@ORCUS_API_VERSION@_la-yaml_document_tree.lo \
 	liborcus_@ORCUS_API_VERSION@_la-ooxml_namespace_types.lo \
@@ -493,25 +500,28 @@ format_detection_test_DEPENDENCIES = liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
 am__gnumeric_cell_context_test_SOURCES_DIST = session_context.cpp \
 	gnumeric_cell_context_test.cpp gnumeric_cell_context.cpp \
-	xml_context_base.cpp gnumeric_namespace_types.cpp \
-	gnumeric_tokens.cpp odf_namespace_types.cpp \
-	spreadsheet_interface.cpp mock_spreadsheet.hpp \
-	mock_spreadsheet.cpp
+	xml_context_base.cpp xml_element_validator.cpp \
+	xml_empty_context.cpp xml_util.cpp \
+	gnumeric_namespace_types.cpp gnumeric_tokens.cpp \
+	odf_namespace_types.cpp spreadsheet_interface.cpp
 @WITH_GNUMERIC_FILTER_TRUE@am_gnumeric_cell_context_test_OBJECTS =  \
 @WITH_GNUMERIC_FILTER_TRUE@	session_context.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_cell_context_test.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_cell_context.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	xml_context_base.$(OBJEXT) \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_element_validator.$(OBJEXT) \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_empty_context.$(OBJEXT) \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_util.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_namespace_types.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_tokens.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	odf_namespace_types.$(OBJEXT) \
-@WITH_GNUMERIC_FILTER_TRUE@	spreadsheet_interface.$(OBJEXT) \
-@WITH_GNUMERIC_FILTER_TRUE@	mock_spreadsheet.$(OBJEXT)
+@WITH_GNUMERIC_FILTER_TRUE@	spreadsheet_interface.$(OBJEXT)
 gnumeric_cell_context_test_OBJECTS =  \
 	$(am_gnumeric_cell_context_test_OBJECTS)
 @WITH_GNUMERIC_FILTER_TRUE@gnumeric_cell_context_test_DEPENDENCIES =  \
 @WITH_GNUMERIC_FILTER_TRUE@	liborcus-@ORCUS_API_VERSION@.la \
-@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+@WITH_GNUMERIC_FILTER_TRUE@	../test/liborcus-test.a
 am__gnumeric_helper_test_SOURCES_DIST = gnumeric_helper_test.cpp \
 	string_helper.hpp string_helper.cpp
 @WITH_GNUMERIC_FILTER_TRUE@am_gnumeric_helper_test_OBJECTS = gnumeric_helper_test-gnumeric_helper_test.$(OBJEXT) \
@@ -523,27 +533,31 @@ gnumeric_helper_test_OBJECTS = $(am_gnumeric_helper_test_OBJECTS)
 am__gnumeric_sheet_context_test_SOURCES_DIST = session_context.cpp \
 	gnumeric_sheet_context_test.cpp gnumeric_sheet_context.cpp \
 	gnumeric_cell_context.cpp gnumeric_helper.cpp \
-	xml_context_base.cpp gnumeric_namespace_types.cpp \
-	gnumeric_tokens.cpp odf_namespace_types.cpp \
-	spreadsheet_interface.cpp mock_spreadsheet.hpp \
-	mock_spreadsheet.cpp string_helper.cpp
+	xml_context_base.cpp xml_element_validator.cpp \
+	xml_empty_context.cpp xml_util.cpp \
+	gnumeric_namespace_types.cpp gnumeric_tokens.cpp \
+	odf_namespace_types.cpp spreadsheet_interface.cpp \
+	string_helper.cpp
 @WITH_GNUMERIC_FILTER_TRUE@am_gnumeric_sheet_context_test_OBJECTS = gnumeric_sheet_context_test-session_context.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-gnumeric_sheet_context_test.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-gnumeric_sheet_context.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-gnumeric_cell_context.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-gnumeric_helper.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-xml_context_base.$(OBJEXT) \
+@WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-xml_element_validator.$(OBJEXT) \
+@WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-xml_empty_context.$(OBJEXT) \
+@WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-xml_util.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-gnumeric_namespace_types.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-gnumeric_tokens.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-odf_namespace_types.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-spreadsheet_interface.$(OBJEXT) \
-@WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-mock_spreadsheet.$(OBJEXT) \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_sheet_context_test-string_helper.$(OBJEXT)
 gnumeric_sheet_context_test_OBJECTS =  \
 	$(am_gnumeric_sheet_context_test_OBJECTS)
 @WITH_GNUMERIC_FILTER_TRUE@gnumeric_sheet_context_test_DEPENDENCIES =  \
 @WITH_GNUMERIC_FILTER_TRUE@	liborcus-@ORCUS_API_VERSION@.la \
-@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+@WITH_GNUMERIC_FILTER_TRUE@	../test/liborcus-test.a
 am_json_document_tree_test_OBJECTS =  \
 	json_document_tree_test-json_document_tree.$(OBJEXT) \
 	json_document_tree_test-json_util.$(OBJEXT) \
@@ -553,7 +567,8 @@ json_document_tree_test_OBJECTS =  \
 json_document_tree_test_DEPENDENCIES =  \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	../test/liborcus-test.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_json_map_tree_test_OBJECTS = json_map_tree_test.$(OBJEXT) \
 	json_map_tree.$(OBJEXT) spreadsheet_impl_types.$(OBJEXT)
 json_map_tree_test_OBJECTS = $(am_json_map_tree_test_OBJECTS)
@@ -578,17 +593,17 @@ odf_helper_test_OBJECTS = $(am_odf_helper_test_OBJECTS)
 @WITH_ODS_FILTER_TRUE@	liborcus-@ORCUS_API_VERSION@.la \
 @WITH_ODS_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
 am__xlsx_sheet_context_test_SOURCES_DIST = formula_result.cpp \
-	global.cpp mock_spreadsheet.hpp mock_spreadsheet.cpp \
-	ooxml_global.cpp ooxml_namespace_types.cpp ooxml_schemas.cpp \
-	ooxml_tokens.cpp ooxml_types.cpp session_context.cpp \
-	spreadsheet_interface.cpp xlsx_autofilter_context.cpp \
+	global.cpp ooxml_global.cpp ooxml_namespace_types.cpp \
+	ooxml_schemas.cpp ooxml_tokens.cpp ooxml_types.cpp \
+	session_context.cpp spreadsheet_interface.cpp \
+	xlsx_autofilter_context.cpp \
 	xlsx_conditional_format_context.cpp xlsx_helper.cpp \
 	xlsx_session_data.cpp xlsx_sheet_context.cpp \
 	xlsx_sheet_context_test.cpp xlsx_types.cpp \
-	xml_context_base.cpp xml_context_global.cpp
+	xml_context_base.cpp xml_context_global.cpp \
+	xml_element_validator.cpp xml_empty_context.cpp xml_util.cpp
 @WITH_XLSX_FILTER_TRUE@am_xlsx_sheet_context_test_OBJECTS = xlsx_sheet_context_test-formula_result.$(OBJEXT) \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-global.$(OBJEXT) \
-@WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-mock_spreadsheet.$(OBJEXT) \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-ooxml_global.$(OBJEXT) \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-ooxml_namespace_types.$(OBJEXT) \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-ooxml_schemas.$(OBJEXT) \
@@ -604,12 +619,16 @@ am__xlsx_sheet_context_test_SOURCES_DIST = formula_result.cpp \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xlsx_sheet_context_test.$(OBJEXT) \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xlsx_types.$(OBJEXT) \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xml_context_base.$(OBJEXT) \
-@WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xml_context_global.$(OBJEXT)
+@WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xml_context_global.$(OBJEXT) \
+@WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xml_element_validator.$(OBJEXT) \
+@WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xml_empty_context.$(OBJEXT) \
+@WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test-xml_util.$(OBJEXT)
 xlsx_sheet_context_test_OBJECTS =  \
 	$(am_xlsx_sheet_context_test_OBJECTS)
 @WITH_XLSX_FILTER_TRUE@xlsx_sheet_context_test_DEPENDENCIES =  \
 @WITH_XLSX_FILTER_TRUE@	liborcus-@ORCUS_API_VERSION@.la \
-@WITH_XLSX_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+@WITH_XLSX_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+@WITH_XLSX_FILTER_TRUE@	../test/liborcus-test.a
 am_xml_map_tree_test_OBJECTS = xml_map_tree.$(OBJEXT) \
 	xpath_parser.$(OBJEXT) spreadsheet_impl_types.$(OBJEXT) \
 	xml_map_tree_test.$(OBJEXT)
@@ -673,12 +692,14 @@ am__depfiles_remade = ./$(DEPDIR)/common_test.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context_test.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_tokens.Po \
-	./$(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-odf_namespace_types.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-session_context.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-spreadsheet_interface.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-string_helper.Po \
 	./$(DEPDIR)/gnumeric_sheet_context_test-xml_context_base.Po \
+	./$(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Po \
+	./$(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Po \
+	./$(DEPDIR)/gnumeric_sheet_context_test-xml_util.Po \
 	./$(DEPDIR)/gnumeric_tokens.Po \
 	./$(DEPDIR)/json_document_tree_test-json_document_tree.Po \
 	./$(DEPDIR)/json_document_tree_test-json_document_tree_test.Po \
@@ -765,15 +786,17 @@ am__depfiles_remade = ./$(DEPDIR)/common_test.Po \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xlsx_workbook_context.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_base.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_global.Plo \
+	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.Plo \
+	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_simple_stream_handler.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_handler.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_parser.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_mapper.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.Plo \
+	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_util.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xpath_parser.Plo \
 	./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-yaml_document_tree.Plo \
-	./$(DEPDIR)/mock_spreadsheet.Po \
 	./$(DEPDIR)/odf_helper_test-odf_helper.Po \
 	./$(DEPDIR)/odf_helper_test-odf_helper_test.Po \
 	./$(DEPDIR)/odf_helper_test-string_helper.Po \
@@ -783,7 +806,6 @@ am__depfiles_remade = ./$(DEPDIR)/common_test.Po \
 	./$(DEPDIR)/spreadsheet_interface.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-formula_result.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-global.Po \
-	./$(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-ooxml_global.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-ooxml_namespace_types.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-ooxml_schemas.Po \
@@ -800,13 +822,19 @@ am__depfiles_remade = ./$(DEPDIR)/common_test.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-xlsx_types.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-xml_context_base.Po \
 	./$(DEPDIR)/xlsx_sheet_context_test-xml_context_global.Po \
-	./$(DEPDIR)/xml_context_base.Po ./$(DEPDIR)/xml_map_tree.Po \
+	./$(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Po \
+	./$(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Po \
+	./$(DEPDIR)/xlsx_sheet_context_test-xml_util.Po \
+	./$(DEPDIR)/xml_context_base.Po \
+	./$(DEPDIR)/xml_element_validator.Po \
+	./$(DEPDIR)/xml_empty_context.Po ./$(DEPDIR)/xml_map_tree.Po \
 	./$(DEPDIR)/xml_map_tree_test.Po \
 	./$(DEPDIR)/xml_structure_tree_test-string_helper.Po \
 	./$(DEPDIR)/xml_structure_tree_test-xml_structure_mapper.Po \
 	./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree.Po \
 	./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree_test.Po \
-	./$(DEPDIR)/xpath_parser.Po ./$(DEPDIR)/xpath_parser_test.Po \
+	./$(DEPDIR)/xml_util.Po ./$(DEPDIR)/xpath_parser.Po \
+	./$(DEPDIR)/xpath_parser_test.Po \
 	./$(DEPDIR)/yaml_document_tree_test-json_util.Po \
 	./$(DEPDIR)/yaml_document_tree_test-yaml_document_tree.Po \
 	./$(DEPDIR)/yaml_document_tree_test-yaml_document_tree_test.Po
@@ -1130,7 +1158,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
+HAVE_CXX17 = @HAVE_CXX17@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -1248,8 +1276,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -I$(top_srcdir)/include -I./include $(BOOST_CPPFLAGS) \
-	$(am__append_1) $(am__append_2) -DSRCDIR=\""$(top_srcdir)"\"
+AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src/include \
+	-I./include $(BOOST_CPPFLAGS) $(am__append_1) $(am__append_2) \
+	-DSRCDIR=\""$(top_srcdir)"\"
 liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS = \
 	$(ZLIB_CFLAGS)
 
@@ -1272,12 +1301,15 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES = config.cpp \
 	orcus_csv.cpp orcus_json.cpp orcus_xml.cpp orcus_xml_impl.hpp \
 	orcus_xml_impl.cpp orcus_xml_map_def.cpp measurement.cpp \
 	xml_context_base.hpp xml_context_base.cpp \
-	xml_context_global.hpp xml_context_global.cpp xml_map_tree.hpp \
+	xml_context_global.hpp xml_context_global.cpp \
+	xml_element_validator.hpp xml_element_validator.cpp \
+	xml_empty_context.hpp xml_empty_context.cpp xml_map_tree.hpp \
 	xml_map_tree.cpp xml_stream_handler.hpp xml_stream_handler.cpp \
 	xml_stream_parser.hpp xml_stream_parser.cpp \
 	xml_simple_stream_handler.hpp xml_simple_stream_handler.cpp \
 	xml_structure_mapper.hpp xml_structure_mapper.cpp \
-	xml_structure_tree.cpp xpath_parser.cpp yaml_document_tree.cpp \
+	xml_structure_tree.cpp xml_util.hpp xml_util.cpp \
+	xpath_parser.cpp yaml_document_tree.cpp \
 	ooxml_namespace_types.cpp ooxml_namespace_types.hpp \
 	odf_namespace_types.hpp odf_namespace_types_hpp.inl \
 	odf_namespace_types.cpp odf_namespace_types_cpp.inl \
@@ -1294,8 +1326,6 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES = config.cpp \
 @WITH_XLSX_FILTER_TRUE@xlsx_sheet_context_test_SOURCES = \
 @WITH_XLSX_FILTER_TRUE@	formula_result.cpp \
 @WITH_XLSX_FILTER_TRUE@	global.cpp \
-@WITH_XLSX_FILTER_TRUE@	mock_spreadsheet.hpp \
-@WITH_XLSX_FILTER_TRUE@	mock_spreadsheet.cpp \
 @WITH_XLSX_FILTER_TRUE@	ooxml_global.cpp \
 @WITH_XLSX_FILTER_TRUE@	ooxml_namespace_types.cpp \
 @WITH_XLSX_FILTER_TRUE@	ooxml_schemas.cpp \
@@ -1311,11 +1341,15 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES = config.cpp \
 @WITH_XLSX_FILTER_TRUE@	xlsx_sheet_context_test.cpp \
 @WITH_XLSX_FILTER_TRUE@	xlsx_types.cpp \
 @WITH_XLSX_FILTER_TRUE@	xml_context_base.cpp \
-@WITH_XLSX_FILTER_TRUE@	xml_context_global.cpp
+@WITH_XLSX_FILTER_TRUE@	xml_context_global.cpp \
+@WITH_XLSX_FILTER_TRUE@	xml_element_validator.cpp \
+@WITH_XLSX_FILTER_TRUE@	xml_empty_context.cpp \
+@WITH_XLSX_FILTER_TRUE@	xml_util.cpp
 
 @WITH_XLSX_FILTER_TRUE@xlsx_sheet_context_test_LDADD = \
 @WITH_XLSX_FILTER_TRUE@	liborcus-@ORCUS_API_VERSION@.la \
-@WITH_XLSX_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+@WITH_XLSX_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+@WITH_XLSX_FILTER_TRUE@	../test/liborcus-test.a
 
 @WITH_XLSX_FILTER_TRUE@xlsx_sheet_context_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS)
 @WITH_ODS_FILTER_TRUE@odf_helper_test_SOURCES = \
@@ -1333,16 +1367,18 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES = config.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_cell_context_test.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_cell_context.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	xml_context_base.cpp \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_element_validator.cpp \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_empty_context.cpp \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_util.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_namespace_types.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_tokens.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	odf_namespace_types.cpp \
-@WITH_GNUMERIC_FILTER_TRUE@	spreadsheet_interface.cpp \
-@WITH_GNUMERIC_FILTER_TRUE@	mock_spreadsheet.hpp \
-@WITH_GNUMERIC_FILTER_TRUE@	mock_spreadsheet.cpp
+@WITH_GNUMERIC_FILTER_TRUE@	spreadsheet_interface.cpp
 
 @WITH_GNUMERIC_FILTER_TRUE@gnumeric_cell_context_test_LDADD = \
 @WITH_GNUMERIC_FILTER_TRUE@	liborcus-@ORCUS_API_VERSION@.la \
-@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+@WITH_GNUMERIC_FILTER_TRUE@	../test/liborcus-test.a
 
 @WITH_GNUMERIC_FILTER_TRUE@orcus_gnumeric_cell_context_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS)
 
@@ -1354,17 +1390,19 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES = config.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_cell_context.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_helper.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	xml_context_base.cpp \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_element_validator.cpp \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_empty_context.cpp \
+@WITH_GNUMERIC_FILTER_TRUE@	xml_util.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_namespace_types.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	gnumeric_tokens.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	odf_namespace_types.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	spreadsheet_interface.cpp \
-@WITH_GNUMERIC_FILTER_TRUE@	mock_spreadsheet.hpp \
-@WITH_GNUMERIC_FILTER_TRUE@	mock_spreadsheet.cpp \
 @WITH_GNUMERIC_FILTER_TRUE@	string_helper.cpp
 
 @WITH_GNUMERIC_FILTER_TRUE@gnumeric_sheet_context_test_LDADD = \
 @WITH_GNUMERIC_FILTER_TRUE@	liborcus-@ORCUS_API_VERSION@.la \
-@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+@WITH_GNUMERIC_FILTER_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+@WITH_GNUMERIC_FILTER_TRUE@	../test/liborcus-test.a
 
 @WITH_GNUMERIC_FILTER_TRUE@gnumeric_sheet_context_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS)
 
@@ -1400,6 +1438,7 @@ json_document_tree_test_SOURCES = \
 json_document_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a \
 	$(BOOST_FILESYSTEM_LIBS) $(BOOST_SYSTEM_LIBS)
 
 json_document_tree_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS)
@@ -1660,12 +1699,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context_test.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_tokens.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-odf_namespace_types.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-session_context.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-spreadsheet_interface.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-string_helper.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-xml_context_base.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_sheet_context_test-xml_util.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric_tokens.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/json_document_tree_test-json_document_tree.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/json_document_tree_test-json_document_tree_test.Po@am__quote@ # am--include-marker
@@ -1753,15 +1794,17 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xlsx_workbook_context.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_global.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_simple_stream_handler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_handler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_parser.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_mapper.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_util.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xpath_parser.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-yaml_document_tree.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mock_spreadsheet.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/odf_helper_test-odf_helper.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/odf_helper_test-odf_helper_test.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/odf_helper_test-string_helper.Po@am__quote@ # am--include-marker
@@ -1771,7 +1814,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spreadsheet_interface.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-formula_result.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-global.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-ooxml_global.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-ooxml_namespace_types.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-ooxml_schemas.Po@am__quote@ # am--include-marker
@@ -1788,13 +1830,19 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-xlsx_types.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-xml_context_base.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-xml_context_global.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx_sheet_context_test-xml_util.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_context_base.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_element_validator.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_empty_context.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_map_tree.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_map_tree_test.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_structure_tree_test-string_helper.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_structure_tree_test-xml_structure_mapper.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree_test.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_util.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xpath_parser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xpath_parser_test.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/yaml_document_tree_test-json_util.Po@am__quote@ # am--include-marker
@@ -1996,6 +2044,20 @@ liborcus_@ORCUS_API_VERSION@_la-xml_context_global.lo: xml_context_global.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -c -o liborcus_@ORCUS_API_VERSION@_la-xml_context_global.lo `test -f 'xml_context_global.cpp' || echo '$(srcdir)/'`xml_context_global.cpp
 
+liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.lo: xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -MT liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.lo -MD -MP -MF $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.Tpo -c -o liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.lo `test -f 'xml_element_validator.cpp' || echo '$(srcdir)/'`xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.Tpo $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_element_validator.cpp' object='liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -c -o liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.lo `test -f 'xml_element_validator.cpp' || echo '$(srcdir)/'`xml_element_validator.cpp
+
+liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.lo: xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -MT liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.lo -MD -MP -MF $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.Tpo -c -o liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.lo `test -f 'xml_empty_context.cpp' || echo '$(srcdir)/'`xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.Tpo $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_empty_context.cpp' object='liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -c -o liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.lo `test -f 'xml_empty_context.cpp' || echo '$(srcdir)/'`xml_empty_context.cpp
+
 liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.lo: xml_map_tree.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -MT liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.lo -MD -MP -MF $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.Tpo -c -o liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.lo `test -f 'xml_map_tree.cpp' || echo '$(srcdir)/'`xml_map_tree.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.Tpo $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.Plo
@@ -2037,6 +2099,13 @@ liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.lo: xml_structure_tree.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_structure_tree.cpp' object='liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -c -o liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.lo `test -f 'xml_structure_tree.cpp' || echo '$(srcdir)/'`xml_structure_tree.cpp
+
+liborcus_@ORCUS_API_VERSION@_la-xml_util.lo: xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -MT liborcus_@ORCUS_API_VERSION@_la-xml_util.lo -MD -MP -MF $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_util.Tpo -c -o liborcus_@ORCUS_API_VERSION@_la-xml_util.lo `test -f 'xml_util.cpp' || echo '$(srcdir)/'`xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_util.Tpo $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_util.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_util.cpp' object='liborcus_@ORCUS_API_VERSION@_la-xml_util.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -c -o liborcus_@ORCUS_API_VERSION@_la-xml_util.lo `test -f 'xml_util.cpp' || echo '$(srcdir)/'`xml_util.cpp
 
 liborcus_@ORCUS_API_VERSION@_la-xpath_parser.lo: xpath_parser.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS) $(CXXFLAGS) -MT liborcus_@ORCUS_API_VERSION@_la-xpath_parser.lo -MD -MP -MF $(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xpath_parser.Tpo -c -o liborcus_@ORCUS_API_VERSION@_la-xpath_parser.lo `test -f 'xpath_parser.cpp' || echo '$(srcdir)/'`xpath_parser.cpp
@@ -2556,6 +2625,48 @@ gnumeric_sheet_context_test-xml_context_base.obj: xml_context_base.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-xml_context_base.obj `if test -f 'xml_context_base.cpp'; then $(CYGPATH_W) 'xml_context_base.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_context_base.cpp'; fi`
 
+gnumeric_sheet_context_test-xml_element_validator.o: xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-xml_element_validator.o -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Tpo -c -o gnumeric_sheet_context_test-xml_element_validator.o `test -f 'xml_element_validator.cpp' || echo '$(srcdir)/'`xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Tpo $(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_element_validator.cpp' object='gnumeric_sheet_context_test-xml_element_validator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-xml_element_validator.o `test -f 'xml_element_validator.cpp' || echo '$(srcdir)/'`xml_element_validator.cpp
+
+gnumeric_sheet_context_test-xml_element_validator.obj: xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-xml_element_validator.obj -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Tpo -c -o gnumeric_sheet_context_test-xml_element_validator.obj `if test -f 'xml_element_validator.cpp'; then $(CYGPATH_W) 'xml_element_validator.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_element_validator.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Tpo $(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_element_validator.cpp' object='gnumeric_sheet_context_test-xml_element_validator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-xml_element_validator.obj `if test -f 'xml_element_validator.cpp'; then $(CYGPATH_W) 'xml_element_validator.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_element_validator.cpp'; fi`
+
+gnumeric_sheet_context_test-xml_empty_context.o: xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-xml_empty_context.o -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Tpo -c -o gnumeric_sheet_context_test-xml_empty_context.o `test -f 'xml_empty_context.cpp' || echo '$(srcdir)/'`xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Tpo $(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_empty_context.cpp' object='gnumeric_sheet_context_test-xml_empty_context.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-xml_empty_context.o `test -f 'xml_empty_context.cpp' || echo '$(srcdir)/'`xml_empty_context.cpp
+
+gnumeric_sheet_context_test-xml_empty_context.obj: xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-xml_empty_context.obj -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Tpo -c -o gnumeric_sheet_context_test-xml_empty_context.obj `if test -f 'xml_empty_context.cpp'; then $(CYGPATH_W) 'xml_empty_context.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_empty_context.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Tpo $(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_empty_context.cpp' object='gnumeric_sheet_context_test-xml_empty_context.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-xml_empty_context.obj `if test -f 'xml_empty_context.cpp'; then $(CYGPATH_W) 'xml_empty_context.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_empty_context.cpp'; fi`
+
+gnumeric_sheet_context_test-xml_util.o: xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-xml_util.o -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-xml_util.Tpo -c -o gnumeric_sheet_context_test-xml_util.o `test -f 'xml_util.cpp' || echo '$(srcdir)/'`xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-xml_util.Tpo $(DEPDIR)/gnumeric_sheet_context_test-xml_util.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_util.cpp' object='gnumeric_sheet_context_test-xml_util.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-xml_util.o `test -f 'xml_util.cpp' || echo '$(srcdir)/'`xml_util.cpp
+
+gnumeric_sheet_context_test-xml_util.obj: xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-xml_util.obj -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-xml_util.Tpo -c -o gnumeric_sheet_context_test-xml_util.obj `if test -f 'xml_util.cpp'; then $(CYGPATH_W) 'xml_util.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_util.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-xml_util.Tpo $(DEPDIR)/gnumeric_sheet_context_test-xml_util.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_util.cpp' object='gnumeric_sheet_context_test-xml_util.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-xml_util.obj `if test -f 'xml_util.cpp'; then $(CYGPATH_W) 'xml_util.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_util.cpp'; fi`
+
 gnumeric_sheet_context_test-gnumeric_namespace_types.o: gnumeric_namespace_types.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-gnumeric_namespace_types.o -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-gnumeric_namespace_types.Tpo -c -o gnumeric_sheet_context_test-gnumeric_namespace_types.o `test -f 'gnumeric_namespace_types.cpp' || echo '$(srcdir)/'`gnumeric_namespace_types.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-gnumeric_namespace_types.Tpo $(DEPDIR)/gnumeric_sheet_context_test-gnumeric_namespace_types.Po
@@ -2611,20 +2722,6 @@ gnumeric_sheet_context_test-spreadsheet_interface.obj: spreadsheet_interface.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='spreadsheet_interface.cpp' object='gnumeric_sheet_context_test-spreadsheet_interface.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-spreadsheet_interface.obj `if test -f 'spreadsheet_interface.cpp'; then $(CYGPATH_W) 'spreadsheet_interface.cpp'; else $(CYGPATH_W) '$(srcdir)/spreadsheet_interface.cpp'; fi`
-
-gnumeric_sheet_context_test-mock_spreadsheet.o: mock_spreadsheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-mock_spreadsheet.o -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Tpo -c -o gnumeric_sheet_context_test-mock_spreadsheet.o `test -f 'mock_spreadsheet.cpp' || echo '$(srcdir)/'`mock_spreadsheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Tpo $(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mock_spreadsheet.cpp' object='gnumeric_sheet_context_test-mock_spreadsheet.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-mock_spreadsheet.o `test -f 'mock_spreadsheet.cpp' || echo '$(srcdir)/'`mock_spreadsheet.cpp
-
-gnumeric_sheet_context_test-mock_spreadsheet.obj: mock_spreadsheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-mock_spreadsheet.obj -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Tpo -c -o gnumeric_sheet_context_test-mock_spreadsheet.obj `if test -f 'mock_spreadsheet.cpp'; then $(CYGPATH_W) 'mock_spreadsheet.cpp'; else $(CYGPATH_W) '$(srcdir)/mock_spreadsheet.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Tpo $(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mock_spreadsheet.cpp' object='gnumeric_sheet_context_test-mock_spreadsheet.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gnumeric_sheet_context_test-mock_spreadsheet.obj `if test -f 'mock_spreadsheet.cpp'; then $(CYGPATH_W) 'mock_spreadsheet.cpp'; else $(CYGPATH_W) '$(srcdir)/mock_spreadsheet.cpp'; fi`
 
 gnumeric_sheet_context_test-string_helper.o: string_helper.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(gnumeric_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gnumeric_sheet_context_test-string_helper.o -MD -MP -MF $(DEPDIR)/gnumeric_sheet_context_test-string_helper.Tpo -c -o gnumeric_sheet_context_test-string_helper.o `test -f 'string_helper.cpp' || echo '$(srcdir)/'`string_helper.cpp
@@ -2751,20 +2848,6 @@ xlsx_sheet_context_test-global.obj: global.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='global.cpp' object='xlsx_sheet_context_test-global.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-global.obj `if test -f 'global.cpp'; then $(CYGPATH_W) 'global.cpp'; else $(CYGPATH_W) '$(srcdir)/global.cpp'; fi`
-
-xlsx_sheet_context_test-mock_spreadsheet.o: mock_spreadsheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-mock_spreadsheet.o -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Tpo -c -o xlsx_sheet_context_test-mock_spreadsheet.o `test -f 'mock_spreadsheet.cpp' || echo '$(srcdir)/'`mock_spreadsheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Tpo $(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mock_spreadsheet.cpp' object='xlsx_sheet_context_test-mock_spreadsheet.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-mock_spreadsheet.o `test -f 'mock_spreadsheet.cpp' || echo '$(srcdir)/'`mock_spreadsheet.cpp
-
-xlsx_sheet_context_test-mock_spreadsheet.obj: mock_spreadsheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-mock_spreadsheet.obj -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Tpo -c -o xlsx_sheet_context_test-mock_spreadsheet.obj `if test -f 'mock_spreadsheet.cpp'; then $(CYGPATH_W) 'mock_spreadsheet.cpp'; else $(CYGPATH_W) '$(srcdir)/mock_spreadsheet.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Tpo $(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='mock_spreadsheet.cpp' object='xlsx_sheet_context_test-mock_spreadsheet.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-mock_spreadsheet.obj `if test -f 'mock_spreadsheet.cpp'; then $(CYGPATH_W) 'mock_spreadsheet.cpp'; else $(CYGPATH_W) '$(srcdir)/mock_spreadsheet.cpp'; fi`
 
 xlsx_sheet_context_test-ooxml_global.o: ooxml_global.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-ooxml_global.o -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-ooxml_global.Tpo -c -o xlsx_sheet_context_test-ooxml_global.o `test -f 'ooxml_global.cpp' || echo '$(srcdir)/'`ooxml_global.cpp
@@ -2989,6 +3072,48 @@ xlsx_sheet_context_test-xml_context_global.obj: xml_context_global.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_context_global.cpp' object='xlsx_sheet_context_test-xml_context_global.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-xml_context_global.obj `if test -f 'xml_context_global.cpp'; then $(CYGPATH_W) 'xml_context_global.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_context_global.cpp'; fi`
+
+xlsx_sheet_context_test-xml_element_validator.o: xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-xml_element_validator.o -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Tpo -c -o xlsx_sheet_context_test-xml_element_validator.o `test -f 'xml_element_validator.cpp' || echo '$(srcdir)/'`xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Tpo $(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_element_validator.cpp' object='xlsx_sheet_context_test-xml_element_validator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-xml_element_validator.o `test -f 'xml_element_validator.cpp' || echo '$(srcdir)/'`xml_element_validator.cpp
+
+xlsx_sheet_context_test-xml_element_validator.obj: xml_element_validator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-xml_element_validator.obj -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Tpo -c -o xlsx_sheet_context_test-xml_element_validator.obj `if test -f 'xml_element_validator.cpp'; then $(CYGPATH_W) 'xml_element_validator.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_element_validator.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Tpo $(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_element_validator.cpp' object='xlsx_sheet_context_test-xml_element_validator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-xml_element_validator.obj `if test -f 'xml_element_validator.cpp'; then $(CYGPATH_W) 'xml_element_validator.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_element_validator.cpp'; fi`
+
+xlsx_sheet_context_test-xml_empty_context.o: xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-xml_empty_context.o -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Tpo -c -o xlsx_sheet_context_test-xml_empty_context.o `test -f 'xml_empty_context.cpp' || echo '$(srcdir)/'`xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Tpo $(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_empty_context.cpp' object='xlsx_sheet_context_test-xml_empty_context.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-xml_empty_context.o `test -f 'xml_empty_context.cpp' || echo '$(srcdir)/'`xml_empty_context.cpp
+
+xlsx_sheet_context_test-xml_empty_context.obj: xml_empty_context.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-xml_empty_context.obj -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Tpo -c -o xlsx_sheet_context_test-xml_empty_context.obj `if test -f 'xml_empty_context.cpp'; then $(CYGPATH_W) 'xml_empty_context.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_empty_context.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Tpo $(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_empty_context.cpp' object='xlsx_sheet_context_test-xml_empty_context.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-xml_empty_context.obj `if test -f 'xml_empty_context.cpp'; then $(CYGPATH_W) 'xml_empty_context.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_empty_context.cpp'; fi`
+
+xlsx_sheet_context_test-xml_util.o: xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-xml_util.o -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-xml_util.Tpo -c -o xlsx_sheet_context_test-xml_util.o `test -f 'xml_util.cpp' || echo '$(srcdir)/'`xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-xml_util.Tpo $(DEPDIR)/xlsx_sheet_context_test-xml_util.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_util.cpp' object='xlsx_sheet_context_test-xml_util.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-xml_util.o `test -f 'xml_util.cpp' || echo '$(srcdir)/'`xml_util.cpp
+
+xlsx_sheet_context_test-xml_util.obj: xml_util.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xlsx_sheet_context_test-xml_util.obj -MD -MP -MF $(DEPDIR)/xlsx_sheet_context_test-xml_util.Tpo -c -o xlsx_sheet_context_test-xml_util.obj `if test -f 'xml_util.cpp'; then $(CYGPATH_W) 'xml_util.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_util.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xlsx_sheet_context_test-xml_util.Tpo $(DEPDIR)/xlsx_sheet_context_test-xml_util.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xml_util.cpp' object='xlsx_sheet_context_test-xml_util.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xlsx_sheet_context_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o xlsx_sheet_context_test-xml_util.obj `if test -f 'xml_util.cpp'; then $(CYGPATH_W) 'xml_util.cpp'; else $(CYGPATH_W) '$(srcdir)/xml_util.cpp'; fi`
 
 xml_structure_tree_test-string_helper.o: string_helper.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xml_structure_tree_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xml_structure_tree_test-string_helper.o -MD -MP -MF $(DEPDIR)/xml_structure_tree_test-string_helper.Tpo -c -o xml_structure_tree_test-string_helper.o `test -f 'string_helper.cpp' || echo '$(srcdir)/'`string_helper.cpp
@@ -3511,12 +3636,14 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context_test.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_tokens.Po
-	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-odf_namespace_types.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-session_context.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-spreadsheet_interface.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-string_helper.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_context_base.Po
+	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Po
+	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Po
+	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_util.Po
 	-rm -f ./$(DEPDIR)/gnumeric_tokens.Po
 	-rm -f ./$(DEPDIR)/json_document_tree_test-json_document_tree.Po
 	-rm -f ./$(DEPDIR)/json_document_tree_test-json_document_tree_test.Po
@@ -3604,15 +3731,17 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xlsx_workbook_context.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_base.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_global.Plo
+	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.Plo
+	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_simple_stream_handler.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_handler.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_parser.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_mapper.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.Plo
+	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_util.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xpath_parser.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-yaml_document_tree.Plo
-	-rm -f ./$(DEPDIR)/mock_spreadsheet.Po
 	-rm -f ./$(DEPDIR)/odf_helper_test-odf_helper.Po
 	-rm -f ./$(DEPDIR)/odf_helper_test-odf_helper_test.Po
 	-rm -f ./$(DEPDIR)/odf_helper_test-string_helper.Po
@@ -3622,7 +3751,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/spreadsheet_interface.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-formula_result.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-global.Po
-	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-ooxml_global.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-ooxml_namespace_types.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-ooxml_schemas.Po
@@ -3639,13 +3767,19 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xlsx_types.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_context_base.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_context_global.Po
+	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Po
+	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Po
+	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_util.Po
 	-rm -f ./$(DEPDIR)/xml_context_base.Po
+	-rm -f ./$(DEPDIR)/xml_element_validator.Po
+	-rm -f ./$(DEPDIR)/xml_empty_context.Po
 	-rm -f ./$(DEPDIR)/xml_map_tree.Po
 	-rm -f ./$(DEPDIR)/xml_map_tree_test.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-string_helper.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-xml_structure_mapper.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree_test.Po
+	-rm -f ./$(DEPDIR)/xml_util.Po
 	-rm -f ./$(DEPDIR)/xpath_parser.Po
 	-rm -f ./$(DEPDIR)/xpath_parser_test.Po
 	-rm -f ./$(DEPDIR)/yaml_document_tree_test-json_util.Po
@@ -3713,12 +3847,14 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_sheet_context_test.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-gnumeric_tokens.Po
-	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-mock_spreadsheet.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-odf_namespace_types.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-session_context.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-spreadsheet_interface.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-string_helper.Po
 	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_context_base.Po
+	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_element_validator.Po
+	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_empty_context.Po
+	-rm -f ./$(DEPDIR)/gnumeric_sheet_context_test-xml_util.Po
 	-rm -f ./$(DEPDIR)/gnumeric_tokens.Po
 	-rm -f ./$(DEPDIR)/json_document_tree_test-json_document_tree.Po
 	-rm -f ./$(DEPDIR)/json_document_tree_test-json_document_tree_test.Po
@@ -3806,15 +3942,17 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xlsx_workbook_context.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_base.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_context_global.Plo
+	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_element_validator.Plo
+	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_empty_context.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_map_tree.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_simple_stream_handler.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_handler.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_stream_parser.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_mapper.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_structure_tree.Plo
+	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xml_util.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-xpath_parser.Plo
 	-rm -f ./$(DEPDIR)/liborcus_@ORCUS_API_VERSION@_la-yaml_document_tree.Plo
-	-rm -f ./$(DEPDIR)/mock_spreadsheet.Po
 	-rm -f ./$(DEPDIR)/odf_helper_test-odf_helper.Po
 	-rm -f ./$(DEPDIR)/odf_helper_test-odf_helper_test.Po
 	-rm -f ./$(DEPDIR)/odf_helper_test-string_helper.Po
@@ -3824,7 +3962,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/spreadsheet_interface.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-formula_result.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-global.Po
-	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-mock_spreadsheet.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-ooxml_global.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-ooxml_namespace_types.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-ooxml_schemas.Po
@@ -3841,13 +3978,19 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xlsx_types.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_context_base.Po
 	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_context_global.Po
+	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_element_validator.Po
+	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_empty_context.Po
+	-rm -f ./$(DEPDIR)/xlsx_sheet_context_test-xml_util.Po
 	-rm -f ./$(DEPDIR)/xml_context_base.Po
+	-rm -f ./$(DEPDIR)/xml_element_validator.Po
+	-rm -f ./$(DEPDIR)/xml_empty_context.Po
 	-rm -f ./$(DEPDIR)/xml_map_tree.Po
 	-rm -f ./$(DEPDIR)/xml_map_tree_test.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-string_helper.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-xml_structure_mapper.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree.Po
 	-rm -f ./$(DEPDIR)/xml_structure_tree_test-xml_structure_tree_test.Po
+	-rm -f ./$(DEPDIR)/xml_util.Po
 	-rm -f ./$(DEPDIR)/xpath_parser.Po
 	-rm -f ./$(DEPDIR)/xpath_parser_test.Po
 	-rm -f ./$(DEPDIR)/yaml_document_tree_test-json_util.Po

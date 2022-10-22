@@ -16,7 +16,7 @@
 #include "orcus/spreadsheet/import_interface_pivot.hpp"
 
 #include <iostream>
-#include <boost/optional.hpp>
+#include <optional>
 #include <mdds/sorted_string_map.hpp>
 
 using namespace std;
@@ -52,11 +52,6 @@ xlsx_pivot_cache_def_context::xlsx_pivot_cache_def_context(
     spreadsheet::iface::import_pivot_cache_definition& pcache,
     spreadsheet::pivot_cache_id_t pcache_id) :
     xml_context_base(cxt, tokens), m_pcache(pcache), m_pcache_id(pcache_id) {}
-
-bool xlsx_pivot_cache_def_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
 
 xml_context_base* xlsx_pivot_cache_def_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -132,7 +127,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
 
                 m_pcache_info.data.insert(
                     opc_rel_extras_t::map_type::value_type(
-                        rid, orcus::make_unique<xlsx_rel_pivot_cache_record_info>(m_pcache_id)));
+                        rid, std::make_unique<xlsx_rel_pivot_cache_record_info>(m_pcache_id)));
             }
 
             break;
@@ -153,7 +148,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
                     {
                         case XML_type:
                             m_source_type =
-                                get_pc_source_map().find(attr.value.get(), attr.value.size());
+                                get_pc_source_map().find(attr.value.data(), attr.value.size());
 
                             source_type_s = attr.value;
                             break;
@@ -208,10 +203,9 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
             }
 
             if (!table_name.empty())
-                m_pcache.set_worksheet_source(table_name.data(), table_name.size());
+                m_pcache.set_worksheet_source(table_name);
             else
-                m_pcache.set_worksheet_source(
-                    ref.get(), ref.size(), sheet_name.get(), sheet_name.size());
+                m_pcache.set_worksheet_source(ref, sheet_name);
             break;
         }
         case XML_cacheFields:
@@ -257,7 +251,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
             );
 
             // TODO : Handle number format ID here.
-            m_pcache.set_field_name(field_name.get(), field_name.size());
+            m_pcache.set_field_name(field_name);
 
             if (get_config().debug)
             {
@@ -345,8 +339,8 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
             double end = 0.0;
             double interval = 1.0;
 
-            boost::optional<date_time_t> start_date;
-            boost::optional<date_time_t> end_date;
+            std::optional<date_time_t> start_date;
+            std::optional<date_time_t> end_date;
 
             // Default group-by type appears to be 'range'.
             spreadsheet::pivot_cache_group_by_t group_by =
@@ -382,8 +376,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
                             end_date = to_date_time(attr.value);
                             break;
                         case XML_groupBy:
-                            group_by = spreadsheet::to_pivot_cache_group_by_enum(
-                                attr.value.get(), attr.value.size());
+                            group_by = spreadsheet::to_pivot_cache_group_by_enum(attr.value);
                             break;
                         default:
                             ;
@@ -563,7 +556,7 @@ bool xlsx_pivot_cache_def_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_pivot_cache_def_context::characters(const pstring& /*str*/, bool /*transient*/)
+void xlsx_pivot_cache_def_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 
@@ -610,7 +603,7 @@ void xlsx_pivot_cache_def_context::start_element_s(
                 cout << "    * field member: " << value << endl;
 
             m_field_item_used = true;
-            m_pcache.set_field_item_string(value.get(), value.size());
+            m_pcache.set_field_item_string(value);
             break;
         }
         case XML_groupItems:
@@ -622,7 +615,7 @@ void xlsx_pivot_cache_def_context::start_element_s(
 
             m_field_item_used = true;
             if (m_pcache_field_group)
-                m_pcache_field_group->set_field_item_string(value.get(), value.size());
+                m_pcache_field_group->set_field_item_string(value);
             break;
         }
         default:
@@ -831,7 +824,7 @@ void xlsx_pivot_cache_def_context::start_element_e(
                     switch (attr.name)
                     {
                         case XML_v:
-                            ev = spreadsheet::to_error_value_enum(attr.value.get(), attr.value.size());
+                            ev = spreadsheet::to_error_value_enum(attr.value);
                         break;
                         case XML_u:
                             // flag for unused item.
@@ -901,10 +894,10 @@ void xlsx_pivot_cache_def_context::start_element_shared_items(
     bool has_long_text = false;
 
     long count = -1;
-    boost::optional<double> min_value;
-    boost::optional<double> max_value;
-    boost::optional<date_time_t> min_date;
-    boost::optional<date_time_t> max_date;
+    std::optional<double> min_value;
+    std::optional<double> max_value;
+    std::optional<date_time_t> min_date;
+    std::optional<date_time_t> max_date;
 
     for_each(attrs.begin(), attrs.end(),
         [&](const xml_token_attr_t& attr)
@@ -1001,11 +994,6 @@ xlsx_pivot_cache_rec_context::xlsx_pivot_cache_rec_context(
     xml_context_base(cxt, tokens),
     m_pc_records(pc_records) {}
 
-bool xlsx_pivot_cache_rec_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
-
 xml_context_base* xlsx_pivot_cache_rec_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return nullptr;
@@ -1048,12 +1036,12 @@ void xlsx_pivot_cache_rec_context::start_element(xmlns_id_t ns, xml_token_t name
         {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_r);
 
-            pstring cv = single_attr_getter::get(attrs, NS_ooxml_xlsx, XML_v);
+            std::string_view cv = single_attr_getter::get(attrs, NS_ooxml_xlsx, XML_v);
 
             if (get_config().debug)
                 cout << "  * s = '" << cv << "'" << endl;
 
-            m_pc_records.append_record_value_character(cv.get(), cv.size());
+            m_pc_records.append_record_value_character(cv);
             break;
         }
         case XML_x: // shared item index
@@ -1113,17 +1101,12 @@ bool xlsx_pivot_cache_rec_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_pivot_cache_rec_context::characters(const pstring& /*str*/, bool /*transient*/)
+void xlsx_pivot_cache_rec_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 
 xlsx_pivot_table_context::xlsx_pivot_table_context(session_context& cxt, const tokens& tokens) :
     xml_context_base(cxt, tokens) {}
-
-bool xlsx_pivot_table_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
 
 xml_context_base* xlsx_pivot_table_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -1741,7 +1724,7 @@ bool xlsx_pivot_table_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_pivot_table_context::characters(const pstring& /*str*/, bool /*transient*/)
+void xlsx_pivot_table_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 

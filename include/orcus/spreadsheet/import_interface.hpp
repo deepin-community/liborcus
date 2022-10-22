@@ -10,9 +10,9 @@
 
 #include <cstdlib>
 
-#include "orcus/spreadsheet/types.hpp"
-#include "orcus/types.hpp"
-#include "orcus/env.hpp"
+#include "types.hpp"
+#include "../types.hpp"
+#include "../env.hpp"
 
 // NB: This header must not depend on ixion, as it needs to be usable for
 // those clients that provide their own formula engine.  Other headers in
@@ -38,26 +38,22 @@ public:
      * Note that this method assumes that the caller knows the string being
      * appended is not yet in the pool.
      *
-     * @param s pointer to the first character of the string array.  The
-     *          string array doesn't necessary have to be null-terminated.
-     * @param n length of the string.
+     * @param s string to append to the pool.
      *
      * @return ID of the string just inserted.
      */
-    virtual size_t append(const char* s, size_t n) = 0;
+    virtual size_t append(std::string_view s) = 0;
 
     /**
      * Similar to the append method, it adds new string to the string pool;
      * however, this method checks if the string being added is already in the
      * pool before each insertion, to avoid duplicated strings.
      *
-     * @param s pointer to the first character of the string array.  The
-     *          string array doesn't necessary have to be null-terminated.
-     * @param n length of the string.
+     * @param s string to add to the pool.
      *
      * @return ID of the string just inserted.
      */
-    virtual size_t add(const char* s, size_t n) = 0;
+    virtual size_t add(std::string_view s) = 0;
 
     /**
      * Set the index of a font to apply to the current format attributes.
@@ -85,11 +81,9 @@ public:
     /**
      * Set the name of a font to the current format attributes.
      *
-     * @param s pointer to the first character of a char array that stores the
-     *          font name.
-     * @param n size of the char array that stores the font name.
+     * @param s font name.
      */
-    virtual void set_segment_font_name(const char* s, size_t n) = 0;
+    virtual void set_segment_font_name(std::string_view s) = 0;
 
     /**
      * Set a font size to the current format attributes.
@@ -112,11 +106,9 @@ public:
      * Append a string segment with the current format attributes to the
      * formatted string buffer.
      *
-     * @param s pointer to the first character of the string array.  The
-     *          string array doesn't necessary have to be null-terminated.
-     * @param n length of the string.
+     * @param s string segment value.
      */
-    virtual void append_segment(const char* s, size_t n) = 0;
+    virtual void append_segment(std::string_view s) = 0;
 
     /**
      * Store the formatted string in the current buffer to the shared strings
@@ -152,7 +144,7 @@ public:
     virtual void set_font_count(size_t n) = 0;
     virtual void set_font_bold(bool b) = 0;
     virtual void set_font_italic(bool b) = 0;
-    virtual void set_font_name(const char* s, size_t n) = 0;
+    virtual void set_font_name(std::string_view s) = 0;
     virtual void set_font_size(double point) = 0;
     virtual void set_font_underline(underline_t e) = 0;
     virtual void set_font_underline_width(underline_width_t e) = 0;
@@ -235,7 +227,7 @@ public:
     // number format
     virtual void set_number_format_count(size_t n) = 0;
     virtual void set_number_format_identifier(size_t id) = 0;
-    virtual void set_number_format_code(const char* s, size_t n) = 0;
+    virtual void set_number_format_code(std::string_view s) = 0;
     virtual size_t commit_number_format() = 0;
 
     // cell format and cell style format (xf == cell format)
@@ -261,10 +253,10 @@ public:
     // cell style entry
 
     virtual void set_cell_style_count(size_t n) = 0;
-    virtual void set_cell_style_name(const char* s, size_t n) = 0;
+    virtual void set_cell_style_name(std::string_view s) = 0;
     virtual void set_cell_style_xf(size_t index) = 0;
     virtual void set_cell_style_builtin(size_t index) = 0;
-    virtual void set_cell_style_parent_name(const char* s, size_t n) = 0;
+    virtual void set_cell_style_parent_name(std::string_view s) = 0;
     virtual size_t commit_cell_style() = 0;
 };
 
@@ -324,31 +316,19 @@ public:
     /**
      * Define a new named expression or overwrite an existing one.
      *
-     * @param p_name pointer to the buffer that stores the name of the
-     *               expression to be defined.
-     * @param n_name size of the buffer that stores the name of the expression
-     *               to be defined.
-     * @param p_exp pointer to the buffer that stores the expression to be
-     *              associated with the name.
-     * @param n_exp size of the buffer that stores the expression to be
-     *              associated with the name.
+     * @param name name of the expression to be defined.
+     * @param expression expression to be associated with the name.
      */
-    virtual void set_named_expression(const char* p_name, size_t n_name, const char* p_exp, size_t n_exp) = 0;
+    virtual void set_named_expression(std::string_view name, std::string_view expression) = 0;
 
     /**
      * Define a new named range or overwrite an existin gone.  Note that you
      * can only define one named range or expression per single commit.
      *
-     * @param p_name pointer to the buffer that stores the name of the
-     *               expression to be defined.
-     * @param n_name size of the buffer that stores the name of the expression
-     *               to be defined.
-     * @param p_range pointer to the buffer that stores the range to be
-     *                associated with the name.
-     * @param n_range size of the buffer that stores the range to be
-     *                associated with the name.
+     * @param name name of the expression to be defined.
+     * @param range range to be associated with the name.
      */
-    virtual void set_named_range(const char* p_name, size_t n_name, const char* p_range, size_t n_range) = 0;
+    virtual void set_named_range(std::string_view name, std::string_view range) = 0;
 
     virtual void commit() = 0;
 };
@@ -365,9 +345,9 @@ public:
 
     virtual void set_range(const range_t& range) = 0;
 
-    virtual void set_first_reference(const char* p_ref, size_t n_ref, bool deleted) = 0;
+    virtual void set_first_reference(std::string_view ref, bool deleted) = 0;
 
-    virtual void set_second_reference(const char* p_ref, size_t n_ref, bool deleted) = 0;
+    virtual void set_second_reference(std::string_view ref, bool deleted) = 0;
 
     virtual void commit() = 0;
 };
@@ -397,10 +377,9 @@ public:
     /**
      * Add a match value to the current column filter.
      *
-     * @param p pointer to the first character of match value.
-     * @param n length of match value.
+     * @param value match value.
      */
-    virtual void append_column_match_value(const char* p, size_t n) = 0;
+    virtual void append_column_match_value(std::string_view value) = 0;
 
     /**
      * Commit current column filter to the current auto filter.
@@ -450,7 +429,7 @@ public:
     /**
      * Sets the formula, value or string of the current condition.
      */
-    virtual void set_formula(const char* p, size_t n) = 0;
+    virtual void set_formula(std::string_view formula) = 0;
 
     /**
      * Sets the type for the formula, value or string of the current condition.
@@ -472,7 +451,7 @@ public:
      * Name of the icons to use in the current entry.
      * only valid for type = iconset
      */
-    virtual void set_icon_name(const char* p, size_t n) = 0;
+    virtual void set_icon_name(std::string_view name) = 0;
 
     /**
      * Use a gradient for the current entry.
@@ -539,7 +518,7 @@ public:
 
     virtual void commit_entry() = 0;
 
-    virtual void set_range(const char* p, size_t n) = 0;
+    virtual void set_range(std::string_view range) = 0;
 
     virtual void set_range(row_t row_start, col_t col_start,
             row_t row_end, col_t col_end) = 0;
@@ -560,23 +539,23 @@ public:
 
     virtual void set_identifier(size_t id) = 0;
 
-    virtual void set_range(const char* p_ref, size_t n_ref) = 0;
+    virtual void set_range(std::string_view ref) = 0;
 
     virtual void set_totals_row_count(size_t row_count) = 0;
 
-    virtual void set_name(const char* p, size_t n) = 0;
+    virtual void set_name(std::string_view name) = 0;
 
-    virtual void set_display_name(const char* p, size_t n) = 0;
+    virtual void set_display_name(std::string_view name) = 0;
 
     virtual void set_column_count(size_t n) = 0;
 
     virtual void set_column_identifier(size_t id) = 0;
-    virtual void set_column_name(const char* p, size_t n) = 0;
-    virtual void set_column_totals_row_label(const char* p, size_t n) = 0;
+    virtual void set_column_name(std::string_view name) = 0;
+    virtual void set_column_totals_row_label(std::string_view label) = 0;
     virtual void set_column_totals_row_function(totals_row_function_t func) = 0;
     virtual void commit_column() = 0;
 
-    virtual void set_style_name(const char* p, size_t n) = 0;
+    virtual void set_style_name(std::string_view name) = 0;
     virtual void set_style_show_first_column(bool b) = 0;
     virtual void set_style_show_last_column(bool b) = 0;
     virtual void set_style_show_row_stripes(bool b) = 0;
@@ -603,10 +582,9 @@ public:
      *
      * @param grammar grammar to use to compile the formula string into
      *                tokens.
-     * @param p pointer to the buffer where the formula string is stored.
-     * @param n size of the buffer where the formula string is stored.
+     * @param formula formula expression to store.
      */
-    virtual void set_formula(formula_grammar_t grammar, const char* p, size_t n) = 0;
+    virtual void set_formula(formula_grammar_t grammar, std::string_view formula) = 0;
 
     /**
      * Register the formula as a shared string, to be shared with other cells.
@@ -618,9 +596,9 @@ public:
     /**
      * Set cached result of string type.
      *
-     * @param sindex index of the string value into the shared string pool.
+     * @param value string result value.
      */
-    virtual void set_result_string(size_t sindex) = 0;
+    virtual void set_result_string(std::string_view value) = 0;
 
     /**
      * Set cached result of numeric type.
@@ -654,9 +632,9 @@ public:
 
     virtual void set_range(const range_t& range) = 0;
 
-    virtual void set_formula(formula_grammar_t grammar, const char* p, size_t n) = 0;
+    virtual void set_formula(formula_grammar_t grammar, std::string_view formula) = 0;
 
-    virtual void set_result_string(row_t row, col_t col, size_t sindex) = 0;
+    virtual void set_result_string(row_t row, col_t col, std::string_view value) = 0;
 
     virtual void set_result_value(row_t row, col_t col, double value) = 0;
 
@@ -741,10 +719,9 @@ public:
      *
      * @param row row ID
      * @param col column ID
-     * @param p pointer to the first character of the raw string value.
-     * @param n size of the raw string value.
+     * @param s raw string value.
      */
-    virtual void set_auto(row_t row, col_t col, const char* p, size_t n) = 0;
+    virtual void set_auto(row_t row, col_t col, std::string_view s) = 0;
 
     /**
      * Set string value to a cell.
@@ -753,7 +730,7 @@ public:
      * @param col column ID
      * @param sindex 0-based string index in the shared string table.
      */
-    virtual void set_string(row_t row, col_t col, size_t sindex) = 0;
+    virtual void set_string(row_t row, col_t col, string_id_t sindex) = 0;
 
     /**
      * Set numerical value to a cell.
@@ -778,6 +755,13 @@ public:
      *
      * @param row row ID
      * @param col column ID
+     * @param year 1-based value representing year
+     * @param month 1-based value representing month, varying from 1 through
+     *              12.
+     * @param day 1-based value representing day, varying from 1 through 31.
+     * @param hour the hour of a day, ranging from 0 through 23.
+     * @param minute the minute of an hour, ranging from 0 through 59.
+     * @param second the second of a minute, ranging from 0 through 59.
      */
     virtual void set_date_time(
         row_t row, col_t col,
@@ -789,7 +773,7 @@ public:
      *
      * @param row row ID
      * @param col column ID
-     * @param index 0-based xf (cell format) index
+     * @param xf_index 0-based xf (cell format) index
      */
     virtual void set_format(row_t row, col_t col, size_t xf_index) = 0;
 
@@ -801,7 +785,7 @@ public:
      * @param col_start start column ID
      * @param row_end end row ID
      * @param col_end end column ID
-     * @param index 0-based xf (cell format) index
+     * @param xf_index 0-based xf (cell format) index
      */
     virtual void set_format(row_t row_start, col_t col_start,
         row_t row_end, col_t col_end, size_t xf_index) = 0;
@@ -875,9 +859,7 @@ public:
     /**
      * Resolve a textural representation of a single cell address.
      *
-     * @param p pointer to the first character of the single cell address
-     *          string.
-     * @param n size of the single cell address string.
+     * @param address single cell address string.
      *
      * @return structure containing the column and row positions of the
      *         address.
@@ -885,22 +867,21 @@ public:
      * @exception orcus::invalid_arg_error the string is not a valid
      *        single cell addreess.
      */
-    virtual src_address_t resolve_address(const char* p, size_t n) = 0;
+    virtual src_address_t resolve_address(std::string_view address) = 0;
 
     /**
      * Resolve a textural representation of a range address.  Note that a
      * string representing a valid single cell address should be considered a
      * valid range address.
      *
-     * @param p pointer to the first character of the range address string.
-     * @param n size of the range address string.
+     * @param range range address string.
      *
      * @return structure containing the start and end positions of the range
      *         address.
      *
      * @exception invalid_arg_error the string is not a valid range addreess.
      */
-    virtual src_range_t resolve_range(const char* p, size_t n) = 0;
+    virtual src_range_t resolve_range(std::string_view range) = 0;
 };
 
 /**
@@ -968,22 +949,23 @@ public:
      * @param sheet_index position index of the sheet to be appended.  It is
      *                    0-based i.e. the first sheet to be appended will
      *                    have an index value of 0.
-     * @param sheet_name pointer to the first character in the buffer where
-     *                   the sheet name is stored.
-     * @param sheet_name_length length of the sheet name.
+     * @param name sheet name.
      *
      * @return pointer to the sheet instance. It may return nullptr if the
      *         client app fails to append a new sheet.
      */
-    virtual import_sheet* append_sheet(
-        sheet_t sheet_index, const char* sheet_name, size_t sheet_name_length) = 0;
+    virtual import_sheet* append_sheet(sheet_t sheet_index, std::string_view name) = 0;
 
     /**
+     * Get a sheet instance by name.
+     *
+     * @param name sheet name.
+     *
      * @return pointer to the sheet instance whose name matches the name
      *         passed to this method. It returns nullptr if no sheet instance
      *         exists by the specified name.
      */
-    virtual import_sheet* get_sheet(const char* sheet_name, size_t sheet_name_length) = 0;
+    virtual import_sheet* get_sheet(std::string_view name) = 0;
 
     /**
      * Retrieve sheet instance by specified numerical sheet index.

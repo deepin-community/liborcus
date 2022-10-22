@@ -5,10 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/orcus_ods.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/zip_archive.hpp"
-#include "orcus/zip_archive_stream.hpp"
+#include <orcus/orcus_ods.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/zip_archive.hpp>
+#include <orcus/zip_archive_stream.hpp>
+#include <orcus/measurement.hpp>
 
 #include "xml_stream_parser.hpp"
 #include "ods_content_xml_handler.hpp"
@@ -37,7 +38,7 @@ struct orcus_ods::impl
 
 orcus_ods::orcus_ods(spreadsheet::iface::import_factory* factory) :
     iface::import_filter(format_t::ods),
-    mp_impl(orcus::make_unique<impl>(factory))
+    mp_impl(std::make_unique<impl>(factory))
 {
     mp_impl->m_ns_repo.add_predefined_values(NS_odf_all);
 }
@@ -73,16 +74,33 @@ void orcus_ods::read_content(const zip_archive& archive)
 
 void orcus_ods::read_content_xml(const unsigned char* p, size_t size)
 {
-    threaded_xml_stream_parser parser(
-        get_config(), mp_impl->m_ns_repo, odf_tokens,
-        reinterpret_cast<const char*>(p), size);
-    ods_content_xml_handler handler(mp_impl->m_cxt, odf_tokens, mp_impl->mp_factory);
-    parser.set_handler(&handler);
-    parser.parse();
+    bool use_threads = true;
 
-    string_pool this_pool;
-    parser.swap_string_pool(this_pool);
-    mp_impl->m_cxt.m_string_pool.merge(this_pool);
+    if (const char* p_env = std::getenv("ORCUS_ODS_USE_THREADS"); p_env)
+        use_threads = to_bool(p_env);
+
+    if (use_threads)
+    {
+        threaded_xml_stream_parser parser(
+            get_config(), mp_impl->m_ns_repo, odf_tokens,
+            reinterpret_cast<const char*>(p), size);
+        ods_content_xml_handler handler(mp_impl->m_cxt, odf_tokens, mp_impl->mp_factory);
+        parser.set_handler(&handler);
+        parser.parse();
+
+        string_pool this_pool;
+        parser.swap_string_pool(this_pool);
+        mp_impl->m_cxt.m_string_pool.merge(this_pool);
+    }
+    else
+    {
+        xml_stream_parser parser(
+            get_config(), mp_impl->m_ns_repo, odf_tokens,
+            reinterpret_cast<const char*>(p), size);
+        ods_content_xml_handler handler(mp_impl->m_cxt, odf_tokens, mp_impl->mp_factory);
+        parser.set_handler(&handler);
+        parser.parse();
+    }
 }
 
 bool orcus_ods::detect(const unsigned char* blob, size_t size)
@@ -126,11 +144,11 @@ void orcus_ods::read_file(const std::string& filepath)
     read_file_impl(&stream);
 }
 
-void orcus_ods::read_stream(const char* content, size_t len)
+void orcus_ods::read_stream(std::string_view stream)
 {
-    zip_archive_stream_blob stream(
-            reinterpret_cast<const unsigned char*>(content), len);
-    read_file_impl(&stream);
+    zip_archive_stream_blob blob(
+        reinterpret_cast<const uint8_t*>(stream.data()), stream.size());
+    read_file_impl(&blob);
 }
 
 void orcus_ods::read_file_impl(zip_archive_stream* stream)
@@ -158,10 +176,9 @@ void orcus_ods::read_file_impl(zip_archive_stream* stream)
         gs->set_default_formula_grammar(old_grammar);
 }
 
-const char* orcus_ods::get_name() const
+std::string_view orcus_ods::get_name() const
 {
-    static const char* name = "ods";
-    return name;
+    return "ods";
 }
 
 }

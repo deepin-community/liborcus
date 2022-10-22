@@ -14,6 +14,7 @@
 #include "orcus/string_pool.hpp"
 
 #include "formula_result.hpp"
+#include "pstring.hpp"
 
 #include <string>
 #include <unordered_map>
@@ -52,11 +53,11 @@ class xls_xml_data_context : public xml_context_base
 
     struct string_segment_type
     {
-        pstring str;
+        std::string_view str;
         format_type format;
         bool formatted = false;
 
-        string_segment_type(const pstring& _str);
+        string_segment_type(std::string_view _str);
     };
 
     enum cell_type { ct_unknown = 0, ct_string, ct_number, ct_datetime };
@@ -76,12 +77,11 @@ public:
     xls_xml_data_context(session_context& session_cxt, const tokens& tokens, xls_xml_context& parent_cxt);
     virtual ~xls_xml_data_context() override;
 
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const override;
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) override;
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child) override;
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const::std::vector<xml_token_attr_t>& attrs) override;
-    virtual void characters(const pstring& str, bool transient) override;
+    virtual void characters(std::string_view str, bool transient) override;
     virtual bool end_element(xmlns_id_t ns, xml_token_t name) override;
 
     /**
@@ -225,23 +225,23 @@ public:
 
     virtual void declaration(const xml_declaration_t& decl) override;
 
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const override;
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) override;
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child) override;
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs) override;
     virtual bool end_element(xmlns_id_t ns, xml_token_t name) override;
-    virtual void characters(const pstring& str, bool transient) override;
+    virtual void characters(std::string_view str, bool transient) override;
 
 private:
-    void start_element_borders(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_border(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_number_format(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_cell(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_column(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_row(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_table(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_worksheet(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
+
+    void start_element_borders(const xml_attrs_t& attrs);
+    void start_element_border(const xml_attrs_t& attrs);
+    void start_element_number_format(const xml_attrs_t& attrs);
+    void start_element_cell(const xml_attrs_t& attrs);
+    void start_element_column(const xml_attrs_t& attrs);
+    void start_element_row(const xml_attrs_t& attrs);
+    void start_element_table(const xml_attrs_t& attrs);
+    void start_element_worksheet(const xml_attrs_t& attrs);
 
     void end_element_borders();
     void end_element_border();

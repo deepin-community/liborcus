@@ -42,8 +42,8 @@ public:
         orcus::spreadsheet::pivot_cache_id_t cache_id) override;
     virtual iface::import_pivot_cache_records* create_pivot_cache_records(
         orcus::spreadsheet::pivot_cache_id_t cache_id) override;
-    virtual iface::import_sheet* append_sheet(sheet_t sheet_index, const char* sheet_name, size_t sheet_name_length) override;
-    virtual iface::import_sheet* get_sheet(const char* sheet_name, size_t sheet_name_length) override;
+    virtual iface::import_sheet* append_sheet(sheet_t sheet_index, std::string_view name) override;
+    virtual iface::import_sheet* get_sheet(std::string_view name) override;
     virtual iface::import_sheet* get_sheet(sheet_t sheet_index) override;
     virtual void finalize() override;
 
@@ -76,7 +76,7 @@ public:
     virtual void set_font_count(size_t n) override;
     virtual void set_font_bold(bool b) override;
     virtual void set_font_italic(bool b) override;
-    virtual void set_font_name(const char* s, size_t n) override;
+    virtual void set_font_name(std::string_view s) override;
     virtual void set_font_size(double point) override;
     virtual void set_font_underline(underline_t e) override;
     virtual void set_font_underline_width(underline_width_t e) override;
@@ -111,7 +111,7 @@ public:
 
     virtual void set_number_format_count(size_t n) override;
     virtual void set_number_format_identifier(size_t id) override;
-    virtual void set_number_format_code(const char* s, size_t n) override;
+    virtual void set_number_format_code(std::string_view s) override;
     virtual size_t commit_number_format() override;
 
     virtual void set_cell_xf_count(size_t n) override;
@@ -133,10 +133,10 @@ public:
     virtual size_t commit_dxf() override;
 
     virtual void set_cell_style_count(size_t n) override;
-    virtual void set_cell_style_name(const char* s, size_t n) override;
+    virtual void set_cell_style_name(std::string_view s) override;
     virtual void set_cell_style_xf(size_t index) override;
     virtual void set_cell_style_builtin(size_t index) override;
-    virtual void set_cell_style_parent_name(const char* s, size_t n) override;
+    virtual void set_cell_style_parent_name(std::string_view s) override;
     virtual size_t commit_cell_style() override;
 };
 
@@ -148,7 +148,7 @@ public:
     export_factory(const document& doc);
     virtual ~export_factory();
 
-    virtual const iface::export_sheet* get_sheet(const char* sheet_name, size_t sheet_name_length) const;
+    virtual const iface::export_sheet* get_sheet(std::string_view sheet_name) const override;
 };
 
 }}

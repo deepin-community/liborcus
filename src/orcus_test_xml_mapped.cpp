@@ -5,15 +5,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/orcus_xml.hpp"
-#include "orcus/global.hpp"
-#include "orcus/sax_ns_parser.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/stream.hpp"
-#include "orcus/dom_tree.hpp"
+#include <orcus/orcus_xml.hpp>
+#include <orcus/global.hpp>
+#include <orcus/sax_ns_parser.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/stream.hpp>
+#include <orcus/dom_tree.hpp>
 
-#include "orcus/spreadsheet/factory.hpp"
-#include "orcus/spreadsheet/document.hpp"
+#include <orcus/spreadsheet/factory.hpp>
+#include <orcus/spreadsheet/document.hpp>
 
 #include "orcus_test_global.hpp"
 
@@ -66,11 +66,11 @@ void test_mapped_xml_import()
         { SRCDIR"/test/xml-mapped/nested-repeats-4", false },
     };
 
-    auto dump_xml_structure = [](string& dump_content, string& strm, const char* filepath, xmlns_context& cxt)
+    auto dump_xml_structure = [](std::string& dump_content, std::string& /*strm*/, const char* filepath, xmlns_context& cxt)
     {
         file_content content(filepath);
         dom::document_tree tree(cxt);
-        tree.load(content.data(), content.size());
+        tree.load(content.str());
         ostringstream os;
         tree.dump_compact(os);
         dump_content = os.str();
@@ -78,7 +78,7 @@ void test_mapped_xml_import()
 
     const char* temp_output_xml = "out.xml";
 
-    string strm;
+    std::string strm;
 
     for (const test_case& tc : tests)
     {
@@ -90,7 +90,7 @@ void test_mapped_xml_import()
         // Load the data file content.
         cout << "reading " << data_file.string() << endl;
         file_content content(data_file.string().data());
-        string data_strm = content.str().str();
+        std::string data_strm{content.str()};
 
         spreadsheet::range_size_t ss{1048576, 16384};
         spreadsheet::document doc{ss};
@@ -103,8 +103,8 @@ void test_mapped_xml_import()
         // Parse the map file to define map rules, and parse the data file.
         orcus_xml app(repo, &import_fact, &export_fact);
         file_content map_content(map_file.string().data());
-        app.read_map_definition(map_content.data(), map_content.size());
-        app.read_stream(data_strm.data(), data_strm.size());
+        app.read_map_definition(map_content.str());
+        app.read_stream(data_strm);
 
         // Zero the source data stream to make sure it's completely erased off
         // memory.
@@ -117,15 +117,15 @@ void test_mapped_xml_import()
         doc.dump_check(os);
         string loaded = os.str();
         content.load(check_file.string().data());
-        strm = content.str().str();
+        strm = content.str();
 
         assert(!loaded.empty());
         assert(!strm.empty());
 
-        pstring p1(loaded.data(), loaded.size()), p2(strm.data(), strm.size());
+        std::string_view p1(loaded.data(), loaded.size()), p2(strm.data(), strm.size());
 
-        p1 = p1.trim();
-        p2 = p2.trim();
+        p1 = trim(p1);
+        p2 = trim(p2);
         assert(p1 == p2);
 
         if (tc.output_equals_input)
@@ -136,10 +136,10 @@ void test_mapped_xml_import()
             {
                 // Create a duplicate source XML stream.
                 content.load(data_file.string().data());
-                string data_strm_dup = content.str().str();
+                std::string data_strm_dup{content.str()};
                 std::ofstream file(out_file);
                 assert(file);
-                app.write(data_strm_dup.data(), data_strm_dup.size(), file);
+                app.write(data_strm_dup, file);
             }
 
             // Compare the logical xml content of the output xml with the
@@ -202,8 +202,8 @@ void test_mapped_xml_import_no_map_definition()
 
             orcus_xml app(repo, &import_fact, nullptr);
 
-            app.detect_map_definition(content.data(), content.size());
-            app.read_stream(content.data(), content.size());
+            app.detect_map_definition(content.str());
+            app.read_stream(content.str());
 
             test::verify_content(__FILE__, __LINE__, doc, expected.str());
         }
@@ -217,10 +217,10 @@ void test_mapped_xml_import_no_map_definition()
             orcus_xml app(repo, &import_fact, nullptr);
 
             std::ostringstream os;
-            app.write_map_definition(content.data(), content.size(), os);
+            app.write_map_definition(content.str(), os);
             std::string map_def = os.str();
-            app.read_map_definition(map_def.data(), map_def.size());
-            app.read_stream(content.data(), content.size());
+            app.read_map_definition(map_def);
+            app.read_stream(content.str());
 
             test::verify_content(__FILE__, __LINE__, doc, expected.str());
         }
@@ -253,7 +253,7 @@ void test_invalid_map_definition()
 
         try
         {
-            app.read_map_definition(content.data(), content.size());
+            app.read_map_definition(content.str());
             assert(!"We were expecting an exception, but didn't get one.");
         }
         catch (const invalid_map_error& e)

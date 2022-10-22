@@ -8,12 +8,12 @@
 #ifndef INCLUDED_ORCUS_THREADED_SAX_TOKEN_PARSER_HPP
 #define INCLUDED_ORCUS_THREADED_SAX_TOKEN_PARSER_HPP
 
-#include "orcus/tokens.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/sax_token_parser_thread.hpp"
-#include "orcus/sax_parser_base.hpp"
-#include "orcus/exception.hpp"
-#include "orcus/detail/thread.hpp"
+#include "tokens.hpp"
+#include "xml_namespace.hpp"
+#include "sax_token_parser_thread.hpp"
+#include "sax_parser_base.hpp"
+#include "exception.hpp"
+#include "detail/thread.hpp"
 
 #include <thread>
 
@@ -68,7 +68,7 @@ public:
 private:
     void thread_parse();
 
-    void process_tokens(sax::parse_tokens_t& tokens);
+    void process_tokens(const sax::parse_tokens_t& tokens);
 
 private:
     sax::parser_thread m_parser_thread;
@@ -123,29 +123,39 @@ void threaded_sax_token_parser<_Handler>::thread_parse()
 }
 
 template<typename _Handler>
-void threaded_sax_token_parser<_Handler>::process_tokens(sax::parse_tokens_t& tks)
+void threaded_sax_token_parser<_Handler>::process_tokens(const sax::parse_tokens_t& tks)
 {
-    std::for_each(tks.begin(), tks.end(),
-        [this](const sax::parse_token& t)
+    for (const sax::parse_token& t : tks)
+    {
+        switch (t.type)
         {
-            switch (t.type)
+            case sax::parse_token_t::start_element:
             {
-                case sax::parse_token_t::start_element:
-                    m_handler.start_element(*t.element);
-                    break;
-                case sax::parse_token_t::end_element:
-                    m_handler.end_element(*t.element);
-                    break;
-                case sax::parse_token_t::characters:
-                    m_handler.characters(pstring(t.characters.p, t.characters.n), false);
-                    break;
-                case sax::parse_token_t::parse_error:
-                    throw sax::malformed_xml_error(std::string(t.error_value.p, t.error_value.len), t.error_value.offset);
-                default:
-                    throw general_error("unknown token type encountered.");
+                const auto* elem = std::get<const xml_token_element_t*>(t.value);
+                m_handler.start_element(*elem);
+                break;
             }
+            case sax::parse_token_t::end_element:
+            {
+                const auto* elem = std::get<const xml_token_element_t*>(t.value);
+                m_handler.end_element(*elem);
+                break;
+            }
+            case sax::parse_token_t::characters:
+            {
+                auto s = std::get<std::string_view>(t.value);
+                m_handler.characters(s, false);
+                break;
+            }
+            case sax::parse_token_t::parse_error:
+            {
+                auto v = std::get<parse_error_value_t>(t.value);
+                throw sax::malformed_xml_error(std::string{v.str}, v.offset);
+            }
+            default:
+                throw general_error("unknown token type encountered.");
         }
-    );
+    }
 }
 
 }

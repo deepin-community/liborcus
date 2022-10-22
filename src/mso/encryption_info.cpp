@@ -5,10 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/mso/encryption_info.hpp"
-#include "orcus/sax_ns_parser.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/base64.hpp"
+#include <orcus/sax_ns_parser.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/base64.hpp>
+
+#include "mso/encryption_info.hpp"
 
 #define ORCUS_DEBUG_MSO_ENCRYPTION_INFO 1
 
@@ -34,7 +35,7 @@ const xmlns_id_t NS_mso_all[] = {
     nullptr
 };
 
-class char_printer : unary_function<char, void>
+class char_printer
 {
     ostream& m_os;
 public:
@@ -50,17 +51,16 @@ public:
     }
 };
 
-void print_base64(const char* caption, const pstring& base64)
+void print_base64(const char* caption, std::string_view base64)
 {
     cout << caption << " (base64): " << base64 << endl;
-    vector<char> value;
-    orcus::decode_from_base64(base64.get(), base64.size(), value);
+    vector<uint8_t> value = orcus::decode_from_base64(base64);
     cout << caption << " (binary): ";
     for_each(value.begin(), value.end(), char_printer(cout));
     cout << endl;
 }
 
-class key_data_attr_handler : unary_function<sax_ns_parser_attribute, void>
+class key_data_attr_handler
 {
 public:
     void operator() (const sax_ns_parser_attribute& attr)
@@ -88,7 +88,7 @@ public:
     }
 };
 
-class data_integrity_attr_handler : unary_function<sax_ns_parser_attribute, void>
+class data_integrity_attr_handler
 {
 public:
     void operator() (const sax_ns_parser_attribute& attr)
@@ -104,7 +104,7 @@ public:
     }
 };
 
-class password_encrypted_key_attr_handler : unary_function<sax_ns_parser_attribute, void>
+class password_encrypted_key_attr_handler
 {
 public:
     void operator() (const sax_ns_parser_attribute& attr)
@@ -148,16 +148,16 @@ class sax_handler
 public:
     sax_handler(xmlns_context& /*ns_cxt*/) {}
     void doctype(const sax::doctype_declaration&) {}
-    void start_declaration(const pstring&) {}
-    void end_declaration(const pstring&) {}
-    void attribute(const pstring&, const pstring&) {}
+    void start_declaration(std::string_view) {}
+    void end_declaration(std::string_view) {}
+    void attribute(std::string_view, std::string_view) {}
 
     void attribute(const sax_ns_parser_attribute& attr)
     {
         m_attrs.push_back(attr);
     }
 
-    void characters(const pstring&, bool) {}
+    void characters(std::string_view, bool) {}
 
     void start_element(const sax_ns_parser_element& elem)
     {

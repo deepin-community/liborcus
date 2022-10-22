@@ -8,8 +8,9 @@
 #ifndef INCLUDED_ORCUS_SESSION_CONTEXT_HPP
 #define INCLUDED_ORCUS_SESSION_CONTEXT_HPP
 
-#include "orcus/string_pool.hpp"
-#include "orcus/types.hpp"
+#include <orcus/string_pool.hpp>
+#include <orcus/types.hpp>
+#include "pstring.hpp"
 
 #include <memory>
 
@@ -37,8 +38,8 @@ struct session_context
     session_context(custom_data* data);
     ~session_context();
 
-    pstring intern(const xml_token_attr_t& attr);
-    pstring intern(const pstring& s);
+    std::string_view intern(const xml_token_attr_t& attr);
+    std::string_view intern(std::string_view s);
 };
 
 }

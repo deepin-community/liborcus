@@ -8,8 +8,8 @@
 #ifndef INCLUDED_ORCUS_SPREADSHEET_ODSTABLE_HPP
 #define INCLUDED_ORCUS_SPREADSHEET_ODSTABLE_HPP
 
-#include "orcus/env.hpp"
-#include "orcus/spreadsheet/types.hpp"
+#include "../env.hpp"
+#include "types.hpp"
 
 #include <ostream>
 #include <ixion/address.hpp>
@@ -18,13 +18,11 @@
 
 namespace orcus {
 
-class pstring;
 struct date_time_t;
 
 namespace spreadsheet {
 
 class document;
-class sheet_range;
 struct sheet_impl;
 struct auto_filter_t;
 
@@ -43,8 +41,8 @@ public:
     sheet(document& doc, sheet_t sheet_index);
     virtual ~sheet();
 
-    void set_auto(row_t row, col_t col, const char* p, size_t n);
-    void set_string(row_t row, col_t col, size_t sindex);
+    void set_auto(row_t row, col_t col, std::string_view s);
+    void set_string(row_t row, col_t col, string_id_t sindex);
     void set_value(row_t row, col_t col, double value);
     void set_bool(row_t row, col_t col, bool value);
     void set_date_time(row_t row, col_t col, int year, int month, int day, int hour, int minute, double second);
@@ -99,20 +97,6 @@ public:
      */
     ixion::abs_range_t get_data_range() const;
 
-    /**
-     * Return a sheet range object that represents a sub-range within the
-     * sheet.
-     *
-     * @param row_start start row position (0-based).
-     * @param col_start start column position (0-based).
-     * @param row_end end row position (0-based).
-     * @param col_end end column position (0-based).
-     *
-     * @return sheet range object.
-     */
-    sheet_range get_sheet_range(
-        row_t row_start, col_t col_start, row_t row_end, col_t col_end) const;
-
     sheet_t get_index() const;
 
     date_time_t get_date_time(row_t row, col_t col) const;
@@ -120,7 +104,7 @@ public:
     void finalize();
 
     void dump_flat(std::ostream& os) const;
-    void dump_check(std::ostream& os, const pstring& sheet_name) const;
+    void dump_check(std::ostream& os, std::string_view sheet_name) const;
     void dump_html(std::ostream& os) const;
     void dump_json(std::ostream& os) const;
     void dump_csv(std::ostream& os) const;

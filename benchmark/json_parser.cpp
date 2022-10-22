@@ -98,14 +98,11 @@ public:
 
     void object_key(const char* p, size_t len, bool transient)
     {
+        std::string_view s{p, len};
         if (transient)
-        {
-            pstring s = m_pool.intern(p, len).first;
-            p = s.get();
-            len = s.size();
-        }
+            s = m_pool.intern(s).first;
 
-        m_tokens.emplace_back(json::parse_token_t::object_key, p, len);
+        m_tokens.emplace_back(json::parse_token_t::object_key, s);
         do_work();
     }
 
@@ -135,14 +132,11 @@ public:
 
     void string(const char* p, size_t len, bool transient)
     {
+        std::string_view s{p, len};
         if (transient)
-        {
-            pstring s = m_pool.intern(p, len).first;
-            p = s.get();
-            len = s.size();
-        }
+            s = m_pool.intern(s).first;
 
-        m_tokens.emplace_back(json::parse_token_t::string, p, len);
+        m_tokens.emplace_back(json::parse_token_t::string, s);
         do_work();
     }
 
@@ -163,7 +157,7 @@ public:
     }
 };
 
-int main(int argc, char** argv)
+int main(int argc, char** argv) try
 {
     if (argc < 2)
         return EXIT_FAILURE;
@@ -187,4 +181,9 @@ int main(int argc, char** argv)
 #endif
 
     return EXIT_SUCCESS;
+}
+catch (const std::exception& e)
+{
+    cerr << e.what() << endl;
+    return EXIT_FAILURE;
 }

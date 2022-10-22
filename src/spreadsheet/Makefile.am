@@ -1,6 +1,9 @@
 if BUILD_SPREADSHEET_MODEL
 
-AM_CPPFLAGS = -I$(top_srcdir)/include -D__ORCUS_SPM_BUILDING_DLL
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/include \
+	-D__ORCUS_SPM_BUILDING_DLL
 
 AM_CPPFLAGS += $(BOOST_CPPFLAGS) $(LIBIXION_CFLAGS)
 
@@ -13,6 +16,8 @@ endif
 lib_LTLIBRARIES = liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la
 liborcus_spreadsheet_model_@ORCUS_API_VERSION@_la_SOURCES = \
 	auto_filter.cpp \
+	check_dumper.hpp \
+	check_dumper.cpp \
 	config.cpp \
 	document.cpp \
 	dumper_global.hpp \
@@ -43,7 +48,8 @@ liborcus_spreadsheet_model_@ORCUS_API_VERSION@_la_SOURCES = \
 	shared_formula.cpp \
 	shared_strings.cpp \
 	sheet.cpp \
-	sheet_range.cpp \
+	sheet_impl.hpp \
+	sheet_impl.cpp \
 	styles.cpp \
 	view.cpp \
 	global_settings.hpp \

@@ -6,7 +6,7 @@
  */
 
 #include "orcus/orcus_xml.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/sax_parser_base.hpp"
 #include "orcus/sax_parser.hpp"
 #include "orcus/stream.hpp"
@@ -43,9 +43,9 @@ public:
     xml_map_sax_handler(orcus_xml& app) : m_app(app) {}
 
     void doctype(const sax::doctype_declaration&) {}
-    void start_declaration(const pstring& name) {}
+    void start_declaration(const pstring& /*name*/) {}
 
-    void end_declaration(const pstring& name)
+    void end_declaration(const pstring& /*name*/)
     {
         m_attrs.clear();
     }
@@ -65,7 +65,7 @@ public:
         m_attrs.push_back(attr);
     }
 
-    void characters(const pstring&, bool) {}
+    void characters(std::string_view, bool) {}
 };
 
 void xml_map_sax_handler::start_element(const sax::parser_element& elem)
@@ -102,9 +102,9 @@ void xml_map_sax_handler::start_element(const sax::parser_element& elem)
             else if (attr.name == "sheet")
                 sheet = attr.value;
             else if (attr.name == "row")
-                row = strtol(attr.value.get(), nullptr, 10);
+                row = strtol(attr.value.data(), nullptr, 10);
             else if (attr.name == "column")
-                col = strtol(attr.value.get(), nullptr, 10);
+                col = strtol(attr.value.data(), nullptr, 10);
         }
 
         m_app.set_cell_link(xpath, sheet, row, col);
@@ -116,9 +116,9 @@ void xml_map_sax_handler::start_element(const sax::parser_element& elem)
             if (attr.name == "sheet")
                 sheet = attr.value;
             else if (attr.name == "row")
-                row = strtol(attr.value.get(), nullptr, 10);
+                row = strtol(attr.value.data(), nullptr, 10);
             else if (attr.name == "column")
-                col = strtol(attr.value.get(), nullptr, 10);
+                col = strtol(attr.value.data(), nullptr, 10);
         }
 
         m_app.start_range(sheet, row, col);
@@ -170,12 +170,12 @@ void xml_map_sax_handler::start_element(const sax::parser_element& elem)
 
 } // anonymous namespace
 
-void orcus_xml::read_map_definition(const char* p, size_t n)
+void orcus_xml::read_map_definition(std::string_view stream)
 {
     try
     {
         xml_map_sax_handler handler(*this);
-        sax_parser<xml_map_sax_handler> parser(p, n, handler);
+        sax_parser<xml_map_sax_handler> parser(stream.data(), stream.size(), handler);
         parser.parse();
     }
     catch (const parse_error& e)
@@ -183,14 +183,14 @@ void orcus_xml::read_map_definition(const char* p, size_t n)
         std::ostringstream os;
         os << "Error parsing the map definition file:" << std::endl
             << std::endl
-            << create_parse_error_output(pstring(p, n), e.offset()) << std::endl
+            << create_parse_error_output(stream, e.offset()) << std::endl
             << e.what();
 
         throw invalid_map_error(os.str());
     }
 }
 
-void orcus_xml::detect_map_definition(const char* p, size_t n)
+void orcus_xml::detect_map_definition(std::string_view stream)
 {
     size_t range_count = 0;
     std::string sheet_name_prefix = "range-";
@@ -220,7 +220,7 @@ void orcus_xml::detect_map_definition(const char* p, size_t n)
     xmlns_repository repo;
     xmlns_context cxt = repo.create_context();
     xml_structure_tree structure(cxt);
-    structure.parse(p, n);
+    structure.parse(stream);
 
     // Register all namespace aliases first.
     for (const xmlns_id_t& ns : cxt.get_all_namespaces())
@@ -229,14 +229,14 @@ void orcus_xml::detect_map_definition(const char* p, size_t n)
     structure.process_ranges(rh);
 }
 
-void orcus_xml::write_map_definition(const char* p, size_t n, std::ostream& out) const
+void orcus_xml::write_map_definition(std::string_view stream, std::ostream& out) const
 {
     xmlns_context cxt = mp_impl->ns_repo.create_context();
     xml_structure_tree tree(cxt);
-    tree.parse(p, n);
+    tree.parse(stream);
 
     xml_writer writer(mp_impl->ns_repo, out);
-    xmlns_id_t default_ns = writer.add_namespace("", "https://gitlab.com/orcus/orcus");
+    xmlns_id_t default_ns = writer.add_namespace("", "https://gitlab.com/orcus/orcus/xml-map-definition");
     auto map_scope = writer.push_element_scope({default_ns, "map"});
 
     for (const xmlns_id_t& ns : cxt.get_all_namespaces())

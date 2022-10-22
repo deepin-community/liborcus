@@ -7,14 +7,15 @@
 
 #include "orcus/spreadsheet/factory.hpp"
 
-#include "orcus/spreadsheet/shared_strings.hpp"
-#include "orcus/spreadsheet/styles.hpp"
-#include "orcus/spreadsheet/sheet.hpp"
-#include "orcus/spreadsheet/document.hpp"
-#include "orcus/spreadsheet/view.hpp"
-#include "orcus/exception.hpp"
-#include "orcus/global.hpp"
-#include "orcus/string_pool.hpp"
+#include <orcus/spreadsheet/shared_strings.hpp>
+#include <orcus/spreadsheet/styles.hpp>
+#include <orcus/spreadsheet/sheet.hpp>
+#include <orcus/spreadsheet/document.hpp>
+#include <orcus/spreadsheet/view.hpp>
+#include <orcus/exception.hpp>
+#include <orcus/global.hpp>
+#include <orcus/string_pool.hpp>
+#include "pstring.hpp"
 
 #include "factory_pivot.hpp"
 #include "factory_sheet.hpp"
@@ -45,54 +46,57 @@ public:
         m_resolver = m_doc.get_formula_name_resolver(cxt);
     }
 
-    virtual src_address_t resolve_address(const char* p, size_t n) override
+    virtual src_address_t resolve_address(std::string_view address) override
     {
         if (!m_resolver)
             throw std::runtime_error("import_ref_resolver::resolve_address: formula resolver is null!");
 
-        ixion::formula_name_t name = m_resolver->resolve(p, n, ixion::abs_address_t());
+        ixion::formula_name_t name = m_resolver->resolve(address, ixion::abs_address_t());
 
         if (name.type != ixion::formula_name_t::cell_reference)
         {
             std::ostringstream os;
-            os << pstring(p, n) << " is not a valid cell address.";
+            os << address << " is not a valid cell address.";
             throw orcus::invalid_arg_error(os.str());
         }
 
+        auto addr = std::get<ixion::address_t>(name.value);
         src_address_t ret;
-        ret.sheet = name.address.sheet;
-        ret.column = name.address.col;
-        ret.row = name.address.row;
+        ret.sheet = addr.sheet;
+        ret.column = addr.column;
+        ret.row = addr.row;
         return ret;
     }
 
-    virtual src_range_t resolve_range(const char* p, size_t n) override
+    virtual src_range_t resolve_range(std::string_view range) override
     {
         if (!m_resolver)
             throw std::runtime_error("import_ref_resolver::resolve_range: formula resolver is null!");
 
-        ixion::formula_name_t name = m_resolver->resolve(p, n, ixion::abs_address_t());
+        ixion::formula_name_t name = m_resolver->resolve(range, ixion::abs_address_t());
 
         switch (name.type)
         {
             case ixion::formula_name_t::range_reference:
             {
+                auto v = std::get<ixion::range_t>(name.value);
                 src_range_t ret;
-                ret.first.sheet = name.range.first.sheet;
-                ret.first.column = name.range.first.col;
-                ret.first.row = name.range.first.row;
-                ret.last.sheet = name.range.last.sheet;
-                ret.last.column = name.range.last.col;
-                ret.last.row = name.range.last.row;
+                ret.first.sheet = v.first.sheet;
+                ret.first.column = v.first.column;
+                ret.first.row = v.first.row;
+                ret.last.sheet = v.last.sheet;
+                ret.last.column = v.last.column;
+                ret.last.row = v.last.row;
                 return ret;
             }
             case ixion::formula_name_t::cell_reference:
             {
                 // Single cell address is still considered a valid "range".
+                auto addr = std::get<ixion::address_t>(name.value);
                 src_address_t cell;
-                cell.sheet = name.address.sheet;
-                cell.column = name.address.col;
-                cell.row = name.address.row;
+                cell.sheet = addr.sheet;
+                cell.column = addr.column;
+                cell.row = addr.row;
 
                 src_range_t ret;
                 ret.first = cell;
@@ -104,7 +108,7 @@ public:
         }
 
         std::ostringstream os;
-        os << pstring(p, n) << " is not a valid range address.";
+        os << "'" << range << "' is not a valid range address.";
         throw orcus::invalid_arg_error(os.str());
     }
 };
@@ -112,20 +116,20 @@ public:
 class import_global_named_exp : public iface::import_named_expression
 {
     document& m_doc;
-    pstring m_name;
+    std::string_view m_name;
     ixion::abs_address_t m_base;
     ixion::formula_tokens_t m_tokens;
 
-    void define(const char* p_name, size_t n_name, const char* p_exp, size_t n_exp, formula_ref_context_t ref_cxt)
+    void define(std::string_view name, std::string_view expression, formula_ref_context_t ref_cxt)
     {
         string_pool& sp = m_doc.get_string_pool();
-        m_name = sp.intern(p_name, n_name).first;
+        m_name = sp.intern(name).first;
 
         const ixion::formula_name_resolver* resolver = m_doc.get_formula_name_resolver(ref_cxt);
         assert(resolver);
 
         ixion::model_context& cxt = m_doc.get_model_context();
-        m_tokens = ixion::parse_formula_string(cxt, m_base, *resolver, p_exp, n_exp);
+        m_tokens = ixion::parse_formula_string(cxt, m_base, *resolver, expression);
     }
 public:
     import_global_named_exp(document& doc) : m_doc(doc), m_base(0, 0, 0) {}
@@ -138,22 +142,22 @@ public:
         m_base.column = pos.column;
     }
 
-    virtual void set_named_expression(const char* p_name, size_t n_name, const char* p_exp, size_t n_exp) override
+    virtual void set_named_expression(std::string_view name, std::string_view expression) override
     {
-        define(p_name, n_name, p_exp, n_exp, formula_ref_context_t::global);
+        define(name, expression, formula_ref_context_t::global);
     }
 
-    virtual void set_named_range(const char* p_name, size_t n_name, const char* p_range, size_t n_range) override
+    virtual void set_named_range(std::string_view name, std::string_view range) override
     {
-        define(p_name, n_name, p_range, n_range, formula_ref_context_t::named_range);
+        define(name, range, formula_ref_context_t::named_range);
     }
 
     virtual void commit() override
     {
         ixion::model_context& cxt = m_doc.get_model_context();
-        cxt.set_named_expression(m_name.data(), m_name.size(), m_base, std::move(m_tokens));
+        cxt.set_named_expression(std::string{m_name}, m_base, std::move(m_tokens));
 
-        m_name.clear();
+        m_name = std::string_view{};
         m_base.sheet = 0;
         m_base.row = 0;
         m_base.column = 0;
@@ -199,10 +203,10 @@ struct import_factory::impl
 };
 
 import_factory::import_factory(document& doc) :
-    mp_impl(orcus::make_unique<impl>(*this, doc)) {}
+    mp_impl(std::make_unique<impl>(*this, doc)) {}
 
 import_factory::import_factory(document& doc, view& view) :
-    mp_impl(orcus::make_unique<impl>(*this, doc))
+    mp_impl(std::make_unique<impl>(*this, doc))
 {
     // Store the optional view store.
     mp_impl->m_view = &view;
@@ -255,12 +259,11 @@ iface::import_pivot_cache_records* import_factory::create_pivot_cache_records(
     return &mp_impl->m_pc_records;
 }
 
-iface::import_sheet* import_factory::append_sheet(
-    sheet_t sheet_index, const char* sheet_name, size_t sheet_name_length)
+iface::import_sheet* import_factory::append_sheet(sheet_t sheet_index, std::string_view name)
 {
     assert(sheet_index == static_cast<sheet_t>(mp_impl->m_doc.get_sheet_count()));
 
-    sheet* sh = mp_impl->m_doc.append_sheet(pstring(sheet_name, sheet_name_length));
+    sheet* sh = mp_impl->m_doc.append_sheet(name);
 
     if (!sh)
         return nullptr;
@@ -270,7 +273,7 @@ iface::import_sheet* import_factory::append_sheet(
         sv = mp_impl->m_view->get_or_create_sheet_view(sheet_index);
 
     mp_impl->m_sheets.push_back(
-        orcus::make_unique<import_sheet>(mp_impl->m_doc, *sh, sv));
+        std::make_unique<import_sheet>(mp_impl->m_doc, *sh, sv));
 
     import_sheet* p = mp_impl->m_sheets.back().get();
     p->set_character_set(mp_impl->m_charset);
@@ -279,9 +282,9 @@ iface::import_sheet* import_factory::append_sheet(
     return p;
 }
 
-iface::import_sheet* import_factory::get_sheet(const char* sheet_name, size_t sheet_name_length)
+iface::import_sheet* import_factory::get_sheet(std::string_view name)
 {
-    sheet_t si = mp_impl->m_doc.get_sheet_index(pstring(sheet_name, sheet_name_length));
+    sheet_t si = mp_impl->m_doc.get_sheet_index(name);
     if (si == ixion::invalid_sheet)
         return nullptr;
 
@@ -346,11 +349,11 @@ struct export_factory::impl
     const document& m_doc;
 
     std::vector<std::unique_ptr<export_sheet>> m_sheets;
-    std::unordered_map<pstring, sheet_t, pstring::hash> m_sheet_index_map;
+    std::unordered_map<std::string_view, sheet_t> m_sheet_index_map;
 
     impl(const document& doc) : m_doc(doc) {}
 
-    export_sheet* get_sheet(const pstring& name)
+    export_sheet* get_sheet(std::string_view name)
     {
         auto it = m_sheet_index_map.find(name);
         if (it != m_sheet_index_map.end())
@@ -366,7 +369,7 @@ struct export_factory::impl
             return nullptr;
 
         sheet_t sheet_pos = m_sheets.size();
-        m_sheets.emplace_back(orcus::make_unique<export_sheet>(m_doc, *sh));
+        m_sheets.emplace_back(std::make_unique<export_sheet>(m_doc, *sh));
 
         m_sheet_index_map.insert(
             std::make_pair(name, sheet_pos));
@@ -376,15 +379,13 @@ struct export_factory::impl
 };
 
 export_factory::export_factory(const document& doc) :
-    mp_impl(orcus::make_unique<impl>(doc)) {}
+    mp_impl(std::make_unique<impl>(doc)) {}
 
 export_factory::~export_factory() {}
 
-const iface::export_sheet* export_factory::get_sheet(
-    const char* sheet_name, size_t sheet_name_length) const
+const iface::export_sheet* export_factory::get_sheet(std::string_view sheet_name) const
 {
-    pstring name(sheet_name, sheet_name_length);
-    return mp_impl->get_sheet(name);
+    return mp_impl->get_sheet(sheet_name);
 }
 
 }}

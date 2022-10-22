@@ -4,10 +4,10 @@
 
 #include <iostream>
 #include <memory>
+#include <filesystem>
 
-using namespace std;
-using namespace orcus::spreadsheet;
-using orcus::orcus_ods;
+//!code-start: cell_value
+namespace ss = orcus::spreadsheet;
 
 enum class cell_value_type { empty, numeric, string };
 
@@ -17,90 +17,102 @@ struct cell_value
 
     union
     {
-        size_t index;
+        std::size_t index;
         double f;
     };
 
     cell_value() : type(cell_value_type::empty) {}
 };
+//!code-end: cell_value
 
-class my_sheet : public iface::import_sheet
+//!code-start: my_sheet
+class my_sheet : public ss::iface::import_sheet
 {
     cell_value m_cells[100][1000];
-    range_size_t m_sheet_size;
-    sheet_t m_sheet_index;
+    ss::range_size_t m_sheet_size;
+    ss::sheet_t m_sheet_index;
 
 public:
-    my_sheet(sheet_t sheet_index) :
+    my_sheet(ss::sheet_t sheet_index) :
         m_sheet_index(sheet_index)
     {
         m_sheet_size.rows = 1000;
         m_sheet_size.columns = 100;
     }
 
-    virtual void set_string(row_t row, col_t col, size_t sindex) override
+    virtual void set_string(ss::row_t row, ss::col_t col, ss::string_id_t sindex) override
     {
-        cout << "(sheet: " << m_sheet_index << "; row: " << row << "; col: " << col << "): string index = " << sindex << endl;
+        std::cout << "(sheet: " << m_sheet_index << "; row: " << row << "; col: " << col
+            << "): string index = " << sindex << std::endl;
 
         m_cells[col][row].type = cell_value_type::string;
         m_cells[col][row].index = sindex;
     }
 
-    virtual void set_value(row_t row, col_t col, double value) override
+    virtual void set_value(ss::row_t row, ss::col_t col, double value) override
     {
-        cout << "(sheet: " << m_sheet_index << "; row: " << row << "; col: " << col << "): value = " << value << endl;
+        std::cout << "(sheet: " << m_sheet_index << "; row: " << row << "; col: " << col
+            << "): value = " << value << std::endl;
 
         m_cells[col][row].type = cell_value_type::numeric;
         m_cells[col][row].f = value;
     }
 
-    virtual range_size_t get_sheet_size() const override
+    virtual ss::range_size_t get_sheet_size() const override
     {
         return m_sheet_size;
     }
 
     // We don't implement these methods for now.
-    virtual void set_auto(row_t row, col_t col, const char* p, size_t n) override {}
-    virtual void set_bool(row_t row, col_t col, bool value) override {}
-    virtual void set_date_time(row_t row, col_t col, int year, int month, int day, int hour, int minute, double second) override {}
-    virtual void set_format(row_t row, col_t col, size_t xf_index) override {}
-    virtual void set_format(row_t row_start, col_t col_start, row_t row_end, col_t col_end, size_t xf_index) override {}
-    virtual void fill_down_cells(row_t src_row, col_t src_col, row_t range_size) override {}
-};
+    virtual void set_auto(ss::row_t, ss::col_t, std::string_view) override {}
 
-class my_import_factory : public iface::import_factory
+    virtual void set_bool(ss::row_t, ss::col_t, bool) override {}
+
+    virtual void set_date_time(ss::row_t, ss::col_t, int, int, int, int, int, double) override {}
+
+    virtual void set_format(ss::row_t, ss::col_t, std::size_t) override {}
+
+    virtual void set_format(ss::row_t, ss::col_t, ss::row_t, ss::col_t, std::size_t) override {}
+
+    virtual void fill_down_cells(ss::row_t, ss::col_t, ss::row_t) override {}
+};
+//!code-end: my_sheet
+
+//!code-start: my_import_factory
+class my_import_factory : public ss::iface::import_factory
 {
     std::vector<std::unique_ptr<my_sheet>> m_sheets;
 
 public:
-    virtual iface::import_sheet* append_sheet(
-        sheet_t sheet_index, const char* sheet_name, size_t sheet_name_length) override
+    virtual ss::iface::import_sheet* append_sheet(ss::sheet_t, std::string_view) override
     {
         m_sheets.push_back(std::make_unique<my_sheet>(m_sheets.size()));
         return m_sheets.back().get();
     }
 
-    virtual iface::import_sheet* get_sheet(
-        const char* sheet_name, size_t sheet_name_length) override
+    virtual ss::iface::import_sheet* get_sheet(std::string_view) override
     {
         // TODO : implement this.
         return nullptr;
     }
 
-    virtual iface::import_sheet* get_sheet(sheet_t sheet_index) override
+    virtual ss::iface::import_sheet* get_sheet(ss::sheet_t sheet_index) override
     {
-        sheet_t sheet_count = m_sheets.size();
+        ss::sheet_t sheet_count = m_sheets.size();
         return sheet_index < sheet_count ? m_sheets[sheet_index].get() : nullptr;
     }
 
     virtual void finalize() override {}
 };
+//!code-end: my_import_factory
 
 int main()
 {
+    std::filesystem::path input_dir = std::getenv("INPUTDIR");
+
     my_import_factory factory;
-    orcus_ods loader(&factory);
-    loader.read_file(SRCDIR"/doc_example/files/multi-sheets.ods");
+    orcus::orcus_ods loader(&factory);
+    loader.read_file(input_dir / "multi-sheets.ods");
 
     return EXIT_SUCCESS;
 }

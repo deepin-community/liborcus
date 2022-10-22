@@ -13,6 +13,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <cassert>
 
 namespace orcus { namespace spreadsheet {
 
@@ -26,9 +27,9 @@ class import_pc_field_group : public iface::import_pivot_cache_field_group
     pivot_cache_item_t m_current_field_item;
 
 private:
-    pstring intern(const char* p, size_t n)
+    std::string_view intern(std::string_view s)
     {
-        return m_doc.get_string_pool().intern(p, n).first;
+        return m_doc.get_string_pool().intern(s).first;
     }
 
     range_grouping_type& get_range_grouping()
@@ -43,7 +44,7 @@ public:
     import_pc_field_group(document& doc, pivot_cache_field_t& parent, size_t base_index) :
         m_doc(doc),
         m_parent_field(parent),
-        m_data(orcus::make_unique<pivot_cache_group_data_t>(base_index)) {}
+        m_data(std::make_unique<pivot_cache_group_data_t>(base_index)) {}
 
     ~import_pc_field_group() override {}
 
@@ -53,18 +54,16 @@ public:
         b2g.push_back(group_item_index);
     }
 
-    void set_field_item_string(const char* p, size_t n) override
+    void set_field_item_string(std::string_view value) override
     {
         m_current_field_item.type = pivot_cache_item_t::item_type::character;
-        pstring s = intern(p, n);
-        m_current_field_item.value.character.p = s.get();
-        m_current_field_item.value.character.n = s.size();
+        m_current_field_item.value = intern(value);
     }
 
     void set_field_item_numeric(double v) override
     {
         m_current_field_item.type = pivot_cache_item_t::item_type::numeric;
-        m_current_field_item.value.numeric = v;
+        m_current_field_item.value = v;
     }
 
     void commit_field_item() override
@@ -118,9 +117,9 @@ public:
     }
 };
 
-pstring import_pivot_cache_def::intern(const char* p, size_t n)
+std::string_view import_pivot_cache_def::intern(std::string_view s)
 {
-    return m_doc.get_string_pool().intern(p, n).first;
+    return m_doc.get_string_pool().intern(s).first;
 }
 
 import_pivot_cache_def::import_pivot_cache_def(document& doc) : m_doc(doc) {}
@@ -130,11 +129,10 @@ import_pivot_cache_def::~import_pivot_cache_def() {}
 void import_pivot_cache_def::create_cache(pivot_cache_id_t cache_id)
 {
     m_src_type = unknown;
-    m_cache = orcus::make_unique<pivot_cache>(cache_id, m_doc.get_string_pool());
+    m_cache = std::make_unique<pivot_cache>(cache_id, m_doc.get_string_pool());
 }
 
-void import_pivot_cache_def::set_worksheet_source(
-    const char* ref, size_t n_ref, const char* sheet_name, size_t n_sheet_name)
+void import_pivot_cache_def::set_worksheet_source(std::string_view ref, std::string_view sheet_name)
 {
     assert(m_cache);
 
@@ -143,25 +141,25 @@ void import_pivot_cache_def::set_worksheet_source(
     assert(resolver);
 
     m_src_type = worksheet;
-    m_src_sheet_name = intern(sheet_name, n_sheet_name);
+    m_src_sheet_name = intern(sheet_name);
 
-    ixion::formula_name_t fn = resolver->resolve(ref, n_ref, ixion::abs_address_t(0,0,0));
+    ixion::formula_name_t fn = resolver->resolve(ref, ixion::abs_address_t(0,0,0));
 
     if (fn.type != ixion::formula_name_t::range_reference)
     {
         std::ostringstream os;
-        os << pstring(ref, n_ref) << " is not a valid range.";
+        os << "'" << ref << "' is not a valid range.";
         throw xml_structure_error(os.str());
     }
 
-    m_src_range = ixion::to_range(fn.range).to_abs(ixion::abs_address_t(0,0,0));
+    m_src_range = std::get<ixion::range_t>(fn.value).to_abs(ixion::abs_address_t(0,0,0));
 }
 
-void import_pivot_cache_def::set_worksheet_source(const char* table_name, size_t n_table_name)
+void import_pivot_cache_def::set_worksheet_source(std::string_view table_name)
 {
     assert(m_cache);
 
-    m_src_table_name = intern(table_name, n_table_name);
+    m_src_table_name = intern(table_name);
 }
 
 void import_pivot_cache_def::set_field_count(size_t n)
@@ -169,15 +167,15 @@ void import_pivot_cache_def::set_field_count(size_t n)
     m_current_fields.reserve(n);
 }
 
-void import_pivot_cache_def::set_field_name(const char* p, size_t n)
+void import_pivot_cache_def::set_field_name(std::string_view name)
 {
-    m_current_field.name = intern(p, n);
+    m_current_field.name = intern(name);
 }
 
 iface::import_pivot_cache_field_group* import_pivot_cache_def::create_field_group(size_t base_index)
 {
     m_current_field_group =
-        orcus::make_unique<import_pc_field_group>(m_doc, m_current_field, base_index);
+        std::make_unique<import_pc_field_group>(m_doc, m_current_field, base_index);
 
     return m_current_field_group.get();
 }
@@ -207,35 +205,28 @@ void import_pivot_cache_def::commit_field()
     m_current_fields.push_back(std::move(m_current_field));
 }
 
-void import_pivot_cache_def::set_field_item_string(const char* p, size_t n)
+void import_pivot_cache_def::set_field_item_string(std::string_view value)
 {
     m_current_field_item.type = pivot_cache_item_t::item_type::character;
-    pstring s = intern(p, n);
-    m_current_field_item.value.character.p = s.get();
-    m_current_field_item.value.character.n = s.size();
+    m_current_field_item.value = intern(value);
 }
 
 void import_pivot_cache_def::set_field_item_numeric(double v)
 {
     m_current_field_item.type = pivot_cache_item_t::item_type::numeric;
-    m_current_field_item.value.numeric = v;
+    m_current_field_item.value = v;
 }
 
 void import_pivot_cache_def::set_field_item_date_time(const date_time_t& dt)
 {
     m_current_field_item.type = pivot_cache_item_t::item_type::date_time;
-    m_current_field_item.value.date_time.year = dt.year;
-    m_current_field_item.value.date_time.month = dt.month;
-    m_current_field_item.value.date_time.day = dt.day;
-    m_current_field_item.value.date_time.hour = dt.hour;
-    m_current_field_item.value.date_time.minute = dt.minute;
-    m_current_field_item.value.date_time.second = dt.second;
+    m_current_field_item.value = dt;
 }
 
 void import_pivot_cache_def::set_field_item_error(error_value_t ev)
 {
     m_current_field_item.type = pivot_cache_item_t::item_type::error;
-    m_current_field_item.value.error = ev;
+    m_current_field_item.value = ev;
 }
 
 void import_pivot_cache_def::commit_field_item()
@@ -279,9 +270,9 @@ void import_pivot_cache_records::append_record_value_numeric(double v)
     m_current_record.emplace_back(v);
 }
 
-void import_pivot_cache_records::append_record_value_character(const char* p, size_t n)
+void import_pivot_cache_records::append_record_value_character(std::string_view s)
 {
-    m_current_record.emplace_back(p, n);
+    m_current_record.emplace_back(s);
 }
 
 void import_pivot_cache_records::append_record_value_shared_item(size_t index)

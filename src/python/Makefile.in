@@ -121,7 +121,8 @@ host_triplet = @host@
 @BUILD_PYTHON_TRUE@@WITH_PYTHON_GNUMERIC_TRUE@am__append_10 = export WITH_PYTHON_GNUMERIC=1;
 subdir = src/python
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_17.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
 	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
@@ -177,20 +178,18 @@ am___orcus_la_SOURCES_DIST = python.cpp global.hpp global.cpp \
 	formula_token.hpp formula_token.cpp formula_tokens.hpp \
 	formula_tokens.cpp named_expressions.hpp named_expressions.cpp \
 	named_expression.hpp named_expression.cpp
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@am__objects_1 = _orcus_la-document.lo \
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	_orcus_la-sheet.lo \
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	_orcus_la-sheet_rows.lo \
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	_orcus_la-cell.lo \
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	_orcus_la-formula_token.lo \
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	_orcus_la-formula_tokens.lo \
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	_orcus_la-named_expressions.lo \
-@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	_orcus_la-named_expression.lo
-@BUILD_PYTHON_TRUE@am__orcus_la_OBJECTS = _orcus_la-python.lo \
-@BUILD_PYTHON_TRUE@	_orcus_la-global.lo _orcus_la-memory.lo \
-@BUILD_PYTHON_TRUE@	_orcus_la-root.lo _orcus_la-xlsx.lo \
-@BUILD_PYTHON_TRUE@	_orcus_la-xls_xml.lo _orcus_la-ods.lo \
-@BUILD_PYTHON_TRUE@	_orcus_la-csv.lo _orcus_la-gnumeric.lo \
-@BUILD_PYTHON_TRUE@	$(am__objects_1)
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@am__objects_1 =  \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	document.lo \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	sheet.lo \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	sheet_rows.lo \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	cell.lo \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	formula_token.lo \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	formula_tokens.lo \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	named_expressions.lo \
+@BUILD_PYTHON_TRUE@@BUILD_SPREADSHEET_MODEL_TRUE@	named_expression.lo
+@BUILD_PYTHON_TRUE@am__orcus_la_OBJECTS = python.lo global.lo \
+@BUILD_PYTHON_TRUE@	memory.lo root.lo xlsx.lo xls_xml.lo ods.lo \
+@BUILD_PYTHON_TRUE@	csv.lo gnumeric.lo $(am__objects_1)
 _orcus_la_OBJECTS = $(am__orcus_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -204,7 +203,7 @@ _orcus_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 @BUILD_PYTHON_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
 @BUILD_PYTHON_TRUE@	$(am__DEPENDENCIES_1)
 am___orcus_json_la_SOURCES_DIST = json.cpp
-@BUILD_PYTHON_TRUE@am__orcus_json_la_OBJECTS = _orcus_json_la-json.lo
+@BUILD_PYTHON_TRUE@am__orcus_json_la_OBJECTS = json.lo
 _orcus_json_la_OBJECTS = $(am__orcus_json_la_OBJECTS)
 _orcus_json_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
@@ -226,21 +225,15 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/_orcus_json_la-json.Plo \
-	./$(DEPDIR)/_orcus_la-cell.Plo ./$(DEPDIR)/_orcus_la-csv.Plo \
-	./$(DEPDIR)/_orcus_la-document.Plo \
-	./$(DEPDIR)/_orcus_la-formula_token.Plo \
-	./$(DEPDIR)/_orcus_la-formula_tokens.Plo \
-	./$(DEPDIR)/_orcus_la-global.Plo \
-	./$(DEPDIR)/_orcus_la-gnumeric.Plo \
-	./$(DEPDIR)/_orcus_la-memory.Plo \
-	./$(DEPDIR)/_orcus_la-named_expression.Plo \
-	./$(DEPDIR)/_orcus_la-named_expressions.Plo \
-	./$(DEPDIR)/_orcus_la-ods.Plo ./$(DEPDIR)/_orcus_la-python.Plo \
-	./$(DEPDIR)/_orcus_la-root.Plo ./$(DEPDIR)/_orcus_la-sheet.Plo \
-	./$(DEPDIR)/_orcus_la-sheet_rows.Plo \
-	./$(DEPDIR)/_orcus_la-xls_xml.Plo \
-	./$(DEPDIR)/_orcus_la-xlsx.Plo
+am__depfiles_remade = ./$(DEPDIR)/cell.Plo ./$(DEPDIR)/csv.Plo \
+	./$(DEPDIR)/document.Plo ./$(DEPDIR)/formula_token.Plo \
+	./$(DEPDIR)/formula_tokens.Plo ./$(DEPDIR)/global.Plo \
+	./$(DEPDIR)/gnumeric.Plo ./$(DEPDIR)/json.Plo \
+	./$(DEPDIR)/memory.Plo ./$(DEPDIR)/named_expression.Plo \
+	./$(DEPDIR)/named_expressions.Plo ./$(DEPDIR)/ods.Plo \
+	./$(DEPDIR)/python.Plo ./$(DEPDIR)/root.Plo \
+	./$(DEPDIR)/sheet.Plo ./$(DEPDIR)/sheet_rows.Plo \
+	./$(DEPDIR)/xls_xml.Plo ./$(DEPDIR)/xlsx.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -536,7 +529,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
+HAVE_CXX17 = @HAVE_CXX17@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -654,7 +647,14 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-@BUILD_PYTHON_TRUE@AM_CPPFLAGS = $(BOOST_CPPFLAGS) $(PYTHON_CFLAGS) $(MDDS_CFLAGS) $(LIBIXION_CFLAGS)
+@BUILD_PYTHON_TRUE@AM_CPPFLAGS = \
+@BUILD_PYTHON_TRUE@	-I$(top_srcdir)/include \
+@BUILD_PYTHON_TRUE@	-I$(top_srcdir)/src/include \
+@BUILD_PYTHON_TRUE@	$(BOOST_CPPFLAGS) \
+@BUILD_PYTHON_TRUE@	$(PYTHON_CFLAGS) \
+@BUILD_PYTHON_TRUE@	$(MDDS_CFLAGS) \
+@BUILD_PYTHON_TRUE@	$(LIBIXION_CFLAGS)
+
 @BUILD_PYTHON_TRUE@pyexec_LTLIBRARIES = _orcus.la _orcus_json.la
 @BUILD_PYTHON_TRUE@_orcus_la_SOURCES = python.cpp global.hpp \
 @BUILD_PYTHON_TRUE@	global.cpp memory.hpp memory.cpp root.hpp \
@@ -662,7 +662,6 @@ top_srcdir = @top_srcdir@
 @BUILD_PYTHON_TRUE@	xls_xml.cpp ods.hpp ods.cpp csv.hpp csv.cpp \
 @BUILD_PYTHON_TRUE@	gnumeric.hpp gnumeric.cpp $(am__append_1)
 @BUILD_PYTHON_TRUE@_orcus_la_LDFLAGS = -module -avoid-version -export-symbols-regex PyInit__orcus
-@BUILD_PYTHON_TRUE@_orcus_la_CPPFLAGS = -I$(top_srcdir)/include $(AM_CPPFLAGS)
 @BUILD_PYTHON_TRUE@_orcus_la_LIBADD = ../liborcus/liborcus-@ORCUS_API_VERSION@.la \
 @BUILD_PYTHON_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
 @BUILD_PYTHON_TRUE@	$(PYTHON_LIBS) $(am__append_2)
@@ -670,7 +669,6 @@ top_srcdir = @top_srcdir@
 @BUILD_PYTHON_TRUE@	json.cpp
 
 @BUILD_PYTHON_TRUE@_orcus_json_la_LDFLAGS = -module -avoid-version -export-symbols-regex PyInit__orcus_json
-@BUILD_PYTHON_TRUE@_orcus_json_la_CPPFLAGS = -I$(top_srcdir)/include $(AM_CPPFLAGS)
 @BUILD_PYTHON_TRUE@_orcus_json_la_LIBADD = \
 @BUILD_PYTHON_TRUE@	../liborcus/liborcus-@ORCUS_API_VERSION@.la \
 @BUILD_PYTHON_TRUE@	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
@@ -796,24 +794,24 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_json_la-json.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-cell.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-csv.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-document.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-formula_token.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-formula_tokens.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-global.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-gnumeric.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-memory.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-named_expression.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-named_expressions.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-ods.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-python.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-root.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-sheet.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-sheet_rows.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-xls_xml.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/_orcus_la-xlsx.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cell.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/csv.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/document.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/formula_token.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/formula_tokens.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/global.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnumeric.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/json.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/memory.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/named_expression.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/named_expressions.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ods.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/python.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/root.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sheet.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sheet_rows.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xls_xml.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlsx.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -841,132 +839,6 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
-
-_orcus_la-python.lo: python.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-python.lo -MD -MP -MF $(DEPDIR)/_orcus_la-python.Tpo -c -o _orcus_la-python.lo `test -f 'python.cpp' || echo '$(srcdir)/'`python.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-python.Tpo $(DEPDIR)/_orcus_la-python.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='python.cpp' object='_orcus_la-python.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-python.lo `test -f 'python.cpp' || echo '$(srcdir)/'`python.cpp
-
-_orcus_la-global.lo: global.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-global.lo -MD -MP -MF $(DEPDIR)/_orcus_la-global.Tpo -c -o _orcus_la-global.lo `test -f 'global.cpp' || echo '$(srcdir)/'`global.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-global.Tpo $(DEPDIR)/_orcus_la-global.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='global.cpp' object='_orcus_la-global.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-global.lo `test -f 'global.cpp' || echo '$(srcdir)/'`global.cpp
-
-_orcus_la-memory.lo: memory.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-memory.lo -MD -MP -MF $(DEPDIR)/_orcus_la-memory.Tpo -c -o _orcus_la-memory.lo `test -f 'memory.cpp' || echo '$(srcdir)/'`memory.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-memory.Tpo $(DEPDIR)/_orcus_la-memory.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='memory.cpp' object='_orcus_la-memory.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-memory.lo `test -f 'memory.cpp' || echo '$(srcdir)/'`memory.cpp
-
-_orcus_la-root.lo: root.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-root.lo -MD -MP -MF $(DEPDIR)/_orcus_la-root.Tpo -c -o _orcus_la-root.lo `test -f 'root.cpp' || echo '$(srcdir)/'`root.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-root.Tpo $(DEPDIR)/_orcus_la-root.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='root.cpp' object='_orcus_la-root.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-root.lo `test -f 'root.cpp' || echo '$(srcdir)/'`root.cpp
-
-_orcus_la-xlsx.lo: xlsx.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-xlsx.lo -MD -MP -MF $(DEPDIR)/_orcus_la-xlsx.Tpo -c -o _orcus_la-xlsx.lo `test -f 'xlsx.cpp' || echo '$(srcdir)/'`xlsx.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-xlsx.Tpo $(DEPDIR)/_orcus_la-xlsx.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xlsx.cpp' object='_orcus_la-xlsx.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-xlsx.lo `test -f 'xlsx.cpp' || echo '$(srcdir)/'`xlsx.cpp
-
-_orcus_la-xls_xml.lo: xls_xml.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-xls_xml.lo -MD -MP -MF $(DEPDIR)/_orcus_la-xls_xml.Tpo -c -o _orcus_la-xls_xml.lo `test -f 'xls_xml.cpp' || echo '$(srcdir)/'`xls_xml.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-xls_xml.Tpo $(DEPDIR)/_orcus_la-xls_xml.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='xls_xml.cpp' object='_orcus_la-xls_xml.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-xls_xml.lo `test -f 'xls_xml.cpp' || echo '$(srcdir)/'`xls_xml.cpp
-
-_orcus_la-ods.lo: ods.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-ods.lo -MD -MP -MF $(DEPDIR)/_orcus_la-ods.Tpo -c -o _orcus_la-ods.lo `test -f 'ods.cpp' || echo '$(srcdir)/'`ods.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-ods.Tpo $(DEPDIR)/_orcus_la-ods.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ods.cpp' object='_orcus_la-ods.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-ods.lo `test -f 'ods.cpp' || echo '$(srcdir)/'`ods.cpp
-
-_orcus_la-csv.lo: csv.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-csv.lo -MD -MP -MF $(DEPDIR)/_orcus_la-csv.Tpo -c -o _orcus_la-csv.lo `test -f 'csv.cpp' || echo '$(srcdir)/'`csv.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-csv.Tpo $(DEPDIR)/_orcus_la-csv.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='csv.cpp' object='_orcus_la-csv.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-csv.lo `test -f 'csv.cpp' || echo '$(srcdir)/'`csv.cpp
-
-_orcus_la-gnumeric.lo: gnumeric.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-gnumeric.lo -MD -MP -MF $(DEPDIR)/_orcus_la-gnumeric.Tpo -c -o _orcus_la-gnumeric.lo `test -f 'gnumeric.cpp' || echo '$(srcdir)/'`gnumeric.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-gnumeric.Tpo $(DEPDIR)/_orcus_la-gnumeric.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='gnumeric.cpp' object='_orcus_la-gnumeric.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-gnumeric.lo `test -f 'gnumeric.cpp' || echo '$(srcdir)/'`gnumeric.cpp
-
-_orcus_la-document.lo: document.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-document.lo -MD -MP -MF $(DEPDIR)/_orcus_la-document.Tpo -c -o _orcus_la-document.lo `test -f 'document.cpp' || echo '$(srcdir)/'`document.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-document.Tpo $(DEPDIR)/_orcus_la-document.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='document.cpp' object='_orcus_la-document.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-document.lo `test -f 'document.cpp' || echo '$(srcdir)/'`document.cpp
-
-_orcus_la-sheet.lo: sheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-sheet.lo -MD -MP -MF $(DEPDIR)/_orcus_la-sheet.Tpo -c -o _orcus_la-sheet.lo `test -f 'sheet.cpp' || echo '$(srcdir)/'`sheet.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-sheet.Tpo $(DEPDIR)/_orcus_la-sheet.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sheet.cpp' object='_orcus_la-sheet.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-sheet.lo `test -f 'sheet.cpp' || echo '$(srcdir)/'`sheet.cpp
-
-_orcus_la-sheet_rows.lo: sheet_rows.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-sheet_rows.lo -MD -MP -MF $(DEPDIR)/_orcus_la-sheet_rows.Tpo -c -o _orcus_la-sheet_rows.lo `test -f 'sheet_rows.cpp' || echo '$(srcdir)/'`sheet_rows.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-sheet_rows.Tpo $(DEPDIR)/_orcus_la-sheet_rows.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sheet_rows.cpp' object='_orcus_la-sheet_rows.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-sheet_rows.lo `test -f 'sheet_rows.cpp' || echo '$(srcdir)/'`sheet_rows.cpp
-
-_orcus_la-cell.lo: cell.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-cell.lo -MD -MP -MF $(DEPDIR)/_orcus_la-cell.Tpo -c -o _orcus_la-cell.lo `test -f 'cell.cpp' || echo '$(srcdir)/'`cell.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-cell.Tpo $(DEPDIR)/_orcus_la-cell.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='cell.cpp' object='_orcus_la-cell.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-cell.lo `test -f 'cell.cpp' || echo '$(srcdir)/'`cell.cpp
-
-_orcus_la-formula_token.lo: formula_token.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-formula_token.lo -MD -MP -MF $(DEPDIR)/_orcus_la-formula_token.Tpo -c -o _orcus_la-formula_token.lo `test -f 'formula_token.cpp' || echo '$(srcdir)/'`formula_token.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-formula_token.Tpo $(DEPDIR)/_orcus_la-formula_token.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='formula_token.cpp' object='_orcus_la-formula_token.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-formula_token.lo `test -f 'formula_token.cpp' || echo '$(srcdir)/'`formula_token.cpp
-
-_orcus_la-formula_tokens.lo: formula_tokens.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-formula_tokens.lo -MD -MP -MF $(DEPDIR)/_orcus_la-formula_tokens.Tpo -c -o _orcus_la-formula_tokens.lo `test -f 'formula_tokens.cpp' || echo '$(srcdir)/'`formula_tokens.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-formula_tokens.Tpo $(DEPDIR)/_orcus_la-formula_tokens.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='formula_tokens.cpp' object='_orcus_la-formula_tokens.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-formula_tokens.lo `test -f 'formula_tokens.cpp' || echo '$(srcdir)/'`formula_tokens.cpp
-
-_orcus_la-named_expressions.lo: named_expressions.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-named_expressions.lo -MD -MP -MF $(DEPDIR)/_orcus_la-named_expressions.Tpo -c -o _orcus_la-named_expressions.lo `test -f 'named_expressions.cpp' || echo '$(srcdir)/'`named_expressions.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-named_expressions.Tpo $(DEPDIR)/_orcus_la-named_expressions.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='named_expressions.cpp' object='_orcus_la-named_expressions.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-named_expressions.lo `test -f 'named_expressions.cpp' || echo '$(srcdir)/'`named_expressions.cpp
-
-_orcus_la-named_expression.lo: named_expression.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_la-named_expression.lo -MD -MP -MF $(DEPDIR)/_orcus_la-named_expression.Tpo -c -o _orcus_la-named_expression.lo `test -f 'named_expression.cpp' || echo '$(srcdir)/'`named_expression.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_la-named_expression.Tpo $(DEPDIR)/_orcus_la-named_expression.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='named_expression.cpp' object='_orcus_la-named_expression.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_la-named_expression.lo `test -f 'named_expression.cpp' || echo '$(srcdir)/'`named_expression.cpp
-
-_orcus_json_la-json.lo: json.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_json_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT _orcus_json_la-json.lo -MD -MP -MF $(DEPDIR)/_orcus_json_la-json.Tpo -c -o _orcus_json_la-json.lo `test -f 'json.cpp' || echo '$(srcdir)/'`json.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/_orcus_json_la-json.Tpo $(DEPDIR)/_orcus_json_la-json.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='json.cpp' object='_orcus_json_la-json.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(_orcus_json_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o _orcus_json_la-json.lo `test -f 'json.cpp' || echo '$(srcdir)/'`json.cpp
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -1360,24 +1232,24 @@ clean-am: clean-generic clean-libtool clean-pyexecLTLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/_orcus_json_la-json.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-cell.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-csv.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-document.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-formula_token.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-formula_tokens.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-global.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-gnumeric.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-memory.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-named_expression.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-named_expressions.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-ods.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-python.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-root.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-sheet.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-sheet_rows.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-xls_xml.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-xlsx.Plo
+		-rm -f ./$(DEPDIR)/cell.Plo
+	-rm -f ./$(DEPDIR)/csv.Plo
+	-rm -f ./$(DEPDIR)/document.Plo
+	-rm -f ./$(DEPDIR)/formula_token.Plo
+	-rm -f ./$(DEPDIR)/formula_tokens.Plo
+	-rm -f ./$(DEPDIR)/global.Plo
+	-rm -f ./$(DEPDIR)/gnumeric.Plo
+	-rm -f ./$(DEPDIR)/json.Plo
+	-rm -f ./$(DEPDIR)/memory.Plo
+	-rm -f ./$(DEPDIR)/named_expression.Plo
+	-rm -f ./$(DEPDIR)/named_expressions.Plo
+	-rm -f ./$(DEPDIR)/ods.Plo
+	-rm -f ./$(DEPDIR)/python.Plo
+	-rm -f ./$(DEPDIR)/root.Plo
+	-rm -f ./$(DEPDIR)/sheet.Plo
+	-rm -f ./$(DEPDIR)/sheet_rows.Plo
+	-rm -f ./$(DEPDIR)/xls_xml.Plo
+	-rm -f ./$(DEPDIR)/xlsx.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1423,24 +1295,24 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/_orcus_json_la-json.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-cell.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-csv.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-document.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-formula_token.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-formula_tokens.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-global.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-gnumeric.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-memory.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-named_expression.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-named_expressions.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-ods.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-python.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-root.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-sheet.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-sheet_rows.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-xls_xml.Plo
-	-rm -f ./$(DEPDIR)/_orcus_la-xlsx.Plo
+		-rm -f ./$(DEPDIR)/cell.Plo
+	-rm -f ./$(DEPDIR)/csv.Plo
+	-rm -f ./$(DEPDIR)/document.Plo
+	-rm -f ./$(DEPDIR)/formula_token.Plo
+	-rm -f ./$(DEPDIR)/formula_tokens.Plo
+	-rm -f ./$(DEPDIR)/global.Plo
+	-rm -f ./$(DEPDIR)/gnumeric.Plo
+	-rm -f ./$(DEPDIR)/json.Plo
+	-rm -f ./$(DEPDIR)/memory.Plo
+	-rm -f ./$(DEPDIR)/named_expression.Plo
+	-rm -f ./$(DEPDIR)/named_expressions.Plo
+	-rm -f ./$(DEPDIR)/ods.Plo
+	-rm -f ./$(DEPDIR)/python.Plo
+	-rm -f ./$(DEPDIR)/root.Plo
+	-rm -f ./$(DEPDIR)/sheet.Plo
+	-rm -f ./$(DEPDIR)/sheet_rows.Plo
+	-rm -f ./$(DEPDIR)/xls_xml.Plo
+	-rm -f ./$(DEPDIR)/xlsx.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

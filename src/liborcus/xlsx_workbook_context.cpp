@@ -35,11 +35,6 @@ xlsx_workbook_context::xlsx_workbook_context(
 
 xlsx_workbook_context::~xlsx_workbook_context() {}
 
-bool xlsx_workbook_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
-
 xml_context_base* xlsx_workbook_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return nullptr;
@@ -110,11 +105,11 @@ void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const
 
                 // Insert the sheet here so that we have all the sheets available
                 // prior to parsing global named expressions.
-                m_factory.append_sheet(m_sheet_count++, sheet.name.data(), sheet.name.size());
+                m_factory.append_sheet(m_sheet_count++, sheet.name);
 
                 m_workbook_info.data.insert(
                     opc_rel_extras_t::map_type::value_type(
-                        rid, orcus::make_unique<xlsx_rel_sheet_info>(sheet)));
+                        rid, std::make_unique<xlsx_rel_sheet_info>(sheet)));
 
                 break;
             }
@@ -193,7 +188,7 @@ void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const
 
                 m_workbook_info.data.insert(
                     opc_rel_extras_t::map_type::value_type(
-                        rid, orcus::make_unique<xlsx_rel_pivot_cache_info>(cache_id)));
+                        rid, std::make_unique<xlsx_rel_pivot_cache_info>(cache_id)));
 
                 break;
             }
@@ -219,15 +214,16 @@ bool xlsx_workbook_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_workbook_context::characters(const pstring& str, bool transient)
+void xlsx_workbook_context::characters(std::string_view str, bool transient)
 {
-    const xml_token_pair_t& cur = get_current_element();
+    std::string_view sv(str);
+    xml_token_pair_t cur = get_current_element();
     string_pool& sp = get_session_context().m_string_pool;
 
     if (cur.first == NS_ooxml_xlsx)
     {
         if (cur.second == XML_definedName)
-            m_defined_name_exp = transient ? sp.intern(str).first : str;
+            m_defined_name_exp = transient ? sp.intern(sv).first : sv;
     }
 }
 
@@ -252,9 +248,7 @@ void xlsx_workbook_context::push_defined_name()
 
     if (named_exp)
     {
-        named_exp->set_named_expression(
-            m_defined_name.data(), m_defined_name.size(),
-            m_defined_name_exp.data(), m_defined_name_exp.size());
+        named_exp->set_named_expression(m_defined_name, m_defined_name_exp);
         named_exp->commit();
     }
 }

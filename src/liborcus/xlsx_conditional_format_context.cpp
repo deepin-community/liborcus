@@ -153,7 +153,7 @@ cond_format_boolean_map::entry cond_format_boolean_entries[] =
 bool parse_boolean_flag(const xml_token_attr_t& attr, bool default_value)
 {
     static const cond_format_boolean_map boolean_map(cond_format_boolean_entries, sizeof(cond_format_boolean_entries)/sizeof(cond_format_boolean_entries[0]), boolean_default);    
-    xlsx_cond_format_boolean val = boolean_map.find(attr.value.get(), attr.value.size());
+    xlsx_cond_format_boolean val = boolean_map.find(attr.value.data(), attr.value.size());
     switch (val)
     {
         case boolean_default:
@@ -170,7 +170,7 @@ bool parse_boolean_flag(const xml_token_attr_t& attr, bool default_value)
     return default_value;
 }
 
-struct cfRule_attr_parser : public std::unary_function<xml_token_attr_t, void>
+struct cfRule_attr_parser
 {
 
     cfRule_attr_parser(spreadsheet::iface::import_conditional_format& cond_format):
@@ -192,7 +192,7 @@ struct cfRule_attr_parser : public std::unary_function<xml_token_attr_t, void>
             case XML_type:
             {
                 cond_format_type_map type_map(cond_format_type_entries, sizeof(cond_format_type_entries)/sizeof(cond_format_type_entries[0]), none);
-                m_type = type_map.find(attr.value.get(), attr.value.size());
+                m_type = type_map.find(attr.value.data(), attr.value.size());
             }
             break;
             case XML_dxfId:
@@ -216,7 +216,7 @@ struct cfRule_attr_parser : public std::unary_function<xml_token_attr_t, void>
             case XML_operator:
             {
                 cond_format_operator_map operator_map(cond_format_operator_entries, sizeof(cond_format_operator_entries)/sizeof(cond_format_operator_entries[0]), operator_default);
-                m_operator = operator_map.find(attr.value.get(), attr.value.size());
+                m_operator = operator_map.find(attr.value.data(), attr.value.size());
             }
             break;
             case XML_text:
@@ -226,7 +226,7 @@ struct cfRule_attr_parser : public std::unary_function<xml_token_attr_t, void>
             case XML_timePeriod:
             {
                 cond_format_date_map date_map(cond_format_date_entries, sizeof(cond_format_date_entries)/sizeof(cond_format_date_entries[0]), date_default);
-                m_date = date_map.find(attr.value.get(), attr.value.size());
+                m_date = date_map.find(attr.value.data(), attr.value.size());
             }
             break;
             case XML_rank:
@@ -317,7 +317,7 @@ struct cfRule_attr_parser : public std::unary_function<xml_token_attr_t, void>
                 {
                     m_cond_format.set_operator(spreadsheet::condition_operator_t::top_n);
                 }
-                m_cond_format.set_formula(m_rank.get(), m_rank.size());
+                m_cond_format.set_formula(m_rank);
             break;
             case uniqueValues:
                 m_cond_format.set_type(spreadsheet::conditional_format_t::condition);
@@ -330,22 +330,22 @@ struct cfRule_attr_parser : public std::unary_function<xml_token_attr_t, void>
             case containsText:
                 m_cond_format.set_type(spreadsheet::conditional_format_t::condition);
                 m_cond_format.set_operator(spreadsheet::condition_operator_t::contains);
-                m_cond_format.set_formula(m_text.get(), m_text.size());
+                m_cond_format.set_formula(m_text);
             break;
             case notContainsText:
                 m_cond_format.set_type(spreadsheet::conditional_format_t::condition);
                 m_cond_format.set_operator(spreadsheet::condition_operator_t::not_contains);
-                m_cond_format.set_formula(m_text.get(), m_text.size());
+                m_cond_format.set_formula(m_text);
             break;
             case beginsWith:
                 m_cond_format.set_type(spreadsheet::conditional_format_t::condition);
                 m_cond_format.set_operator(spreadsheet::condition_operator_t::begins_with);
-                m_cond_format.set_formula(m_text.get(), m_text.size());
+                m_cond_format.set_formula(m_text);
             break;
             case endsWith:
                 m_cond_format.set_type(spreadsheet::conditional_format_t::condition);
                 m_cond_format.set_operator(spreadsheet::condition_operator_t::ends_with);
-                m_cond_format.set_formula(m_text.get(), m_text.size());
+                m_cond_format.set_formula(m_text);
             break;
             case containsBlanks:
                 m_cond_format.set_type(spreadsheet::conditional_format_t::condition);
@@ -399,7 +399,7 @@ struct cfRule_attr_parser : public std::unary_function<xml_token_attr_t, void>
                 if (!m_std_dev.empty())
                 {
                     // TODO: we need a way to mark that as std dev in the interfaces
-                    m_cond_format.set_formula(m_std_dev.get(), m_std_dev.size());
+                    m_cond_format.set_formula(m_std_dev);
                 }
                 if (m_above_average)
                 {
@@ -443,7 +443,7 @@ private:
     pstring m_rank;
 };
 
-struct conditional_formatting_attr_parser : public std::unary_function<xml_token_attr_t, void>
+struct conditional_formatting_attr_parser
 {
     conditional_formatting_attr_parser(spreadsheet::iface::import_conditional_format& cond_format):
         m_cond_format(cond_format)
@@ -455,7 +455,7 @@ struct conditional_formatting_attr_parser : public std::unary_function<xml_token
         switch (attr.name)
         {
             case XML_sqref:
-                m_cond_format.set_range(attr.value.get(), attr.value.size());
+                m_cond_format.set_range(attr.value);
             break;
             default:
             break;
@@ -506,7 +506,7 @@ struct cfvo_values
 
 namespace {
 
-struct cfvo_attr_parser : public std::unary_function<xml_token_attr_t, void>
+struct cfvo_attr_parser
 {
     cfvo_attr_parser(string_pool& pool):
         m_string_pool(pool)
@@ -523,7 +523,7 @@ struct cfvo_attr_parser : public std::unary_function<xml_token_attr_t, void>
             case XML_type:
             {
                 cond_format_cfvo_type_map cfvo_type_map(cond_format_cfvo_entries, sizeof(cond_format_cfvo_entries)/sizeof(cond_format_cfvo_entries[0]), cfvo_default);
-                m_values.m_type = cfvo_type_map.find(attr.value.get(), attr.value.size());
+                m_values.m_type = cfvo_type_map.find(attr.value.data(), attr.value.size());
             }
             break;
             case XML_val:
@@ -551,7 +551,7 @@ private:
     string_pool& m_string_pool;
 };
 
-struct data_bar_attr_parser : public std::unary_function<xml_token_attr_t, void>
+struct data_bar_attr_parser
 {
     data_bar_attr_parser():
         m_show_value(true),
@@ -591,7 +591,7 @@ private:
     size_t m_max_length;
 };
 
-struct icon_set_attr_parser : public std::unary_function<xml_token_attr_t, void>
+struct icon_set_attr_parser
 {
     icon_set_attr_parser():
         m_reverse(false),
@@ -626,7 +626,7 @@ struct icon_set_attr_parser : public std::unary_function<xml_token_attr_t, void>
     {
         cond_format.set_show_value(m_show_value);
         cond_format.set_iconset_reverse(m_reverse);
-        cond_format.set_icon_name(icon_name.get(), icon_name.size());
+        cond_format.set_icon_name(icon_name);
     }
 
 private:
@@ -648,11 +648,6 @@ xlsx_conditional_format_context::xlsx_conditional_format_context(
 
 xlsx_conditional_format_context::~xlsx_conditional_format_context()
 {
-}
-
-bool xlsx_conditional_format_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
 }
 
 xml_context_base* xlsx_conditional_format_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
@@ -736,7 +731,7 @@ namespace {
 void import_cfvo(const cfvo_values& values, spreadsheet::iface::import_conditional_format& cond_format)
 {
     if (!values.m_value.empty())
-        cond_format.set_formula(values.m_value.get(),values.m_value.size());
+        cond_format.set_formula(values.m_value);
     switch (values.m_type)
     {
         case cfvo_num:
@@ -786,7 +781,7 @@ bool xlsx_conditional_format_context::end_element(xmlns_id_t ns, xml_token_t nam
         break;
         case XML_formula:
         {
-            m_cond_format.set_formula(m_cur_str.get(), m_cur_str.size());
+            m_cond_format.set_formula(m_cur_str);
             m_cond_format.commit_condition();
         }
         break;
@@ -838,7 +833,7 @@ bool xlsx_conditional_format_context::end_element(xmlns_id_t ns, xml_token_t nam
     return pop_stack(ns, name);
 }
 
-void xlsx_conditional_format_context::characters(const pstring& str, bool transient)
+void xlsx_conditional_format_context::characters(std::string_view str, bool transient)
 {
     m_cur_str = str;
     if (transient)

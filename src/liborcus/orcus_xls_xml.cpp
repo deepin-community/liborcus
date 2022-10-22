@@ -52,7 +52,7 @@ struct orcus_xls_xml::impl
 
         xml_stream_parser parser(cnf, m_ns_repo, xls_xml_tokens, content, len);
 
-        auto handler = orcus::make_unique<xls_xml_handler>(m_cxt, xls_xml_tokens, mp_factory);
+        auto handler = std::make_unique<xls_xml_handler>(m_cxt, xls_xml_tokens, mp_factory);
 
         parser.set_handler(handler.get());
         try
@@ -72,7 +72,7 @@ struct orcus_xls_xml::impl
 
 orcus_xls_xml::orcus_xls_xml(spreadsheet::iface::import_factory* factory) :
     iface::import_filter(format_t::xls_xml),
-    mp_impl(orcus::make_unique<impl>(factory))
+    mp_impl(std::make_unique<impl>(factory))
 {
     mp_impl->m_ns_repo.add_predefined_values(NS_xls_xml_all);
 }
@@ -112,9 +112,9 @@ void orcus_xls_xml::read_file(const string& filepath)
     mp_impl->read_stream(content.data(), content.size(), get_config());
 }
 
-void orcus_xls_xml::read_stream(const char* content, size_t len)
+void orcus_xls_xml::read_stream(std::string_view stream)
 {
-    memory_content mem_content(content, len);
+    memory_content mem_content(stream);
     if (mem_content.empty())
         return;
 
@@ -122,10 +122,9 @@ void orcus_xls_xml::read_stream(const char* content, size_t len)
     mp_impl->read_stream(mem_content.data(), mem_content.size(), get_config());
 }
 
-const char* orcus_xls_xml::get_name() const
+std::string_view orcus_xls_xml::get_name() const
 {
-    static const char* name = "xls-xml";
-    return name;
+    return "xls-xml";
 }
 
 }

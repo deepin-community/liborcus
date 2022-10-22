@@ -8,7 +8,7 @@
 #ifndef INCLUDED_ORCUS_SPREADSHEET_IMPL_TYPES_HPP
 #define INCLUDED_ORCUS_SPREADSHEET_IMPL_TYPES_HPP
 
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/spreadsheet/types.hpp"
 
 #include <iosfwd>
@@ -17,7 +17,7 @@ namespace orcus { namespace spreadsheet { namespace detail {
 
 struct cell_position_t
 {
-    pstring sheet;
+    std::string_view sheet;
     spreadsheet::row_t row;
     spreadsheet::col_t col;
 

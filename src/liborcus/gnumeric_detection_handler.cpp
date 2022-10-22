@@ -25,9 +25,8 @@ public:
     gnumeric_detection_context(session_context& session_cxt, const tokens& tokens) :
         xml_context_base(session_cxt, tokens) {}
 
-    virtual bool can_handle_element(xmlns_id_t, xml_token_t) const { return true; };
     virtual xml_context_base* create_child_context(xmlns_id_t, xml_token_t) { return nullptr; }
-    virtual void characters(const pstring&, bool) {}
+    virtual void characters(std::string_view, bool) {}
     virtual void end_child_context(xmlns_id_t, xml_token_t, xml_context_base*) {}
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const::std::vector<xml_token_attr_t>& /*attrs*/)
@@ -72,8 +71,8 @@ public:
 
 }
 
-gnumeric_detection_handler::gnumeric_detection_handler(session_context& session_cxt, const tokens& tokens) :
-    xml_stream_handler(new gnumeric_detection_context(session_cxt, tokens)) {}
+gnumeric_detection_handler::gnumeric_detection_handler(session_context& session_cxt, const tokens& t) :
+    xml_stream_handler(session_cxt, t, std::make_unique<gnumeric_detection_context>(session_cxt, t)) {}
 
 gnumeric_detection_handler::~gnumeric_detection_handler() {}
 

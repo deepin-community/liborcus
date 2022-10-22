@@ -5,37 +5,44 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/stream.hpp"
-#include "orcus/json_document_tree.hpp"
-#include "orcus/json_parser_base.hpp"
-#include "orcus/global.hpp"
-#include "orcus/config.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/dom_tree.hpp"
+#include "test_global.hpp"
+
+#include <orcus/stream.hpp>
+#include <orcus/json_document_tree.hpp>
+#include <orcus/json_parser_base.hpp>
+#include <orcus/global.hpp>
+#include <orcus/config.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/dom_tree.hpp>
+
+#include <boost/filesystem.hpp>
 
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <cmath>
+#include <cstring>
 
-using namespace std;
+namespace fs = boost::filesystem;
+
 using namespace orcus;
 
-const char* json_test_dirs[] = {
-    SRCDIR"/test/json/basic1/",
-    SRCDIR"/test/json/basic2/",
-    SRCDIR"/test/json/basic3/",
-    SRCDIR"/test/json/basic4/",
-    SRCDIR"/test/json/empty-array-1/",
-    SRCDIR"/test/json/empty-array-2/",
-    SRCDIR"/test/json/empty-array-3/",
-    SRCDIR"/test/json/nested1/",
-    SRCDIR"/test/json/nested2/",
-    SRCDIR"/test/json/swagger/"
+fs::path json_test_dirs[] = {
+    SRCDIR"/test/json/basic1",
+    SRCDIR"/test/json/basic2",
+    SRCDIR"/test/json/basic3",
+    SRCDIR"/test/json/basic4",
+    SRCDIR"/test/json/empty-array-1",
+    SRCDIR"/test/json/empty-array-2",
+    SRCDIR"/test/json/empty-array-3",
+    SRCDIR"/test/json/nested1",
+    SRCDIR"/test/json/nested2",
+    SRCDIR"/test/json/swagger",
+    SRCDIR"/test/json/to-yaml-1",
 };
 
-const char* json_test_refs_dirs[] = {
-    SRCDIR"/test/json/refs1/",
+fs::path json_test_refs_dirs[] = {
+    SRCDIR"/test/json/refs1",
 };
 
 bool string_expected(const json::const_node& node, const char* expected)
@@ -46,7 +53,7 @@ bool string_expected(const json::const_node& node, const char* expected)
     if (node.string_value() == expected)
         return true;
 
-    cerr << "expected='" << expected << "', actual='" << node.string_value() << "'" << endl;
+    std::cerr << "expected='" << expected << "', actual='" << node.string_value() << "'" << std::endl;
     return false;
 }
 
@@ -75,13 +82,13 @@ bool number_expected(
     if (actual == expected)
         return true;
 
-    cerr << "expected=" << expected << ", actual=" << actual << endl;
+    std::cerr << "expected=" << expected << ", actual=" << actual << std::endl;
     return false;
 }
 
-string dump_check_content(const json::document_tree& doc)
+std::string dump_check_content(const json::document_tree& doc)
 {
-    string xml_strm = doc.dump_xml();
+    std::string xml_strm = doc.dump_xml();
     assert(!xml_strm.empty());
 
     xmlns_repository repo;
@@ -89,56 +96,65 @@ string dump_check_content(const json::document_tree& doc)
     dom::document_tree dom(cxt);
     dom.load(xml_strm);
 
-    ostringstream os;
+    std::ostringstream os;
     dom.dump_compact(os);
     return os.str();
 }
 
 bool compare_check_contents(const file_content& expected, const std::string& actual)
 {
-    pstring _expected(expected.data(), expected.size());
-    pstring _actual(actual.data(), actual.size());
-    _expected = _expected.trim();
-    _actual = _actual.trim();
+    std::string_view _expected(expected.data(), expected.size());
+    std::string_view _actual(actual.data(), actual.size());
+    _expected = trim(_expected);
+    _actual = trim(_actual);
 
     if (_expected != _actual)
     {
-        size_t pos = locate_first_different_char(_expected, _actual);
-        cout << create_parse_error_output(_expected, pos) << endl;
-        cout << create_parse_error_output(_actual, pos) << endl;
+        std::size_t pos = locate_first_different_char(_expected, _actual);
+        std::cout << create_parse_error_output(_expected, pos) << std::endl;
+        std::cout << create_parse_error_output(_actual, pos) << std::endl;
     }
 
     return _expected == _actual;
 }
 
-void verify_input(json_config& test_config, const char* basedir)
+void verify_input(json_config& test_config, const fs::path& basedir)
 {
-    string json_file(basedir);
-    json_file += "input.json";
-    test_config.input_path = json_file;
+    fs::path json_file = basedir / "input.json";
+    test_config.input_path = json_file.string();
 
-    cout << "Testing " << json_file << endl;
+    std::cout << "* verify input: " << json_file << std::endl;
 
-    file_content content(json_file.data());
+    file_content content(json_file.string());
     json::document_tree doc;
-    doc.load(content.data(), content.size(), test_config);
+    doc.load(content.str(), test_config);
 
-    string check_file(basedir);
-    check_file += "check.txt";
-    file_content check_master(check_file.data());
-    string check_doc = dump_check_content(doc);
+    fs::path check_file = basedir / "check.txt";
+    file_content check_master(check_file.string());
+    std::string check_doc = dump_check_content(doc);
 
     bool result = compare_check_contents(check_master, check_doc);
     assert(result);
+
+    if (fs::path outpath = basedir / "output.yaml"; fs::is_regular_file(outpath))
+    {
+        // Test the yaml output.
+        std::cout << "  * yaml output: " << outpath << std::endl;
+
+        file_content expected(outpath.string());
+        std::string actual = doc.dump_yaml();
+
+        test::verify_content(__FILE__, __LINE__, expected.str(), actual);
+    }
 }
 
 void test_json_parse()
 {
     json_config test_config;
 
-    for (size_t i = 0; i < ORCUS_N_ELEMENTS(json_test_dirs); ++i)
+    for (std::size_t i = 0; i < ORCUS_N_ELEMENTS(json_test_dirs); ++i)
     {
-        const char* basedir = json_test_dirs[i];
+        fs::path basedir = json_test_dirs[i];
         verify_input(test_config, basedir);
     }
 }
@@ -150,7 +166,7 @@ void test_json_resolve_refs()
 
     for (size_t i = 0; i < ORCUS_N_ELEMENTS(json_test_refs_dirs); ++i)
     {
-        const char* basedir = json_test_refs_dirs[i];
+        fs::path basedir = json_test_refs_dirs[i];
         verify_input(test_config, basedir);
     }
 }
@@ -168,16 +184,16 @@ void test_json_parse_empty()
     for (size_t i = 0; i < ORCUS_N_ELEMENTS(tests); ++i)
     {
         const char* test = tests[i];
-        cout << "JSON stream: '" << test << "' (" << strlen(test) << ")" << endl;
+        std::cout << "JSON stream: '" << test << "' (" << std::strlen(test) << ")" << std::endl;
         json::document_tree doc;
         try
         {
-            doc.load(test, strlen(test), test_config);
+            doc.load(test, test_config);
         }
         catch (const json::parse_error& e)
         {
-            cout << create_parse_error_output(test, e.offset()) << endl;
-            cout << e.what() << endl;
+            std::cout << create_parse_error_output(test, e.offset()) << std::endl;
+            std::cout << e.what() << std::endl;
             assert(false);
         }
     }
@@ -196,21 +212,21 @@ void test_json_parse_invalid()
         "\"key\": {\"inner\": 12}"
     };
 
-    for (size_t i = 0; i < ORCUS_N_ELEMENTS(invalids); ++i)
+    for (std::size_t i = 0; i < ORCUS_N_ELEMENTS(invalids); ++i)
     {
         const char* invalid_json = invalids[i];
         json::document_tree doc;
         try
         {
-            doc.load(string(invalid_json, strlen(invalid_json)), test_config);
-            cerr << "Invalid JSON expression is parsed as valid: '" << invalid_json << "'" << endl;
+            doc.load(invalid_json, test_config);
+            std::cerr << "Invalid JSON expression is parsed as valid: '" << invalid_json << "'" << std::endl;
             assert(false);
         }
         catch (const json::parse_error& e)
         {
             // works as expected.
-            cout << "invalid expression tested: " << invalid_json << endl;
-            cout << "error message received: " << e.what() << endl;
+            std::cout << "invalid expression tested: " << invalid_json << std::endl;
+            std::cout << "error message received: " << e.what() << std::endl;
         }
     }
 }
@@ -219,13 +235,13 @@ std::unique_ptr<json::document_tree> get_doc_tree(const char* filepath)
 {
     json_config test_config;
 
-    cout << filepath << endl;
+    std::cout << filepath << std::endl;
     file_content content(filepath);
-    cout << "--- original" << endl;
-    cout << content.str() << endl;
+    std::cout << "--- original" << std::endl;
+    std::cout << content.str() << std::endl;
 
-    auto doc = orcus::make_unique<json::document_tree>();
-    doc->load(content.data(), content.size(), test_config);
+    auto doc = std::make_unique<json::document_tree>();
+    doc->load(content.str(), test_config);
 
     return doc;
 }
@@ -235,8 +251,8 @@ void dump_and_load(
 {
     json::document_tree doc2;
     std::string dumped = doc.dump();
-    cout << "--- dumped" << endl;
-    cout << dumped << endl;
+    std::cout << "--- dumped" << std::endl;
+    std::cout << dumped << std::endl;
     doc2.load(dumped, json_config());
     json::const_node node = doc2.get_document_root();
     test_func(node);
@@ -328,7 +344,7 @@ void test_json_traverse_basic4()
         assert(keys.size() == 3);
         for (auto it = keys.begin(), ite = keys.end(); it != ite; ++it)
         {
-            const pstring& key = *it;
+            std::string_view key = *it;
             json::const_node child = node.child(key);
             if (key == "int")
                 assert(number_expected(child, 12.0));
@@ -839,7 +855,7 @@ int main()
     }
     catch (const orcus::general_error& e)
     {
-        cerr << e.what() << endl;
+        std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 

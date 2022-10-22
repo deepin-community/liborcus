@@ -91,6 +91,9 @@ spreadsheet_doc_2_sheets_with_formula_LDADD = \
 	../src/parser/liborcus-parser-@ORCUS_API_VERSION@.la \
 	../src/liborcus/liborcus-@ORCUS_API_VERSION@.la
 
+AM_TESTS_ENVIRONMENT = \
+	INPUTDIR=$(srcdir)/files; export INPUTDIR;
+
 TESTS = \
 	json-doc-1 \
 	json-doc-2 \
@@ -102,7 +105,6 @@ TESTS = \
 	spreadsheet-doc-2-sheets-no-string-pool \
 	spreadsheet-doc-2-sheets-with-string-pool \
 	spreadsheet-doc-2-sheets-with-formula
-
 
 distclean-local:
 	rm -rf $(TESTS)

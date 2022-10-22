@@ -32,13 +32,12 @@ public:
     xlsx_shared_strings_context(session_context& session_cxt, const tokens& tokens, spreadsheet::iface::import_shared_strings* strings);
     virtual ~xlsx_shared_strings_context();
 
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const;
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(const pstring& str, bool transient);
+    virtual void characters(std::string_view str, bool transient);
 
 private:
     spreadsheet::iface::import_shared_strings* mp_strings;
@@ -58,13 +57,12 @@ public:
     xlsx_styles_context(session_context& session_cxt, const tokens& tokens, spreadsheet::iface::import_styles* import_styles);
     virtual ~xlsx_styles_context();
 
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const;
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(const pstring& str, bool transient);
+    virtual void characters(std::string_view str, bool transient);
 
 private:
     void start_element_number_format(const xml_token_pair_t& parent, const xml_attrs_t& attrs);

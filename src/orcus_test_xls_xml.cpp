@@ -7,7 +7,7 @@
 
 #include "orcus_test_global.hpp"
 #include "orcus/orcus_xls_xml.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/global.hpp"
 #include "orcus/stream.hpp"
 #include "orcus/config.hpp"
@@ -22,6 +22,7 @@
 
 #include <ixion/model_context.hpp>
 #include <ixion/address.hpp>
+#include <ixion/cell.hpp>
 
 #include <string>
 #include <sstream>
@@ -50,6 +51,7 @@ std::vector<const char*> dirs = {
     SRCDIR"/test/xls-xml/formula-cells-1/",
     SRCDIR"/test/xls-xml/formula-cells-2/",
     SRCDIR"/test/xls-xml/formula-cells-3/",
+    SRCDIR"/test/xls-xml/invalid-sub-structure/",
     SRCDIR"/test/xls-xml/leading-whitespace/",
     SRCDIR"/test/xls-xml/merged-cells/",
     SRCDIR"/test/xls-xml/named-colors/",
@@ -65,7 +67,7 @@ std::unique_ptr<spreadsheet::document> load_doc_from_filepath(
     ss::formula_error_policy_t error_policy=ss::formula_error_policy_t::fail)
 {
     spreadsheet::range_size_t ss{1048576, 16384};
-    std::unique_ptr<spreadsheet::document> doc = orcus::make_unique<spreadsheet::document>(ss);
+    std::unique_ptr<spreadsheet::document> doc = std::make_unique<spreadsheet::document>(ss);
     spreadsheet::import_factory factory(*doc);
     factory.set_recalc_formula_cells(recalc);
     factory.set_formula_error_policy(error_policy);
@@ -79,17 +81,17 @@ std::unique_ptr<spreadsheet::document> load_doc_from_filepath(
 std::unique_ptr<spreadsheet::document> load_doc_from_stream(const string& path)
 {
     spreadsheet::range_size_t ss{1048576, 16384};
-    std::unique_ptr<spreadsheet::document> doc = orcus::make_unique<spreadsheet::document>(ss);
+    std::unique_ptr<spreadsheet::document> doc = std::make_unique<spreadsheet::document>(ss);
     spreadsheet::import_factory factory(*doc);
     orcus_xls_xml app(&factory);
 
     std::ifstream ifs(path, std::ios::binary | std::ios::ate);
     std::streamsize n = ifs.tellg();
     ifs.seekg(0);
-    std::vector<char> content(n, '\0');
+    std::string content(n, '\0');
     if (ifs.read(content.data(), n))
     {
-        app.read_stream(content.data(), content.size());
+        app.read_stream(content);
         doc->recalc_formula_cells();
     }
 
@@ -128,7 +130,7 @@ void update_config(spreadsheet::document& doc, const string& path)
 
         yaml::document_tree config;
         file_content content(path.data());
-        config.load(content.data(), content.size());
+        config.load(content.str());
         yaml::const_node root = config.get_document_root(0);
         std::vector<yaml::const_node> keys = root.keys();
         for (size_t i = 0; i < keys.size(); ++i)
@@ -592,7 +594,7 @@ void test_xls_xml_named_colors()
             size_t sid = model.get_string_identifier(ixion::abs_address_t(sh->get_index(), row, 1));
             const string* s = model.get_string(sid);
             assert(s);
-            spreadsheet::color_rgb_t expected = spreadsheet::to_color_rgb(s->data(), s->size());
+            spreadsheet::color_rgb_t expected = spreadsheet::to_color_rgb(*s);
 
             size_t xf = sh->get_cell_format(row, 0);
             const spreadsheet::fill_t* fill_data = styles.get_fill(xf);
@@ -1074,7 +1076,7 @@ void test_xls_xml_view_cursor_per_sheet()
     assert(resolver);
 
     // On Sheet1, the cursor should be set to C4.
-    spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("R4C3")));
+    spreadsheet::range_t expected = to_rc_range(resolver->resolve_range("R4C3"));
     spreadsheet::range_t actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 
@@ -1082,7 +1084,7 @@ void test_xls_xml_view_cursor_per_sheet()
     assert(sv);
 
     // On Sheet2, the cursor should be set to D8.
-    expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("R8C4")));
+    expected = to_rc_range(resolver->resolve_range("R8C4"));
     actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 
@@ -1090,7 +1092,7 @@ void test_xls_xml_view_cursor_per_sheet()
     assert(sv);
 
     // On Sheet3, the cursor should be set to D2.
-    expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("R2C4")));
+    expected = to_rc_range(resolver->resolve_range("R2C4"));
     actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 
@@ -1098,7 +1100,7 @@ void test_xls_xml_view_cursor_per_sheet()
     assert(sv);
 
     // On Sheet4, the cursor should be set to C5:E8.
-    expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("R5C3:R8C5")));
+    expected = to_rc_range(resolver->resolve_range("R5C3:R8C5"));
     actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 }
@@ -1140,7 +1142,7 @@ void test_xls_xml_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 1800.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("R6C6")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("R6C6"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1156,7 +1158,7 @@ void test_xls_xml_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1170,7 +1172,7 @@ void test_xls_xml_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 2400.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("R8C6")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("R8C6"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1186,7 +1188,7 @@ void test_xls_xml_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1200,7 +1202,7 @@ void test_xls_xml_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 1500.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("R5C1")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("R5C1"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1214,7 +1216,7 @@ void test_xls_xml_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1228,7 +1230,7 @@ void test_xls_xml_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 0.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("R1C5")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("R1C5"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1242,7 +1244,7 @@ void test_xls_xml_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1275,7 +1277,7 @@ void test_xls_xml_view_frozen_pane()
     {
         // Sheet1 is vertically frozen between columns A and B.
         const spreadsheet::frozen_pane_t& fp = sv->get_frozen_pane();
-        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address(ORCUS_ASCII("R1C2"))));
+        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address("R1C2")));
         assert(fp.visible_columns == 1);
         assert(fp.visible_rows == 0);
         assert(sv->get_active_pane() == spreadsheet::sheet_pane_t::top_right);
@@ -1287,7 +1289,7 @@ void test_xls_xml_view_frozen_pane()
     {
         // Sheet2 is horizontally frozen between rows 1 and 2.
         const spreadsheet::frozen_pane_t& fp = sv->get_frozen_pane();
-        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address(ORCUS_ASCII("R2C1"))));
+        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address("R2C1")));
         assert(fp.visible_columns == 0);
         assert(fp.visible_rows == 1);
         assert(sv->get_active_pane() == spreadsheet::sheet_pane_t::bottom_left);
@@ -1299,7 +1301,7 @@ void test_xls_xml_view_frozen_pane()
     {
         // Sheet3 is frozen both horizontally and vertically.
         const spreadsheet::frozen_pane_t& fp = sv->get_frozen_pane();
-        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address(ORCUS_ASCII("R9C5"))));
+        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address("R9C5")));
         assert(fp.visible_columns == 4);
         assert(fp.visible_rows == 8);
         assert(sv->get_active_pane() == spreadsheet::sheet_pane_t::bottom_right);

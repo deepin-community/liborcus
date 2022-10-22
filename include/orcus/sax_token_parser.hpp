@@ -8,12 +8,12 @@
 #ifndef INCLUDED_ORCUS_SAX_TOKEN_PARSER_HPP
 #define INCLUDED_ORCUS_SAX_TOKEN_PARSER_HPP
 
+#include "sax_ns_parser.hpp"
+#include "types.hpp"
+
 #include <vector>
 #include <algorithm>
 #include <functional>
-
-#include "types.hpp"
-#include "sax_ns_parser.hpp"
 
 namespace orcus {
 
@@ -23,7 +23,7 @@ namespace sax {
 
 #if ORCUS_DEBUG_SAX_PARSER
 template<typename _Attr, typename _Tokens>
-class attr_printer : public ::std::unary_function<_Attr, void>
+class attr_printer
 {
 public:
     attr_printer(const _Tokens& tokens, const ::std::string& indent) :
@@ -52,13 +52,13 @@ protected:
     xml_token_element_t m_elem;
     const tokens& m_tokens;
 
-    xml_token_t tokenize(const pstring& name) const;
+    xml_token_t tokenize(std::string_view name) const;
     void set_element(const sax_ns_parser_element& elem);
 
 public:
     sax_token_handler_wrapper_base(const tokens& _tokens);
 
-    void attribute(const pstring& name, const pstring& val);
+    void attribute(std::string_view name, std::string_view val);
     void attribute(const sax_ns_parser_attribute& attr);
 };
 
@@ -112,7 +112,7 @@ public:
      *                  a non-text value or be interned within the scope of
      *                  the callback</em>.
      */
-    void characters(const orcus::pstring& val, bool transient)
+    void characters(std::string_view val, bool transient)
     {
         (void)val; (void)transient;
     }
@@ -155,9 +155,9 @@ private:
 
         void doctype(const sax::doctype_declaration&) {}
 
-        void start_declaration(const pstring&) {}
+        void start_declaration(std::string_view) {}
 
-        void end_declaration(const pstring&)
+        void end_declaration(std::string_view)
         {
             m_handler.declaration(m_declaration);
             m_elem.attrs.clear();
@@ -176,7 +176,7 @@ private:
             m_handler.end_element(m_elem);
         }
 
-        void characters(const pstring& val, bool transient)
+        void characters(std::string_view val, bool transient)
         {
             m_handler.characters(val, transient);
         }

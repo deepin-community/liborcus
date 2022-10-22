@@ -32,6 +32,8 @@ struct xlsx_session_data : public session_context::custom_data
         spreadsheet::address_t ref;
         std::string exp;
 
+        formula_result result;
+
         formula(
             spreadsheet::sheet_t _sheet, spreadsheet::row_t _row, spreadsheet::col_t _column,
             const std::string& _exp);
@@ -59,6 +61,8 @@ struct xlsx_session_data : public session_context::custom_data
         std::string formula;
         bool master;
 
+        formula_result result;
+
         shared_formula(
             spreadsheet::sheet_t _sheet, spreadsheet::row_t _row, spreadsheet::col_t _column,
             size_t _identifier);
@@ -76,6 +80,7 @@ struct xlsx_session_data : public session_context::custom_data
     formulas_type m_formulas;
     array_formulas_type m_array_formulas;
     shared_formulas_type m_shared_formulas;
+    string_pool m_formula_result_strings;
 
     virtual ~xlsx_session_data();
 };

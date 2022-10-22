@@ -26,6 +26,7 @@ class ORCUS_PSR_DLLPUBLIC xml_writer
     std::unique_ptr<impl> mp_impl;
 
     void close_current_element();
+    void pop_elements();
 
 public:
     class ORCUS_PSR_DLLPUBLIC scope
@@ -87,7 +88,7 @@ public:
      *
      * @return ID for the namespace being added.
      */
-    xmlns_id_t add_namespace(const pstring& alias, const pstring& value);
+    xmlns_id_t add_namespace(std::string_view alias, std::string_view value);
 
     /**
      * Add a new attribute for the next element to be pushed.
@@ -95,7 +96,7 @@ public:
      * @param name name of the attribute to be added.
      * @param value value of the attribute to be added.
      */
-    void add_attribute(const xml_name_t& name, const pstring& value);
+    void add_attribute(const xml_name_t& name, std::string_view value);
 
     /**
      * Add a content to the current element on the stack.  The content will be
@@ -103,7 +104,7 @@ public:
      *
      * @param content content to be added to the current element.
      */
-    void add_content(const pstring& content);
+    void add_content(std::string_view content);
 
     /**
      * Pop the current element from the stack, and write a closing element to

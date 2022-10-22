@@ -5,9 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/css_parser_base.hpp"
-#include "orcus/parser_global.hpp"
-#include "orcus/global.hpp"
+#include <orcus/css_parser_base.hpp>
+#include <orcus/parser_global.hpp>
+#include <orcus/global.hpp>
+
+#include "utf8.hpp"
 
 #include <cstring>
 #include <cassert>
@@ -32,25 +34,30 @@ void parse_error::throw_with(
     throw parse_error(build_message(msg_before, p, n, msg_after));
 }
 
+void parse_error::throw_with(const char* msg_before, std::string_view s, const char* msg_after)
+{
+    throw parse_error(build_message(msg_before, s.data(), s.size(), msg_after));
+}
+
 parser_base::parser_base(const char* p, size_t n) :
     ::orcus::parser_base(p, n, false),
     m_simple_selector_count(0),
     m_combinator(combinator_t::descendant) {}
 
-void parser_base::identifier(const char*& p, size_t& len, const char* extra, size_t n_extra)
+void parser_base::identifier(const char*& p, size_t& len, std::string_view extra)
 {
     p = mp_char;
     len = 1;
     for (next(); has_char(); next(), ++len)
     {
         char c = cur_char();
-        if (is_alpha(c) || is_name_char(c) || is_numeric(c))
+        if (is_alpha(c) || is_numeric(c) || is_in(c, "-_"))
             continue;
 
-        if (extra)
+        if (!extra.empty())
         {
             // See if the character is one of the extra allowed characters.
-            if (is_in(c, extra, n_extra))
+            if (is_in(c, extra))
                 continue;
         }
         return;
@@ -81,6 +88,92 @@ uint8_t parser_base::parse_uint8()
         val = maxval;
 
     return static_cast<uint8_t>(val);
+}
+
+std::string_view parser_base::parse_value()
+{
+    auto throw_invalid = [](uint8_t n_bytes)
+    {
+        std::ostringstream os;
+        os << "parse_value: invalid utf-8 byte length (" << int(n_bytes) << ")";
+        throw css::parse_error(os.str());
+    };
+
+    auto check_byte_length_or_throw = [](uint8_t n_bytes, std::size_t max_size)
+    {
+        if (std::size_t(n_bytes) > max_size)
+        {
+            std::ostringstream os;
+            os << "parse_value: utf-8 byte length is " << int(n_bytes) << " but only " << max_size << " bytes remaining.";
+            throw css::parse_error(os.str());
+        }
+    };
+
+    std::size_t max_size = available_size();
+    if (!max_size)
+        return {};
+
+    const char* p0 = mp_char;
+    std::size_t len = 0;
+
+    char c = cur_char();
+    uint8_t n_bytes = calc_utf8_byte_length(c);
+
+    // any of '-+.#' is allowed as first character, while any of '-_.%' is
+    // allowed as second characters.
+
+    switch (n_bytes)
+    {
+        case 1:
+        {
+            if (!is_alpha(c) && !is_numeric(c) && !is_in(c, "-+.#"))
+                css::parse_error::throw_with("parse_value: illegal first character of a value '", c, "'");
+            break;
+        }
+        case 2:
+        case 3:
+        case 4:
+        {
+            check_byte_length_or_throw(n_bytes, max_size);
+            break;
+        }
+        default:
+            throw_invalid(n_bytes);
+    }
+
+    len += n_bytes;
+    next(n_bytes);
+
+    while (has_char())
+    {
+        c = cur_char();
+        max_size = available_size();
+        n_bytes = calc_utf8_byte_length(c);
+
+        switch (n_bytes)
+        {
+            case 1:
+            {
+                if (!is_alpha(c) && !is_numeric(c) && !is_in(c, "-_.%"))
+                    return {p0, len};
+                break;
+            }
+            case 2:
+            case 3:
+            case 4:
+            {
+                check_byte_length_or_throw(n_bytes, max_size);
+                break;
+            }
+            default:
+                throw_invalid(n_bytes);
+        }
+
+        len += n_bytes;
+        next(n_bytes);
+    }
+
+    return {p0, len};
 }
 
 double parser_base::parse_percent()
@@ -131,7 +224,7 @@ void parser_base::skip_to_or_blank(
     len = 0;
     for (; has_char(); next(), ++len)
     {
-        if (is_blank(*mp_char) || is_in(*mp_char, chars, n_chars))
+        if (is_blank(*mp_char) || is_in(*mp_char, {chars, n_chars}))
             return;
     }
 }

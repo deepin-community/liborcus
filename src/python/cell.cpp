@@ -115,7 +115,7 @@ int tp_init(pyobj_cell* self, PyObject* args, PyObject* kwargs)
     return 0;
 }
 
-PyObject* cell_get_formula_tokens(PyObject* self, PyObject* args, PyObject* kwargs)
+PyObject* cell_get_formula_tokens(PyObject* self, PyObject* /*args*/, PyObject* /*kwargs*/)
 {
     pyobj_cell* obj = reinterpret_cast<pyobj_cell*>(self);
     cell_data& data = *obj->data;
@@ -317,9 +317,9 @@ PyObject* create_cell_object_formula(
         case ixion::formula_result::result_type::error:
         {
             ixion::formula_error_t fe = res.get_error();
-            const char* fename = ixion::get_formula_error_name(fe);
-            if (fename)
-                obj_data->value = PyUnicode_FromString(fename);
+            std::string_view fename = ixion::get_formula_error_name(fe);
+            if (!fename.empty())
+                obj_data->value = PyUnicode_FromStringAndSize(fename.data(), fename.size());
             else
             {
                 // This should not be hit, but just in case...

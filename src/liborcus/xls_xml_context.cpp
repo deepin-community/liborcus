@@ -9,13 +9,15 @@
 #include "xls_xml_namespace_types.hpp"
 #include "xls_xml_token_constants.hpp"
 #include "spreadsheet_iface_util.hpp"
-#include "orcus/spreadsheet/import_interface.hpp"
-#include "orcus/spreadsheet/import_interface_view.hpp"
-#include "orcus/measurement.hpp"
+
+#include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/spreadsheet/import_interface_view.hpp>
+#include <orcus/measurement.hpp>
 
 #include <mdds/sorted_string_map.hpp>
 
 #include <iostream>
+#include <limits>
 
 using namespace std;
 namespace ss = orcus::spreadsheet;
@@ -24,10 +26,10 @@ namespace orcus {
 
 namespace {
 
-spreadsheet::color_rgb_t to_rgb(const pstring& s)
+spreadsheet::color_rgb_t to_rgb(std::string_view s)
 {
     if (!s.empty() && s[0] == '#')
-        return spreadsheet::to_color_rgb(s.data(), s.size());
+        return spreadsheet::to_color_rgb(s);
     else
     {
         // This may be a color name.  Lower-case it before sending it to the
@@ -43,7 +45,7 @@ spreadsheet::color_rgb_t to_rgb(const pstring& s)
             }
         );
 
-        return spreadsheet::to_color_rgb_from_name(s_lower.data(), s_lower.size());
+        return spreadsheet::to_color_rgb_from_name(s_lower);
     }
 }
 
@@ -75,7 +77,7 @@ bool xls_xml_data_context::format_type::formatted() const
     return false;
 }
 
-xls_xml_data_context::string_segment_type::string_segment_type(const pstring& _str) :
+xls_xml_data_context::string_segment_type::string_segment_type(std::string_view _str) :
     str(_str) {}
 
 xls_xml_data_context::xls_xml_data_context(
@@ -85,21 +87,27 @@ xls_xml_data_context::xls_xml_data_context(
     m_cell_type(ct_unknown),
     m_cell_value(std::numeric_limits<double>::quiet_NaN())
 {
+    static const xml_element_validator::rule rules[] = {
+        // parent element -> child element
+        { XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN, NS_xls_xml_ss, XML_Data }, // root element
+        { NS_xls_xml_html, XML_B, NS_xls_xml_html, XML_Font },
+        { NS_xls_xml_html, XML_I, NS_xls_xml_html, XML_Font },
+        { NS_xls_xml_ss, XML_Data, NS_xls_xml_html, XML_B },
+        { NS_xls_xml_ss, XML_Data, NS_xls_xml_html, XML_Font },
+        { NS_xls_xml_ss, XML_Data, NS_xls_xml_html, XML_I },
+    };
+
+    init_element_validator(rules, std::size(rules));
 }
 
 xls_xml_data_context::~xls_xml_data_context() {}
 
-bool xls_xml_data_context::can_handle_element(xmlns_id_t ns, xml_token_t name) const
-{
-    return true;
-}
-
-xml_context_base* xls_xml_data_context::create_child_context(xmlns_id_t ns, xml_token_t name)
+xml_context_base* xls_xml_data_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return nullptr;
 }
 
-void xls_xml_data_context::end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child)
+void xls_xml_data_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/, xml_context_base* /*child*/)
 {
 }
 
@@ -164,7 +172,7 @@ void xls_xml_data_context::start_element(xmlns_id_t ns, xml_token_t name, const:
         warn_unhandled();
 }
 
-void xls_xml_data_context::characters(const pstring& str, bool transient)
+void xls_xml_data_context::characters(std::string_view str, bool transient)
 {
     if (str.empty())
         return;
@@ -192,8 +200,7 @@ void xls_xml_data_context::characters(const pstring& str, bool transient)
         }
         case ct_number:
         {
-            const char* p = str.get();
-            m_cell_value = to_double(p, p + str.size());
+            m_cell_value = to_double(str);
             break;
         }
         case ct_datetime:
@@ -254,7 +261,7 @@ void xls_xml_data_context::reset()
 }
 
 void xls_xml_data_context::start_element_data(
-    const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+    const xml_token_pair_t& /*parent*/, const xml_attrs_t& attrs)
 {
     m_cell_type = ct_unknown;
     m_cell_string.clear();
@@ -327,8 +334,8 @@ void xls_xml_data_context::end_element_data()
             if (m_cell_string.size() == 1 && !m_cell_string[0].formatted)
             {
                 // Unformatted string.
-                const pstring& s = m_cell_string.back().str;
-                sheet->set_string(pos.row, pos.column, ss->append(s.data(), s.size()));
+                std::string_view s = m_cell_string.back().str;
+                sheet->set_string(pos.row, pos.column, ss->append(s));
             }
             else
             {
@@ -346,7 +353,7 @@ void xls_xml_data_context::end_element_data()
                             sstr.format.color.blue);
                     }
 
-                    ss->append_segment(sstr.str.data(), sstr.str.size());
+                    ss->append_segment(sstr.str);
                 }
 
                 size_t si = ss->commit_segments();
@@ -472,7 +479,7 @@ void xls_xml_data_context::store_array_formula_parent_cell(const pstring& formul
     store.push_back(
         std::make_pair(
             range,
-            orcus::make_unique<xls_xml_context::array_formula_type>(range, formula)));
+            std::make_unique<xls_xml_context::array_formula_type>(range, formula)));
 
     xls_xml_context::array_formula_type& af = *store.back().second;
 
@@ -723,6 +730,88 @@ xls_xml_context::xls_xml_context(session_context& session_cxt, const tokens& tok
     m_cur_merge_down(0), m_cur_merge_across(0),
     m_cc_data(session_cxt, tokens, *this)
 {
+    static const xml_element_validator::rule rules[] = {
+        // parent element -> child element
+        { XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN, NS_xls_xml_ss, XML_Workbook }, // root element
+        { NS_xls_xml_o, XML_DocumentProperties, NS_xls_xml_o, XML_Author },
+        { NS_xls_xml_o, XML_DocumentProperties, NS_xls_xml_o, XML_Company },
+        { NS_xls_xml_o, XML_DocumentProperties, NS_xls_xml_o, XML_Created },
+        { NS_xls_xml_o, XML_DocumentProperties, NS_xls_xml_o, XML_LastAuthor },
+        { NS_xls_xml_o, XML_DocumentProperties, NS_xls_xml_o, XML_LastSaved },
+        { NS_xls_xml_o, XML_DocumentProperties, NS_xls_xml_o, XML_Version },
+        { NS_xls_xml_o, XML_OfficeDocumentSettings, NS_xls_xml_o, XML_AllowPNG },
+        { NS_xls_xml_o, XML_OfficeDocumentSettings, NS_xls_xml_o, XML_DownloadComponents },
+        { NS_xls_xml_o, XML_OfficeDocumentSettings, NS_xls_xml_o, XML_LocationOfComponents },
+        { NS_xls_xml_ss, XML_Borders, NS_xls_xml_ss, XML_Border },
+        { NS_xls_xml_ss, XML_Cell, NS_xls_xml_ss, XML_Data },
+        { NS_xls_xml_ss, XML_Cell, NS_xls_xml_ss, XML_NamedCell },
+        { NS_xls_xml_ss, XML_Names, NS_xls_xml_ss, XML_NamedRange },
+        { NS_xls_xml_ss, XML_Row, NS_xls_xml_ss, XML_Cell },
+        { NS_xls_xml_ss, XML_Style, NS_xls_xml_ss, XML_Alignment },
+        { NS_xls_xml_ss, XML_Style, NS_xls_xml_ss, XML_Borders },
+        { NS_xls_xml_ss, XML_Style, NS_xls_xml_ss, XML_Font },
+        { NS_xls_xml_ss, XML_Style, NS_xls_xml_ss, XML_Interior },
+        { NS_xls_xml_ss, XML_Style, NS_xls_xml_ss, XML_NumberFormat },
+        { NS_xls_xml_ss, XML_Style, NS_xls_xml_ss, XML_Protection },
+        { NS_xls_xml_ss, XML_Styles, NS_xls_xml_ss, XML_Style },
+        { NS_xls_xml_ss, XML_Table, NS_xls_xml_ss, XML_Column },
+        { NS_xls_xml_ss, XML_Table, NS_xls_xml_ss, XML_Row },
+        { NS_xls_xml_ss, XML_Workbook, NS_xls_xml_o, XML_DocumentProperties },
+        { NS_xls_xml_ss, XML_Workbook, NS_xls_xml_o, XML_OfficeDocumentSettings },
+        { NS_xls_xml_ss, XML_Workbook, NS_xls_xml_ss, XML_Names },
+        { NS_xls_xml_ss, XML_Workbook, NS_xls_xml_ss, XML_Styles },
+        { NS_xls_xml_ss, XML_Workbook, NS_xls_xml_ss, XML_Worksheet },
+        { NS_xls_xml_ss, XML_Workbook, NS_xls_xml_x, XML_ExcelWorkbook },
+        { NS_xls_xml_ss, XML_Worksheet, NS_xls_xml_ss, XML_Names },
+        { NS_xls_xml_ss, XML_Worksheet, NS_xls_xml_ss, XML_Table },
+        { NS_xls_xml_ss, XML_Worksheet, NS_xls_xml_x, XML_AutoFilter },
+        { NS_xls_xml_ss, XML_Worksheet, NS_xls_xml_x, XML_WorksheetOptions },
+        { NS_xls_xml_x, XML_AutoFilter, NS_xls_xml_x, XML_AutoFilterColumn },
+        { NS_xls_xml_x, XML_AutoFilterColumn, NS_xls_xml_x, XML_AutoFilterCondition },
+        { NS_xls_xml_x, XML_AutoFilterColumn, NS_xls_xml_x, XML_AutoFilterOr },
+        { NS_xls_xml_x, XML_AutoFilterOr, NS_xls_xml_x, XML_AutoFilterCondition },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_ActiveSheet },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_FirstVisibleSheet },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_ProtectStructure },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_ProtectWindows },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_RefModeR1C1 },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_TabRatio },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_WindowHeight },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_WindowTopX },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_WindowTopY },
+        { NS_xls_xml_x, XML_ExcelWorkbook, NS_xls_xml_x, XML_WindowWidth },
+        { NS_xls_xml_x, XML_PageSetup, NS_xls_xml_x, XML_Footer },
+        { NS_xls_xml_x, XML_PageSetup, NS_xls_xml_x, XML_Header },
+        { NS_xls_xml_x, XML_PageSetup, NS_xls_xml_x, XML_PageMargins },
+        { NS_xls_xml_x, XML_Pane, NS_xls_xml_x, XML_ActiveCol },
+        { NS_xls_xml_x, XML_Pane, NS_xls_xml_x, XML_ActiveRow },
+        { NS_xls_xml_x, XML_Pane, NS_xls_xml_x, XML_Number },
+        { NS_xls_xml_x, XML_Pane, NS_xls_xml_x, XML_RangeSelection },
+        { NS_xls_xml_x, XML_Panes, NS_xls_xml_x, XML_Pane },
+        { NS_xls_xml_x, XML_Print, NS_xls_xml_x, XML_HorizontalResolution },
+        { NS_xls_xml_x, XML_Print, NS_xls_xml_x, XML_ValidPrinterInfo },
+        { NS_xls_xml_x, XML_Print, NS_xls_xml_x, XML_VerticalResolution },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_ActivePane },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_FilterOn },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_FreezePanes },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_FrozenNoSplit },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_LeftColumnRightPane },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_PageSetup },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_Panes },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_Print },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_ProtectObjects },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_ProtectScenarios },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_Selected },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_SplitHorizontal },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_SplitVertical },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_TopRowBottomPane },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_TopRowVisible },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_Unsynced },
+        { NS_xls_xml_x, XML_WorksheetOptions, NS_xls_xml_x, XML_Zoom },
+    };
+
+    init_element_validator(rules, std::size(rules));
+
     m_cur_array_range.first.column = -1;
     m_cur_array_range.first.row = -1;
     m_cur_array_range.last = m_cur_array_range.first;
@@ -739,21 +828,6 @@ void xls_xml_context::declaration(const xml_declaration_t& decl)
         return;
 
     gs->set_character_set(decl.encoding);
-}
-
-bool xls_xml_context::can_handle_element(xmlns_id_t ns, xml_token_t name) const
-{
-    if (ns == NS_xls_xml_ss)
-    {
-        switch (name)
-        {
-            case XML_Data:
-                return false;
-            default:
-                ;
-        }
-    }
-    return true;
 }
 
 xml_context_base* xls_xml_context::create_child_context(xmlns_id_t ns, xml_token_t name)
@@ -776,13 +850,14 @@ xml_context_base* xls_xml_context::create_child_context(xmlns_id_t ns, xml_token
     return nullptr;
 }
 
-void xls_xml_context::end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child)
+void xls_xml_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/, xml_context_base* /*child*/)
 {
 }
 
 void xls_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs)
 {
-    xml_token_pair_t parent = push_stack(ns, name);
+    push_stack(ns, name);
+
     if (ns == NS_xls_xml_ss)
     {
         switch (name)
@@ -792,34 +867,25 @@ void xls_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_a
                 break;
             case XML_Worksheet:
             {
-                start_element_worksheet(parent, attrs);
+                start_element_worksheet(attrs);
                 break;
             }
             case XML_Table:
-                start_element_table(parent, attrs);
+                start_element_table(attrs);
                 break;
             case XML_Row:
-                start_element_row(parent, attrs);
+                start_element_row(attrs);
                 break;
             case XML_Cell:
-                start_element_cell(parent, attrs);
+                start_element_cell(attrs);
                 break;
             case XML_Column:
-                start_element_column(parent, attrs);
+                start_element_column(attrs);
                 break;
             case XML_Names:
-            {
-                xml_elem_stack_t expected_parents;
-                expected_parents.emplace_back(NS_xls_xml_ss, XML_Workbook);
-                expected_parents.emplace_back(NS_xls_xml_ss, XML_Worksheet);
-
-                xml_element_expected(parent, expected_parents);
                 break;
-            }
             case XML_NamedRange:
             {
-                xml_element_expected(parent, NS_xls_xml_ss, XML_Names);
-
                 pstring name_s, exp;
 
                 for (const xml_token_attr_t& attr : attrs)
@@ -857,14 +923,9 @@ void xls_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_a
                 break;
             }
             case XML_Styles:
-            {
-                xml_element_expected(parent, NS_xls_xml_ss, XML_Workbook);
                 break;
-            }
             case XML_Style:
             {
-                xml_element_expected(parent, NS_xls_xml_ss, XML_Styles);
-
                 pstring style_id, style_name;
 
                 for (const xml_token_attr_t& attr : attrs)
@@ -885,25 +946,23 @@ void xls_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_a
                     }
                 }
 
-                m_current_style = orcus::make_unique<style_type>();
+                m_current_style = std::make_unique<style_type>();
                 m_current_style->id = style_id;
                 m_current_style->name = style_name;
 
                 break;
             }
             case XML_Borders:
-                start_element_borders(parent, attrs);
+                start_element_borders(attrs);
                 break;
             case XML_Border:
-                start_element_border(parent, attrs);
+                start_element_border(attrs);
                 break;
             case XML_NumberFormat:
-                start_element_number_format(parent, attrs);
+                start_element_number_format(attrs);
                 break;
             case XML_Font:
             {
-                xml_element_expected(parent, NS_xls_xml_ss, XML_Style);
-
                 for (const xml_token_attr_t& attr : attrs)
                 {
                     if (attr.ns != NS_xls_xml_ss)
@@ -934,8 +993,6 @@ void xls_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_a
             }
             case XML_Interior:
             {
-                xml_element_expected(parent, NS_xls_xml_ss, XML_Style);
-
                 for (const xml_token_attr_t& attr : attrs)
                 {
                     if (attr.ns != NS_xls_xml_ss)
@@ -962,8 +1019,6 @@ void xls_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_a
             }
             case XML_Alignment:
             {
-                xml_element_expected(parent, NS_xls_xml_ss, XML_Style);
-
                 for (const xml_token_attr_t& attr : attrs)
                 {
                     if (attr.ns != NS_xls_xml_ss)
@@ -1003,60 +1058,45 @@ void xls_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_a
         switch (name)
         {
             case XML_WorksheetOptions:
-                xml_element_expected(parent, NS_xls_xml_ss, XML_Worksheet);
                 m_split_pane.reset();
                 break;
             case XML_FreezePanes:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 // TODO : check if this is correct.
                 m_split_pane.pane_state = spreadsheet::pane_state_t::frozen_split;
                 break;
             case XML_FrozenNoSplit:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 m_split_pane.pane_state = spreadsheet::pane_state_t::frozen;
                 break;
             case XML_ActivePane:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 m_split_pane.active_pane = spreadsheet::sheet_pane_t::unspecified;
                 break;
             case XML_SplitHorizontal:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 m_split_pane.split_horizontal = 0.0;
                 break;
             case XML_SplitVertical:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 m_split_pane.split_vertical = 0.0;
                 break;
             case XML_TopRowBottomPane:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 m_split_pane.top_row_bottom_pane = 0;
                 break;
             case XML_LeftColumnRightPane:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 m_split_pane.left_col_right_pane = 0;
                 break;
             case XML_Panes:
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 break;
             case XML_Pane:
-                xml_element_expected(parent, NS_xls_xml_x, XML_Panes);
                 m_cursor_selection.reset();
                 break;
             case XML_Number:
-                xml_element_expected(parent, NS_xls_xml_x, XML_Pane);
                 break;
             case XML_ActiveCol:
-                xml_element_expected(parent, NS_xls_xml_x, XML_Pane);
                 break;
             case XML_ActiveRow:
-                xml_element_expected(parent, NS_xls_xml_x, XML_Pane);
                 break;
             case XML_RangeSelection:
-                xml_element_expected(parent, NS_xls_xml_x, XML_Pane);
                 break;
             case XML_Selected:
             {
-                xml_element_expected(parent, NS_xls_xml_x, XML_WorksheetOptions);
                 if (mp_cur_sheet)
                 {
                     spreadsheet::iface::import_sheet_view* sv = mp_cur_sheet->get_sheet_view();
@@ -1162,12 +1202,12 @@ spreadsheet::sheet_pane_t to_sheet_pane(long v)
 
 }
 
-void xls_xml_context::characters(const pstring& str, bool /*transient*/)
+void xls_xml_context::characters(std::string_view str, bool /*transient*/)
 {
     if (str.empty())
         return;
 
-    const xml_token_pair_t& ce = get_current_element();
+    xml_token_pair_t ce = get_current_element();
 
     if (ce.first == NS_xls_xml_x)
     {
@@ -1207,7 +1247,7 @@ void xls_xml_context::characters(const pstring& str, bool /*transient*/)
                     mp_factory->get_reference_resolver(spreadsheet::formula_ref_context_t::global);
 
                 if (resolver)
-                    m_cursor_selection.range = to_rc_range(resolver->resolve_range(str.data(), str.size()));
+                    m_cursor_selection.range = to_rc_range(resolver->resolve_range(str));
 
                 break;
             }
@@ -1217,16 +1257,13 @@ void xls_xml_context::characters(const pstring& str, bool /*transient*/)
     }
 }
 
-void xls_xml_context::start_element_borders(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_borders(const xml_attrs_t& /*attrs*/)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Style);
     m_current_style->borders.clear();
 }
 
-void xls_xml_context::start_element_border(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_border(const xml_attrs_t& attrs)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Borders);
-
     spreadsheet::border_direction_t dir = spreadsheet::border_direction_t::unknown;
     spreadsheet::border_style_t style = spreadsheet::border_style_t::unknown;
     spreadsheet::color_rgb_t color;
@@ -1313,9 +1350,8 @@ void xls_xml_context::start_element_border(const xml_token_pair_t& parent, const
     }
 }
 
-void xls_xml_context::start_element_number_format(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_number_format(const xml_attrs_t& attrs)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Style);
     m_current_style->number_format.clear();
 
     for (const xml_token_attr_t& attr : attrs)
@@ -1327,7 +1363,7 @@ void xls_xml_context::start_element_number_format(const xml_token_pair_t& parent
         {
             case XML_Format:
             {
-                pstring code = num_format::get().find(attr.value.data(), attr.value.size());
+                std::string_view code = num_format::get().find(attr.value.data(), attr.value.size());
                 m_current_style->number_format = code.empty() ? intern(attr) : code;
                 break;
             }
@@ -1337,10 +1373,8 @@ void xls_xml_context::start_element_number_format(const xml_token_pair_t& parent
     }
 }
 
-void xls_xml_context::start_element_cell(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_cell(const xml_attrs_t& attrs)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Row);
-
     long col_index = 0;
     pstring formula;
     m_cur_cell_style_id.clear();
@@ -1368,7 +1402,7 @@ void xls_xml_context::start_element_cell(const xml_token_pair_t& parent, const x
             case XML_Formula:
                 if (attr.value[0] == '=' && attr.value.size() > 1)
                 {
-                    pstring s(attr.value.get()+1, attr.value.size()-1);
+                    pstring s(attr.value.data()+1, attr.value.size()-1);
                     formula = s;
                     if (attr.transient)
                         formula = intern(s);
@@ -1388,7 +1422,7 @@ void xls_xml_context::start_element_cell(const xml_token_pair_t& parent, const x
                 spreadsheet::iface::import_reference_resolver* resolver =
                     mp_factory->get_reference_resolver(spreadsheet::formula_ref_context_t::global);
                 if (resolver)
-                    m_cur_array_range = to_rc_range(resolver->resolve_range(attr.value.data(), attr.value.size()));
+                    m_cur_array_range = to_rc_range(resolver->resolve_range(attr.value));
 
                 break;
             }
@@ -1407,10 +1441,8 @@ void xls_xml_context::start_element_cell(const xml_token_pair_t& parent, const x
     }
 }
 
-void xls_xml_context::start_element_column(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_column(const xml_attrs_t& attrs)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Table);
-
     if (!mp_sheet_props)
         return;
 
@@ -1458,9 +1490,8 @@ void xls_xml_context::start_element_column(const xml_token_pair_t& parent, const
     m_cur_prop_col = col_index;
 }
 
-void xls_xml_context::start_element_row(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_row(const xml_attrs_t& attrs)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Table);
     m_cur_col = m_table_props.pos.column;
     spreadsheet::row_t row_index = -1;
     bool has_height = false;
@@ -1508,10 +1539,8 @@ void xls_xml_context::start_element_row(const xml_token_pair_t& parent, const xm
     }
 }
 
-void xls_xml_context::start_element_table(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_table(const xml_attrs_t& attrs)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Worksheet);
-
     spreadsheet::row_t row_index = -1;
     spreadsheet::col_t col_index = -1;
 
@@ -1548,10 +1577,8 @@ void xls_xml_context::start_element_table(const xml_token_pair_t& parent, const 
         m_table_props.pos.column = col_index - 1;
 }
 
-void xls_xml_context::start_element_worksheet(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void xls_xml_context::start_element_worksheet(const xml_attrs_t& attrs)
 {
-    xml_element_expected(parent, NS_xls_xml_ss, XML_Workbook);
-
     ++m_cur_sheet;
     pstring sheet_name;
     m_cell_formulas.emplace_back();
@@ -1571,7 +1598,7 @@ void xls_xml_context::start_element_worksheet(const xml_token_pair_t& parent, co
         }
     }
 
-    mp_cur_sheet = mp_factory->append_sheet(m_cur_sheet, sheet_name.data(), sheet_name.size());
+    mp_cur_sheet = mp_factory->append_sheet(m_cur_sheet, sheet_name);
     spreadsheet::iface::import_named_expression* sheet_named_exp = nullptr;
     if (mp_cur_sheet)
     {
@@ -1669,8 +1696,7 @@ void xls_xml_context::end_element_workbook()
 
         for (const named_exp& ne : m_named_exps_global)
         {
-            ne_global->set_named_expression(
-                ne.name.data(), ne.name.size(), ne.expression.data(), ne.expression.size());
+            ne_global->set_named_expression(ne.name, ne.expression);
             ne_global->commit();
         }
     }
@@ -1685,8 +1711,7 @@ void xls_xml_context::end_element_workbook()
 
         if (p)
         {
-            p->set_named_expression(
-                ne.name.data(), ne.name.size(), ne.expression.data(), ne.expression.size());
+            p->set_named_expression(ne.name, ne.expression);
             p->commit();
         }
     }
@@ -1706,7 +1731,7 @@ void xls_xml_context::end_element_workbook()
         for (const cell_formula_type& cf : store)
         {
             xformula->set_position(cf.pos.row, cf.pos.column);
-            xformula->set_formula(ss::formula_grammar_t::xls_xml, cf.formula.data(), cf.formula.size());
+            xformula->set_formula(ss::formula_grammar_t::xls_xml, cf.formula);
 
             switch (cf.result.type)
             {
@@ -1838,7 +1863,7 @@ void xls_xml_context::commit_default_style()
     {
         const pstring& name = m_default_style->name;
         if (!name.empty())
-            styles->set_cell_style_name(name.data(), name.size());
+            styles->set_cell_style_name(name);
     }
 
     styles->commit_cell_style();
@@ -1905,7 +1930,7 @@ void xls_xml_context::commit_styles()
 
         if (!style->number_format.empty())
         {
-            styles->set_number_format_code(style->number_format.data(), style->number_format.size());
+            styles->set_number_format_code(style->number_format);
             size_t number_format_id = styles->commit_number_format();
             styles->set_xf_number_format(number_format_id);
         }

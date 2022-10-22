@@ -16,7 +16,6 @@
 
 namespace orcus {
 
-class pstring;
 class xmlns_repository;
 
 namespace spreadsheet { namespace iface {
@@ -28,8 +27,6 @@ class ORCUS_DLLPUBLIC orcus_xml
 {
     struct impl;
     std::unique_ptr<impl> mp_impl;
-
-    void read_impl(const pstring& strm);
 
 public:
     orcus_xml(const orcus_xml&) = delete;
@@ -49,7 +46,7 @@ public:
      *                   and attributes used in the paths without explicit
      *                   namespace values.
      */
-    void set_namespace_alias(const pstring& alias, const pstring& uri, bool default_ns=false);
+    void set_namespace_alias(std::string_view alias, std::string_view uri, bool default_ns=false);
 
     /**
      * Define a mapping of a single element or attribute to a single cell
@@ -60,7 +57,7 @@ public:
      * @param row row index (0-based) of the linked cell location.
      * @param col column index (0-based) of the linked cell location.
      */
-    void set_cell_link(const pstring& xpath, const pstring& sheet, spreadsheet::row_t row, spreadsheet::col_t col);
+    void set_cell_link(std::string_view xpath, std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col);
 
     /**
      * Initiate the mapping definition of a linked range.  The definition will
@@ -70,7 +67,7 @@ public:
      * @param row row index (0-based) of the linked cell location.
      * @param col column index (0-based) of the linked cell location.
      */
-    void start_range(const pstring& sheet, spreadsheet::row_t row, spreadsheet::col_t col);
+    void start_range(std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col);
 
     /**
      * Append a field that is mapped to a specified path in the XML document
@@ -80,7 +77,7 @@ public:
      * @param label custom header label to use in lieu of the name of the
      *              linked entity.
      */
-    void append_field_link(const pstring& xpath, const pstring& label);
+    void append_field_link(std::string_view xpath, std::string_view label);
 
     /**
      * Set the element located in the specified path as a row group in the
@@ -91,7 +88,7 @@ public:
      *
      * @param xpath path to the element to use as a row group element.
      */
-    void set_range_row_group(const pstring& xpath);
+    void set_range_row_group(std::string_view xpath);
 
     /**
      * Commit the mapping definition of the current range.
@@ -103,45 +100,41 @@ public:
      *
      * @param name name of the sheet.
      */
-    void append_sheet(const pstring& name);
+    void append_sheet(std::string_view name);
 
     /**
      * Read the stream containing the source XML document.
      *
-     * @param p pointer to the buffer containing the source XML document.
-     * @param n size of the buffer.
+     * @param stream stream containing the content of the source XML document.
      */
-    void read_stream(const char* p, size_t n);
+    void read_stream(std::string_view stream);
 
     /**
      * Read an XML stream that contains an entire set of mapping rules.
      *
      * This method also inserts all necessary sheets into the document model.
      *
-     * @param p pointer to the buffer that contains the XML string.
-     * @param n size of the buffer.
+     * @param stream stream containing the XML string.
      */
-    void read_map_definition(const char* p, size_t n);
+    void read_map_definition(std::string_view stream);
 
     /**
      * Read a stream containing the source XML document, automatically detect
      * all linkable ranges and import them one range per sheet.
      *
-     * @param p pointer to the buffer that contains the source XML document.
-     * @param n size of the buffer.
+     * @param stream stream containing the source XML document.
      */
-    void detect_map_definition(const char* p, size_t n);
+    void detect_map_definition(std::string_view stream);
 
     /**
      * Read a stream containing the source XML document, automatically detect
      * all linkable ranges, and write a map definition file depicting the
      * detected ranges.
      *
-     * @param p pointer to the buffer that contains the source XML document.
-     * @param n size of the buffer.
+     * @param stream stream containing the source XML document.
      * @param out output stream to write the map definition file to.
      */
-    void write_map_definition(const char* p, size_t n, std::ostream& out) const;
+    void write_map_definition(std::string_view stream, std::ostream& out) const;
 
     /**
      * Write the linked cells and ranges in the spreadsheet document as an XML
@@ -150,12 +143,10 @@ public:
      * Note that this requires the source XML document stream, as it re-uses
      * parts of the source stream.
      *
-     * @param p_in pointer to the buffer that contains the source XML
-     *             document.
-     * @param n_in size of the buffer containing the source XML document.
+     * @param stream stream containing the source XML document.
      * @param out output stream to write the XML document to.
      */
-    void write(const char* p_in, size_t n_in, std::ostream& out) const;
+    void write(std::string_view stream, std::ostream& out) const;
 };
 
 }

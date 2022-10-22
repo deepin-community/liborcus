@@ -18,7 +18,6 @@
 #include <ixion/formula_name_resolver.hpp>
 #include <ixion/model_context.hpp>
 #include <ixion/formula.hpp>
-#include <ixion/matrix.hpp>
 
 namespace orcus { namespace spreadsheet {
 
@@ -27,16 +26,17 @@ import_sheet_named_exp::import_sheet_named_exp(document& doc, sheet_t sheet_inde
 
 import_sheet_named_exp::~import_sheet_named_exp() {}
 
-void import_sheet_named_exp::define(const char* p_name, size_t n_name, const char* p_exp, size_t n_exp, formula_ref_context_t ref_cxt)
+void import_sheet_named_exp::define(
+    std::string_view name, std::string_view expression, formula_ref_context_t ref_cxt)
 {
     string_pool& sp = m_doc.get_string_pool();
-    m_name = sp.intern(p_name, n_name).first;
+    m_name = sp.intern(name).first;
 
     const ixion::formula_name_resolver* resolver = m_doc.get_formula_name_resolver(ref_cxt);
     assert(resolver);
 
     ixion::model_context& cxt = m_doc.get_model_context();
-    m_tokens = ixion::parse_formula_string(cxt, m_base, *resolver, p_exp, n_exp);
+    m_tokens = ixion::parse_formula_string(cxt, m_base, *resolver, expression);
 }
 
 void import_sheet_named_exp::set_base_position(const src_address_t& pos)
@@ -46,24 +46,22 @@ void import_sheet_named_exp::set_base_position(const src_address_t& pos)
     m_base.column = pos.column;
 }
 
-void import_sheet_named_exp::set_named_expression(
-    const char* p_name, size_t n_name, const char* p_exp, size_t n_exp)
+void import_sheet_named_exp::set_named_expression(std::string_view name, std::string_view expression)
 {
-    define(p_name, n_name, p_exp, n_exp, formula_ref_context_t::global);
+    define(name, expression, formula_ref_context_t::global);
 }
 
-void import_sheet_named_exp::set_named_range(
-    const char* p_name, size_t n_name, const char* p_range, size_t n_range)
+void import_sheet_named_exp::set_named_range(std::string_view name, std::string_view range)
 {
-    define(p_name, n_name, p_range, n_range, formula_ref_context_t::named_range);
+    define(name, range, formula_ref_context_t::named_range);
 }
 
 void import_sheet_named_exp::commit()
 {
     ixion::model_context& cxt = m_doc.get_model_context();
-    cxt.set_named_expression(m_sheet_index, m_name.data(), m_name.size(), m_base, std::move(m_tokens));
+    cxt.set_named_expression(m_sheet_index, std::string{m_name}, m_base, std::move(m_tokens));
 
-    m_name.clear();
+    m_name = std::string_view{};
     m_base.sheet = 0;
     m_base.row = 0;
     m_base.column = 0;
@@ -76,19 +74,19 @@ void import_data_table::reset()
 {
 }
 
-void import_data_table::set_type(data_table_type_t type)
+void import_data_table::set_type(data_table_type_t /*type*/)
 {
 }
 
-void import_data_table::set_range(const range_t& range)
+void import_data_table::set_range(const range_t& /*range*/)
 {
 }
 
-void import_data_table::set_first_reference(const char* p_ref, size_t n_ref, bool deleted)
+void import_data_table::set_first_reference(std::string_view /*ref*/, bool /*deleted*/)
 {
 }
 
-void import_data_table::set_second_reference(const char* p_ref, size_t n_ref, bool deleted)
+void import_data_table::set_second_reference(std::string_view /*ref*/, bool /*deleted*/)
 {
 }
 
@@ -118,11 +116,11 @@ void import_auto_filter::set_column(col_t col)
     m_cur_col = col;
 }
 
-void import_auto_filter::append_column_match_value(const char* p, size_t n)
+void import_auto_filter::append_column_match_value(std::string_view value)
 {
     // The string pool belongs to the document.
-    pstring s = m_string_pool.intern(p, n).first;
-    m_cur_col_data.match_values.insert(s);
+    value = m_string_pool.intern(value).first;
+    m_cur_col_data.match_values.insert(value);
 }
 
 void import_auto_filter::commit_column()
@@ -140,7 +138,7 @@ void import_auto_filter::commit()
 }
 
 import_array_formula::import_array_formula(document& doc, sheet& sheet) :
-    m_doc(doc), m_sheet(sheet), m_error_policy(formula_error_policy_t::fail)
+    m_doc(doc), m_sheet(sheet), m_missing_formula_result(), m_error_policy(formula_error_policy_t::fail)
 {
     m_range.first.column = -1;
     m_range.first.row = -1;
@@ -154,9 +152,48 @@ import_array_formula::~import_array_formula()
 void import_array_formula::set_range(const range_t& range)
 {
     m_range = range;
+
+    // Initialize the result matrix with the missing result value.
+    switch (m_missing_formula_result.get_type())
+    {
+        case ixion::formula_result::result_type::value:
+        {
+            ixion::matrix _mtx(
+                m_range.last.row - m_range.first.row + 1,
+                m_range.last.column - m_range.first.column + 1,
+                m_missing_formula_result.get_value());
+            m_result_mtx.swap(_mtx);
+            break;
+        }
+        case ixion::formula_result::result_type::error:
+        {
+            ixion::matrix _mtx(
+                m_range.last.row - m_range.first.row + 1,
+                m_range.last.column - m_range.first.column + 1,
+                m_missing_formula_result.get_error());
+            m_result_mtx.swap(_mtx);
+            break;
+        }
+        case ixion::formula_result::result_type::string:
+        {
+            ixion::matrix _mtx(
+                m_range.last.row - m_range.first.row + 1,
+                m_range.last.column - m_range.first.column + 1,
+                m_missing_formula_result.get_string());
+            m_result_mtx.swap(_mtx);
+            break;
+        }
+        default:
+        {
+            ixion::matrix _mtx(
+                m_range.last.row - m_range.first.row + 1,
+                m_range.last.column - m_range.first.column + 1);
+            m_result_mtx.swap(_mtx);
+        }
+    }
 }
 
-void import_array_formula::set_formula(formula_grammar_t grammar, const char* p, size_t n)
+void import_array_formula::set_formula(formula_grammar_t /*grammar*/, std::string_view formula)
 {
     const ixion::formula_name_resolver* resolver =
         m_doc.get_formula_name_resolver(spreadsheet::formula_ref_context_t::global);
@@ -169,84 +206,47 @@ void import_array_formula::set_formula(formula_grammar_t grammar, const char* p,
 
     try
     {
-        m_tokens = ixion::parse_formula_string(cxt, pos, *resolver, p, n);
+        m_tokens = ixion::parse_formula_string(cxt, pos, *resolver, formula);
     }
     catch (const std::exception& e)
     {
         if (m_error_policy == formula_error_policy_t::fail)
             throw;
 
-        const char* p_error = e.what();
-        size_t n_error = strlen(p_error);
-        m_tokens = ixion::create_formula_error_tokens(cxt, p, n, p_error, n_error);
+        std::string_view error_s = e.what();
+        m_tokens = ixion::create_formula_error_tokens(cxt, formula, error_s);
     }
 }
 
 void import_array_formula::set_result_value(row_t row, col_t col, double value)
 {
+    m_result_mtx.set(row, col, value);
 }
 
-void import_array_formula::set_result_string(row_t row, col_t col, size_t sindex)
+void import_array_formula::set_result_string(row_t /*row*/, col_t /*col*/, std::string_view /*value*/)
 {
+    // TODO : handle this
 }
 
-void import_array_formula::set_result_empty(row_t row, col_t col)
+void import_array_formula::set_result_empty(row_t /*row*/, col_t /*col*/)
 {
+    // TODO : handle this
 }
 
 void import_array_formula::set_result_bool(row_t row, col_t col, bool value)
 {
+    m_result_mtx.set(row, col, value);
 }
 
 void import_array_formula::commit()
 {
-    if (m_result)
-    {
-        ixion::matrix mtx;
-
-        switch (m_result->get_type())
-        {
-            case ixion::formula_result::result_type::value:
-            {
-                ixion::matrix _mtx(
-                    m_range.last.row - m_range.first.row + 1,
-                    m_range.last.column - m_range.first.column + 1,
-                    m_result->get_value());
-                mtx.swap(_mtx);
-                break;
-            }
-            case ixion::formula_result::result_type::error:
-            {
-                ixion::matrix _mtx(
-                    m_range.last.row - m_range.first.row + 1,
-                    m_range.last.column - m_range.first.column + 1,
-                    m_result->get_error());
-                mtx.swap(_mtx);
-                break;
-            }
-            case ixion::formula_result::result_type::string:
-            {
-                ixion::matrix _mtx(
-                    m_range.last.row - m_range.first.row + 1,
-                    m_range.last.column - m_range.first.column + 1,
-                    m_result->get_string());
-                mtx.swap(_mtx);
-                break;
-            }
-            case ixion::formula_result::result_type::matrix:
-                throw std::runtime_error("TODO: not implemented yet.");
-        }
-
-        ixion::formula_result cached_results(std::move(mtx));
-        m_sheet.set_grouped_formula(m_range, std::move(m_tokens), std::move(cached_results));
-    }
-    else
-        m_sheet.set_grouped_formula(m_range, std::move(m_tokens));
+    ixion::formula_result cached_results(std::move(m_result_mtx));
+    m_sheet.set_grouped_formula(m_range, std::move(m_tokens), std::move(cached_results));
 }
 
 void import_array_formula::set_missing_formula_result(ixion::formula_result result)
 {
-    m_result.reset(std::move(result));
+    m_missing_formula_result = std::move(result);
 }
 
 void import_array_formula::set_formula_error_policy(formula_error_policy_t policy)
@@ -257,7 +257,7 @@ void import_array_formula::set_formula_error_policy(formula_error_policy_t polic
 void import_array_formula::reset()
 {
     m_tokens.clear();
-    m_result.reset();
+    m_result_mtx = ixion::matrix();
     m_range.first.row = -1;
     m_range.first.column = -1;
     m_range.last.row = -1;
@@ -282,7 +282,7 @@ void import_formula::set_position(row_t row, col_t col)
     m_col = col;
 }
 
-void import_formula::set_formula(formula_grammar_t grammar, const char* p, size_t n)
+void import_formula::set_formula(formula_grammar_t /*grammar*/, std::string_view formula)
 {
     if (m_row < 0 || m_col < 0)
         return;
@@ -299,16 +299,15 @@ void import_formula::set_formula(formula_grammar_t grammar, const char* p, size_
     ixion::formula_tokens_t tokens;
     try
     {
-        tokens = ixion::parse_formula_string(cxt, pos, *resolver, p, n);
+        tokens = ixion::parse_formula_string(cxt, pos, *resolver, formula);
     }
     catch (const std::exception& e)
     {
         if (m_error_policy == formula_error_policy_t::fail)
             throw;
 
-        const char* p_error = e.what();
-        size_t n_error = strlen(p_error);
-        tokens = ixion::create_formula_error_tokens(cxt, p, n, p_error, n_error);
+        std::string_view error_s = e.what();
+        tokens = ixion::create_formula_error_tokens(cxt, formula, error_s);
     }
 
     m_tokens_store = ixion::formula_tokens_store::create();
@@ -321,10 +320,18 @@ void import_formula::set_shared_formula_index(size_t index)
     m_shared_index = index;
 }
 
-void import_formula::set_result_value(double value) {}
-void import_formula::set_result_string(size_t sindex) {}
+void import_formula::set_result_value(double value)
+{
+    m_result = ixion::formula_result(value);
+}
+
+void import_formula::set_result_string(std::string_view value)
+{
+    m_result = ixion::formula_result(std::string{value});
+}
+
 void import_formula::set_result_empty() {}
-void import_formula::set_result_bool(bool value) {}
+void import_formula::set_result_bool(bool /*value*/) {}
 
 void import_formula::commit()
 {
@@ -364,7 +371,7 @@ void import_formula::commit()
 
 void import_formula::set_missing_formula_result(ixion::formula_result result)
 {
-    m_result.reset(std::move(result));
+    m_result = std::move(result);
 }
 
 void import_formula::set_formula_error_policy(formula_error_policy_t policy)
@@ -396,7 +403,7 @@ import_sheet::import_sheet(document& doc, sheet& sh, sheet_view* view) :
     m_fill_missing_formula_results(false)
 {
     if (view)
-        m_sheet_view = orcus::make_unique<import_sheet_view>(*view, sh.get_index());
+        m_sheet_view = std::make_unique<import_sheet_view>(*view, sh.get_index());
 }
 
 import_sheet::~import_sheet() {}
@@ -464,9 +471,9 @@ iface::import_array_formula* import_sheet::get_array_formula()
     return &m_array_formula;
 }
 
-void import_sheet::set_auto(row_t row, col_t col, const char* p, size_t n)
+void import_sheet::set_auto(row_t row, col_t col, std::string_view s)
 {
-    m_sheet.set_auto(row, col, p, n);
+    m_sheet.set_auto(row, col, s);
 }
 
 void import_sheet::set_bool(row_t row, col_t col, bool value)
@@ -490,7 +497,7 @@ void import_sheet::set_format(
     m_sheet.set_format(row_start, col_start, row_end, col_end, xf_index);
 }
 
-void import_sheet::set_string(row_t row, col_t col, size_t sindex)
+void import_sheet::set_string(row_t row, col_t col, string_id_t sindex)
 {
     m_sheet.set_string(row, col, sindex);
 }

@@ -7,7 +7,7 @@
 
 #include "orcus/yaml_document_tree.hpp"
 #include "orcus/yaml_parser.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/global.hpp"
 
 #include "json_util.hpp"
@@ -244,13 +244,13 @@ public:
 
         if (m_root)
         {
-            yaml_value* yv = push_value(orcus::make_unique<yaml_value_sequence>());
+            yaml_value* yv = push_value(std::make_unique<yaml_value_sequence>());
             assert(yv && yv->type == node_t::sequence);
             m_stack.push_back(parser_stack(yv));
         }
         else
         {
-            m_root = orcus::make_unique<yaml_value_sequence>();
+            m_root = std::make_unique<yaml_value_sequence>();
             m_stack.push_back(parser_stack(m_root.get()));
         }
     }
@@ -266,13 +266,13 @@ public:
         assert(m_in_document);
         if (m_root)
         {
-            yaml_value* yv = push_value(orcus::make_unique<yaml_value_map>());
+            yaml_value* yv = push_value(std::make_unique<yaml_value_map>());
             assert(yv && yv->type == node_t::map);
             m_stack.push_back(parser_stack(yv));
         }
         else
         {
-            m_root = orcus::make_unique<yaml_value_map>();
+            m_root = std::make_unique<yaml_value_map>();
             m_stack.push_back(parser_stack(m_root.get()));
         }
     }
@@ -309,11 +309,11 @@ public:
 
         if (m_root)
         {
-            yaml_value* yv = push_value(orcus::make_unique<yaml_value_string>(p, n));
+            yaml_value* yv = push_value(std::make_unique<yaml_value_string>(p, n));
             assert(yv && yv->type == node_t::string);
         }
         else
-            m_root = orcus::make_unique<yaml_value_string>(p, n);
+            m_root = std::make_unique<yaml_value_string>(p, n);
     }
 
     void number(double val)
@@ -321,11 +321,11 @@ public:
         assert(m_in_document);
         if (m_root)
         {
-            yaml_value* yv = push_value(orcus::make_unique<yaml_value_number>(val));
+            yaml_value* yv = push_value(std::make_unique<yaml_value_number>(val));
             assert(yv && yv->type == node_t::number);
         }
         else
-            m_root = orcus::make_unique<yaml_value_number>(val);
+            m_root = std::make_unique<yaml_value_number>(val);
     }
 
     void boolean_true()
@@ -333,11 +333,11 @@ public:
         assert(m_in_document);
         if (m_root)
         {
-            yaml_value* yv = push_value(orcus::make_unique<yaml_value>(node_t::boolean_true));
+            yaml_value* yv = push_value(std::make_unique<yaml_value>(node_t::boolean_true));
             assert(yv && yv->type == node_t::boolean_true);
         }
         else
-            m_root = orcus::make_unique<yaml_value>(node_t::boolean_true);
+            m_root = std::make_unique<yaml_value>(node_t::boolean_true);
     }
 
     void boolean_false()
@@ -345,11 +345,11 @@ public:
         assert(m_in_document);
         if (m_root)
         {
-            yaml_value* yv = push_value(orcus::make_unique<yaml_value>(node_t::boolean_false));
+            yaml_value* yv = push_value(std::make_unique<yaml_value>(node_t::boolean_false));
             assert(yv && yv->type == node_t::boolean_false);
         }
         else
-            m_root = orcus::make_unique<yaml_value>(node_t::boolean_false);
+            m_root = std::make_unique<yaml_value>(node_t::boolean_false);
     }
 
     void null()
@@ -357,11 +357,11 @@ public:
         assert(m_in_document);
         if (m_root)
         {
-            yaml_value* yv = push_value(orcus::make_unique<yaml_value>(node_t::null));
+            yaml_value* yv = push_value(std::make_unique<yaml_value>(node_t::null));
             assert(yv && yv->type == node_t::null);
         }
         else
-            m_root = orcus::make_unique<yaml_value>(node_t::null);
+            m_root = std::make_unique<yaml_value>(node_t::null);
     }
 
     void swap(std::vector<document_root_type>& docs)
@@ -384,8 +384,8 @@ struct const_node::impl
     impl(const yaml_value* yv) : m_node(yv) {}
 };
 
-const_node::const_node(const yaml_value* yv) : mp_impl(orcus::make_unique<impl>(yv)) {}
-const_node::const_node(const const_node& other) : mp_impl(orcus::make_unique<impl>(other.mp_impl->m_node)) {}
+const_node::const_node(const yaml_value* yv) : mp_impl(std::make_unique<impl>(yv)) {}
+const_node::const_node(const const_node& other) : mp_impl(std::make_unique<impl>(other.mp_impl->m_node)) {}
 const_node::const_node(const_node&& rhs) : mp_impl(std::move(rhs.mp_impl)) {}
 const_node::~const_node() {}
 
@@ -515,14 +515,13 @@ const_node const_node::parent() const
     return const_node(mp_impl->m_node->parent);
 }
 
-pstring const_node::string_value() const
+std::string_view const_node::string_value() const
 {
     if (mp_impl->m_node->type != node_t::string)
         throw document_error("node::key: current node is not of string type.");
 
     const yaml_value_string* yvs = static_cast<const yaml_value_string*>(mp_impl->m_node);
-    const std::string& str = yvs->value_string;
-    return pstring(str.data(), str.size());
+    return yvs->value_string;
 }
 
 double const_node::numeric_value() const
@@ -535,22 +534,17 @@ double const_node::numeric_value() const
 }
 
 document_tree::document_tree() :
-    mp_impl(orcus::make_unique<impl>()) {}
+    mp_impl(std::make_unique<impl>()) {}
 
 document_tree::document_tree(document_tree&& other) :
     mp_impl(std::move(other.mp_impl)) {}
 
 document_tree::~document_tree() {}
 
-void document_tree::load(const std::string& strm)
-{
-    load(strm.data(), strm.size());
-}
-
-void document_tree::load(const char* p, size_t n)
+void document_tree::load(std::string_view s)
 {
     handler hdl;
-    yaml_parser<handler> parser(p, n, hdl);
+    yaml_parser<handler> parser(s.data(), s.size(), hdl);
     parser.parse();
     hdl.swap(mp_impl->m_docs);
 }
@@ -585,7 +579,7 @@ bool needs_quoting(const std::string& s)
 {
     // See if it contains certain characters...
     for (auto it = s.begin(), ite = s.end(); it != ite; ++it)
-        if (is_in(*it, ORCUS_ASCII("#'")))
+        if (is_in(*it, "#'"))
             return true;
 
     // See if the whole string is parsed as a number.

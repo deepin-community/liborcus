@@ -13,11 +13,20 @@
 using std::cout;
 using std::endl;
 
-int main(int argc, char** argv)
+int main()
 {
     cout << "CPU flags:" << endl;
     cout << "  SSE 4.2: " << orcus::detail::cpu::has_sse42() << endl;
     cout << "  AVX2: " << orcus::detail::cpu::has_avx2() << endl;
+
+#if defined(_MSC_VER)
+    cout << "MSVC macros:" << endl;
+    #ifdef _M_IX86_FP
+    cout << "  _M_IX86_FP: " << _M_IX86_FP << endl;
+    #else
+    cout << "  _M_IX86_FP: not defined" << endl;
+    #endif
+#endif
 
     return EXIT_SUCCESS;
 }

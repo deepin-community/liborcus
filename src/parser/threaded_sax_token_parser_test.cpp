@@ -82,7 +82,7 @@ void test_sax_token_parser_1()
 
             void start_element(const orcus::xml_token_element_t& elem)
             {
-                assert(pstring(mp_check->raw_name) == elem.raw_name);
+                assert(std::string_view(mp_check->raw_name) == elem.raw_name);
                 assert(mp_check->token == elem.name);
                 assert(mp_check->start_element);
                 ++mp_check;
@@ -90,13 +90,13 @@ void test_sax_token_parser_1()
 
             void end_element(const orcus::xml_token_element_t& elem)
             {
-                assert(pstring(mp_check->raw_name) == elem.raw_name);
+                assert(std::string_view(mp_check->raw_name) == elem.raw_name);
                 assert(mp_check->token == elem.name);
                 assert(!mp_check->start_element);
                 ++mp_check;
             }
 
-            void characters(const orcus::pstring& /*val*/, bool /*transient*/) {}
+            void characters(std::string_view /*val*/, bool /*transient*/) {}
 
             size_t get_token_count() const
             {
@@ -125,7 +125,7 @@ void test_sax_token_parser_1()
 
             void end_element(const orcus::xml_token_element_t& /*elem*/) {}
 
-            void characters(const orcus::pstring& /*val*/, bool /*transient*/) {}
+            void characters(std::string_view /*val*/, bool /*transient*/) {}
         };
 
         try
@@ -139,7 +139,7 @@ void test_sax_token_parser_1()
         {
             assert(e.offset() == 28u);
         }
-        catch (const std::exception)
+        catch (const std::exception&)
         {
             assert(!"Wrong exception was thrown!");
         }
@@ -164,7 +164,7 @@ void test_sax_token_parser_1()
                 throw mock_exception();
             }
 
-            void characters(const orcus::pstring& /*val*/, bool /*transient*/) {}
+            void characters(std::string_view /*val*/, bool /*transient*/) {}
         };
 
         handler hdl;

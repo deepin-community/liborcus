@@ -10,12 +10,13 @@
 #include "global.hpp"
 #include "named_expression.hpp"
 #include "named_expressions.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 
 #include <ixion/model_context.hpp>
 #include <ixion/named_expressions_iterator.hpp>
 #include <structmember.h>
 #include <object.h>
+#include <sstream>
 
 using namespace std;
 namespace ss = orcus::spreadsheet;
@@ -68,12 +69,12 @@ PyObject* tp_new(PyTypeObject* type, PyObject* /*args*/, PyObject* /*kwargs*/)
     return reinterpret_cast<PyObject*>(self);
 }
 
-int tp_init(pyobj_document* self, PyObject* /*args*/, PyObject* /*kwargs*/)
+int tp_init(pyobj_document* /*self*/, PyObject* /*args*/, PyObject* /*kwargs*/)
 {
     return 0;
 }
 
-PyObject* doc_get_named_expressions(PyObject* self, PyObject* args, PyObject* kwargs)
+PyObject* doc_get_named_expressions(PyObject* self, PyObject* /*args*/, PyObject* /*kwargs*/)
 {
     const ss::document& doc = *t(self)->data->m_doc;
     const ixion::model_context& cxt = doc.get_model_context();
@@ -142,7 +143,7 @@ bool import_from_stream_object(iface::import_filter& app, PyObject* obj_bytes)
 
     size_t n = PyBytes_Size(obj_bytes);
 
-    app.read_stream(p, n);
+    app.read_stream({p, n});
 
     return true;
 }
@@ -250,8 +251,7 @@ stream_with_formulas read_stream_and_formula_params_from_args(PyObject* args, Py
 
     if (error_policy_s)
     {
-        size_t n = strlen(error_policy_s);
-        ss::formula_error_policy_t error_policy = ss::to_formula_error_policy(error_policy_s, n);
+        ss::formula_error_policy_t error_policy = ss::to_formula_error_policy(error_policy_s);
         if (error_policy == ss::formula_error_policy_t::unknown)
         {
             std::ostringstream os;

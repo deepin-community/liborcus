@@ -1,6 +1,5 @@
 
 #include <orcus/json_parser.hpp>
-#include <orcus/pstring.hpp>
 #include <cstring>
 #include <iostream>
 
@@ -9,14 +8,14 @@ using namespace std;
 class json_parser_handler : public orcus::json_handler
 {
 public:
-    void object_key(const char* p, size_t len, bool transient)
+    void object_key(const char* p, size_t len, bool /*transient*/)
     {
-        cout << "object key: " << orcus::pstring(p, len) << endl;
+        cout << "object key: " << std::string_view(p, len) << endl;
     }
 
-    void string(const char* p, size_t len, bool transient)
+    void string(const char* p, size_t len, bool /*transient*/)
     {
-        cout << "string: " << orcus::pstring(p, len) << endl;
+        cout << "string: " << std::string_view(p, len) << endl;
     }
 
     void number(double val)

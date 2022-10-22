@@ -21,12 +21,12 @@ namespace orcus {
 
 class tokens;
 
-ORCUS_DLLPUBLIC void print_element(xmlns_id_t ns, xml_token_t name);
+ORCUS_DLLPUBLIC void print_element(xmlns_id_t ns, xml_token_t name); // TODO:API: not used. remove?
 
 /**
  * Print attributes to stdout for debugging purposes.
  */
-ORCUS_DLLPUBLIC void print_attrs(const tokens& tokens, const xml_attrs_t& attrs);
+ORCUS_DLLPUBLIC void print_attrs(const tokens& tokens, const xml_attrs_t& attrs); // TODO:API: internal to liborcus
 
 /**
  * Parse the string representation of a date-time value, and convert it into
@@ -40,26 +40,20 @@ ORCUS_DLLPUBLIC void print_attrs(const tokens& tokens, const xml_attrs_t& attrs)
  * @param str string representation of a date-time value.
  * @return converted date-time value consisting of a set of numeric values.
  */
-ORCUS_DLLPUBLIC date_time_t to_date_time(const pstring& str);
+ORCUS_DLLPUBLIC date_time_t to_date_time(std::string_view str); // TODO:API: internal to liborcus
 
 /**
  * Function object for deleting objects that are stored in map container as
  * pointers.
  */
 template<typename T>
-struct map_object_deleter : public ::std::unary_function<typename T::value_type, void>
+struct map_object_deleter // TODO:API: remove it and use unique_ptr
 {
     void operator() (typename T::value_type& v)
     {
         delete v.second;
     }
 };
-
-template<typename T, typename ...Args>
-std::unique_ptr<T> make_unique(Args&& ...args)
-{
-    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
 
 }
 

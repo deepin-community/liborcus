@@ -12,7 +12,6 @@
 #include <vector>
 #include <string>
 #include <unordered_set>
-#include "pstring.hpp"
 #include "env.hpp"
 
 namespace orcus {
@@ -28,8 +27,8 @@ ORCUS_PSR_DLLPUBLIC extern const size_t index_not_found;
 
 // XML specific types
 
-typedef size_t xml_token_t;
-typedef const char* xmlns_id_t;
+using xml_token_t = size_t;
+using xmlns_id_t = const char*;
 
 using xml_token_pair_t = std::pair<xmlns_id_t, xml_token_t>;
 
@@ -44,15 +43,27 @@ using xml_elem_set_t = std::unordered_set<xml_token_pair_t, xml_token_pair_hash>
 ORCUS_PSR_DLLPUBLIC extern const xmlns_id_t XMLNS_UNKNOWN_ID;
 ORCUS_PSR_DLLPUBLIC extern const xml_token_t XML_UNKNOWN_TOKEN;
 
+struct ORCUS_PSR_DLLPUBLIC parse_error_value_t
+{
+    std::string_view str;
+    std::ptrdiff_t offset;
+
+    parse_error_value_t();
+    parse_error_value_t(std::string_view _str, std::ptrdiff_t _offset);
+
+    bool operator==(const parse_error_value_t& other) const;
+    bool operator!=(const parse_error_value_t& other) const;
+};
+
 struct ORCUS_PSR_DLLPUBLIC xml_name_t
 {
     enum to_string_type { use_alias, use_short_name };
 
     xmlns_id_t ns;
-    pstring name;
+    std::string_view name;
 
     xml_name_t();
-    xml_name_t(xmlns_id_t _ns, const pstring& _name);
+    xml_name_t(xmlns_id_t _ns, std::string_view _name);
     xml_name_t(const xml_name_t& r);
 
     xml_name_t& operator= (const xml_name_t& other);
@@ -69,8 +80,8 @@ struct ORCUS_PSR_DLLPUBLIC xml_token_attr_t
 {
     xmlns_id_t ns;
     xml_token_t name;
-    pstring raw_name;
-    pstring value;
+    std::string_view raw_name;
+    std::string_view value;
 
     /**
      * Whether or not the attribute value is transient. A transient value is
@@ -83,10 +94,10 @@ struct ORCUS_PSR_DLLPUBLIC xml_token_attr_t
 
     xml_token_attr_t();
     xml_token_attr_t(
-        xmlns_id_t _ns, xml_token_t _name, const pstring& _value, bool _transient);
+        xmlns_id_t _ns, xml_token_t _name, std::string_view _value, bool _transient);
     xml_token_attr_t(
-        xmlns_id_t _ns, xml_token_t _name, const pstring& _raw_name,
-        const pstring& _value, bool _transient);
+        xmlns_id_t _ns, xml_token_t _name, std::string_view _raw_name,
+        std::string_view _value, bool _transient);
 };
 
 /**
@@ -97,13 +108,13 @@ struct ORCUS_PSR_DLLPUBLIC xml_token_element_t
 {
     xmlns_id_t ns;
     xml_token_t name;
-    pstring raw_name;
+    std::string_view raw_name;
     std::vector<xml_token_attr_t> attrs;
 
     xml_token_element_t& operator= (xml_token_element_t) = delete;
 
     xml_token_element_t();
-    xml_token_element_t(xmlns_id_t _ns, xml_token_t _name, const pstring& _raw_name, std::vector<xml_token_attr_t>&& _attrs);
+    xml_token_element_t(xmlns_id_t _ns, xml_token_t _name, std::string_view _raw_name, std::vector<xml_token_attr_t>&& _attrs);
     xml_token_element_t(const xml_token_element_t& other);
     xml_token_element_t(xml_token_element_t&& other);
 };
@@ -428,7 +439,8 @@ enum class dump_format_t
     flat,
     html,
     json,
-    xml
+    xml,
+    yaml
 };
 
 struct ORCUS_PSR_DLLPUBLIC length_t
@@ -439,6 +451,9 @@ struct ORCUS_PSR_DLLPUBLIC length_t
     length_t();
 
     std::string to_string() const;
+
+    bool operator== (const length_t& other) const noexcept;
+    bool operator!= (const length_t& other) const noexcept;
 };
 
 struct ORCUS_PSR_DLLPUBLIC date_time_t
@@ -460,15 +475,16 @@ struct ORCUS_PSR_DLLPUBLIC date_time_t
 
     bool operator== (const date_time_t& other) const;
     bool operator!= (const date_time_t& other) const;
+    bool operator< (const date_time_t& other) const;
 
     std::string to_string() const;
 
     void swap(date_time_t& other);
 };
 
-ORCUS_PSR_DLLPUBLIC dump_format_t to_dump_format_enum(const char* p, size_t n);
+ORCUS_PSR_DLLPUBLIC dump_format_t to_dump_format_enum(std::string_view s);
 
-ORCUS_PSR_DLLPUBLIC std::vector<std::pair<pstring, dump_format_t>> get_dump_format_entries();
+ORCUS_PSR_DLLPUBLIC std::vector<std::pair<std::string_view, dump_format_t>> get_dump_format_entries();
 
 ORCUS_PSR_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const date_time_t& v);
 ORCUS_PSR_DLLPUBLIC std::ostream& operator<< (std::ostream& os, format_t v);

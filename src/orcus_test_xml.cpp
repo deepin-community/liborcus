@@ -26,9 +26,9 @@ class sax_handler_encoded_attrs
 public:
     void doctype(const sax::doctype_declaration&) {}
 
-    void start_declaration(const pstring&) {}
+    void start_declaration(std::string_view) {}
 
-    void end_declaration(const pstring&)
+    void end_declaration(std::string_view)
     {
         m_attrs.clear();
     }
@@ -37,7 +37,7 @@ public:
 
     void end_element(const sax::parser_element&) {}
 
-    void characters(const pstring&, bool) {}
+    void characters(std::string_view, bool) {}
 
     void attribute(const sax::parser_attribute& attr)
     {
@@ -77,19 +77,21 @@ const char* sax_parser_test_dirs[] = {
     SRCDIR"/test/xml/no-decl-1/",
     SRCDIR"/test/xml/underscore-identifier/",
     SRCDIR"/test/xml/self-closing-root/",
+    SRCDIR"/test/xml/utf8-1/",
+    SRCDIR"/test/xml/utf8-2/",
 };
 
 const char* sax_parser_parse_only_test_dirs[] = {
     SRCDIR"/test/xml/parse-only/rss/"
 };
 
-void parse_file(dom::document_tree& tree, const char* filepath, string& strm)
+void parse_file(dom::document_tree& tree, const char* filepath, std::string& /*strm*/)
 {
     cout << "testing " << filepath << endl;
     file_content content(filepath);
     assert(!content.empty());
 
-    tree.load(content.data(), content.size());
+    tree.load(content.str());
 }
 
 void test_xml_sax_parser()
@@ -117,11 +119,11 @@ void test_xml_sax_parser()
         file = dir_path;
         file.append("check.txt");
         file_content check(file.data());
-        pstring psource(content.c_str(), content.size());
-        pstring pcheck = check.str();
+        std::string_view psource(content);
+        std::string_view pcheck = check.str();
 
         // They must be equal, minus preceding or trailing spaces (if any).
-        assert(psource.trim() == pcheck.trim());
+        assert(trim(psource) == trim(pcheck));
     }
 }
 

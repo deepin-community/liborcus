@@ -40,7 +40,7 @@ void print_yaml_usage(std::ostream& os, const po::options_description& desc)
 
 std::unique_ptr<yaml_config> parse_yaml_args(int argc, char** argv)
 {
-    po::options_description desc("Allowed options");
+    po::options_description desc("Options");
     desc.add_options()
         ("help,h", "Print this help.")
         ("output,o", po::value<string>(), help_yaml_output)
@@ -77,7 +77,7 @@ std::unique_ptr<yaml_config> parse_yaml_args(int argc, char** argv)
         return nullptr;
     }
 
-    std::unique_ptr<yaml_config> config = orcus::make_unique<yaml_config>();
+    std::unique_ptr<yaml_config> config = std::make_unique<yaml_config>();
 
     if (vm.count("input"))
         config->input_path = vm["input"].as<string>();
@@ -142,14 +142,14 @@ std::unique_ptr<yaml_config> parse_yaml_args(int argc, char** argv)
 
 std::unique_ptr<yaml::document_tree> load_doc(const char* p, size_t n)
 {
-    std::unique_ptr<yaml::document_tree> doc(orcus::make_unique<yaml::document_tree>());
+    std::unique_ptr<yaml::document_tree> doc(std::make_unique<yaml::document_tree>());
     try
     {
-        doc->load(p, n);
+        doc->load({p, n});
     }
     catch (const yaml::parse_error& e)
     {
-        cerr << create_parse_error_output(pstring(p, n), e.offset()) << endl;
+        cerr << create_parse_error_output(std::string_view(p, n), e.offset()) << endl;
         throw;
     }
     return doc;

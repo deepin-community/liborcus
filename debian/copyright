@@ -30,14 +30,14 @@ License: MIT
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
 
-Files: misc/gnumeric.xsd
+Files: misc/xml-tokens/gnumeric.xsd
 Copyright: (C) Marc Johnson (marc_johnson27591@hotmail.com)
            (C) 2007 Jody Goldberg <jody@gnome.org>
            (C) 2011 Andreas J. Guelzow <aguelzow@pyrshep.ca>
 License: GPL-2 or GPL-3
 Comment: copied from gnumeric source code
 
-Files: misc/xls-xml-tokens.txt
+Files: misc/xml-tokens/xls-xml-tokens.txt
 Copyright: Copyright (c) 2010-2013 Kohei Yoshida
 License: MPL-2.0
 Comment:
@@ -46,11 +46,15 @@ Comment:
  21:39 < _rene_> (that is the key question and I can cite that)
  21:40 <@kohei> _rene_, yes.
 
-Files: m4/ax_cxx_compile_stdcxx_11.m4
-Copyright: Copyright (c) 2008 Benjamin Kosnik <bkoz@redhat.com>
-           Copyright (c) 2012 Zack Weinberg <zackw@panix.com>
-           Copyright (c) 2013 Roy Stogner <roystgnr@ices.utexas.edu>
-           Copyright (c) 2014, 2015 Google Inc.; contributed by Alexey Sokolov <sokolov@google.com>
+Files: m4/ax_cxx_compile_stdcxx*.m4
+Copyright: 2008 Benjamin Kosnik <bkoz@redhat.com>
+           2012 Zack Weinberg <zackw@panix.com>
+           2013 Roy Stogner <roystgnr@ices.utexas.edu>
+           2014, 2015 Google Inc.; contributed by Alexey Sokolov <sokolov@google.com>
+           2015 Paul Norman <penorman@mac.com>
+           2015 Moritz Klammler <moritz@klammler.eu>
+           2016, 2018 Krzesimir Nowak <qdlacz@gmail.com>
+           2019 Enji Cooper <yaneurabeya@gmail.com>
 License: other
  Copying and distribution of this file, with or without modification, are
  permitted in any medium without royalty provided the copyright notice
@@ -105,8 +109,8 @@ License: Expat
  OTHER DEALINGS IN THE SOFTWARE.
 
 Files: debian/*
-Copyright: 2012 Rene Engelhard <rene@debian.org>
-           2020 Mattia Rizzolo <mattia@debian.org>
+Copyright: 2012      Rene Engelhard <rene@debian.org>
+           2020-2022 Mattia Rizzolo <mattia@debian.org>
 License: GPL-2+
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

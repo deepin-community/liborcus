@@ -8,6 +8,8 @@
 #include "orcus/sax_parser_base.hpp"
 #include "orcus/global.hpp"
 
+#include "utf8.hpp"
+
 #include <cstring>
 #include <vector>
 #include <memory>
@@ -114,12 +116,12 @@ struct parser_base::impl
 
 parser_base::parser_base(const char* content, size_t size, bool transient_stream) :
     ::orcus::parser_base(content, size, transient_stream),
-    mp_impl(orcus::make_unique<impl>()),
+    mp_impl(std::make_unique<impl>()),
     m_nest_level(0),
     m_buffer_pos(0),
     m_root_elem_open(true)
 {
-    mp_impl->m_cell_buffers.push_back(orcus::make_unique<cell_buffer>());
+    mp_impl->m_cell_buffers.push_back(std::make_unique<cell_buffer>());
 }
 
 parser_base::~parser_base() {}
@@ -128,7 +130,7 @@ void parser_base::inc_buffer_pos()
 {
     ++m_buffer_pos;
     if (m_buffer_pos == mp_impl->m_cell_buffers.size())
-        mp_impl->m_cell_buffers.push_back(orcus::make_unique<cell_buffer>());
+        mp_impl->m_cell_buffers.push_back(std::make_unique<cell_buffer>());
 }
 
 cell_buffer& parser_base::get_cell_buffer()
@@ -260,7 +262,7 @@ void parser_base::parse_encoded_char(cell_buffer& buf)
         "error parsing encoded character: terminating character is not found.", offset());
 }
 
-void parser_base::value_with_encoded_char(cell_buffer& buf, pstring& str, char quote_char)
+void parser_base::value_with_encoded_char(cell_buffer& buf, std::string_view& str, char quote_char)
 {
     assert(cur_char() == '&');
     parse_encoded_char(buf);
@@ -289,14 +291,14 @@ void parser_base::value_with_encoded_char(cell_buffer& buf, pstring& str, char q
         buf.append(p0, mp_char-p0);
 
     if (!buf.empty())
-        str = pstring(buf.get(), buf.size());
+        str = std::string_view(buf.get(), buf.size());
 
     // Skip the closing quote.
     assert(!has_char() || cur_char() == quote_char);
     next();
 }
 
-bool parser_base::value(pstring& str, bool decode)
+bool parser_base::value(std::string_view& str, bool decode)
 {
     char c = cur_char();
     if (c != '"' && c != '\'')
@@ -320,7 +322,7 @@ bool parser_base::value(pstring& str, bool decode)
         }
     }
 
-    str = pstring(p0, mp_char-p0);
+    str = std::string_view(p0, mp_char-p0);
 
     // Skip the closing quote.
     next();
@@ -328,20 +330,20 @@ bool parser_base::value(pstring& str, bool decode)
     return transient_stream();
 }
 
-void parser_base::name(pstring& str)
+void parser_base::name(std::string_view& str)
 {
     const char* p0 = mp_char;
-    char c = cur_char();
-    if (!is_alpha(c) && c != '_')
+    mp_char = parse_utf8_xml_name_start_char(mp_char, mp_end);
+    if (mp_char == p0)
     {
         ::std::ostringstream os;
-        os << "name must begin with an alphabet, but got this instead '" << c << "'";
+        os << "name must begin with an alphabet, but got this instead '" << cur_char() << "'";
         throw malformed_xml_error(os.str(), offset());
     }
 
 #if defined(__ORCUS_CPU_FEATURES) && defined(__SSE4_2__)
 
-    const __m128i match = _mm_loadu_si128((const __m128i*)"azAZ09--__");
+    const __m128i match = _mm_loadu_si128((const __m128i*)"azAZ09--__..");
     const int mode = _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY;
 
     size_t n_total = available_size();
@@ -351,23 +353,42 @@ void parser_base::name(pstring& str)
         __m128i char_block = _mm_loadu_si128((const __m128i*)mp_char);
 
         int n = std::min<size_t>(16u, n_total);
-        int r = _mm_cmpestri(match, 10, char_block, n, mode);
+        int r = _mm_cmpestri(match, 12, char_block, n, mode);
         mp_char += r; // Move the current char position.
+        n_total -= r;
 
-        if (r < 16)
-            // No need to move to the next segment. Stop here.
-            break;
+        if (r < 16 && n_total)
+        {
+            // There is a character that does not match the SSE-based ASCII-only check.
+            // It may either by an ascii character that is not allowed, in which case stop,
+            // or it may possibly be an allowed utf-8 character, in which case move over it
+            // using the slow function.
 
-        // Skip 16 chars to the next segment.
-        n_total -= 16;
+            const char* p = parse_utf8_xml_name_char(mp_char, mp_end);
+            if (p == mp_char)
+                break;
+
+            n_total -= p - mp_char;
+            mp_char = p;
+        }
+
     }
+    cur_char_checked(); // check end of xml stream
 
 #else
-    while (is_alpha(c) || is_numeric(c) || is_name_char(c))
-        c = next_char_checked();
+    for(;;)
+    {
+        cur_char_checked(); // check end of xml stream
+        const char* p = parse_utf8_xml_name_char(mp_char, mp_end);
+
+        if (p == mp_char)
+            break;
+
+        mp_char = p;
+    }
 #endif
 
-    str = pstring(p0, mp_char-p0);
+    str = std::string_view(p0, mp_char-p0);
 }
 
 void parser_base::element_name(parser_element& elem, std::ptrdiff_t begin_pos)
@@ -382,7 +403,7 @@ void parser_base::element_name(parser_element& elem, std::ptrdiff_t begin_pos)
     }
 }
 
-void parser_base::attribute_name(pstring& attr_ns, pstring& attr_name)
+void parser_base::attribute_name(std::string_view& attr_ns, std::string_view& attr_name)
 {
     name(attr_name);
     if (cur_char() == ':')

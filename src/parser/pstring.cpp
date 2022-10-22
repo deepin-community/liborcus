@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/string_pool.hpp"
 #include "orcus/parser_global.hpp"
 
@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 using namespace std;
 
@@ -38,6 +39,18 @@ pstring::pstring(const char* _pos) :
 {
 }
 
+bool pstring::operator== (std::string_view r) const
+{
+    if (m_pos == r.data())
+        return m_size == r.size();
+
+    if (m_size != r.size())
+        // lengths differ.
+        return false;
+
+    return std::equal(m_pos, m_pos + m_size, r.data());
+}
+
 bool pstring::operator== (const pstring& r) const
 {
     if (m_pos == r.m_pos)
@@ -47,29 +60,12 @@ bool pstring::operator== (const pstring& r) const
         // lengths differ.
         return false;
 
-    const char* pos1 = m_pos;
-    const char* pos2 = r.m_pos;
-    for (size_t i = 0; i < m_size; ++i, ++pos1, ++pos2)
-        if (*pos1 != *pos2)
-            return false;
-
-    return true;
+    return std::equal(m_pos, m_pos + m_size, r.m_pos);
 }
 
 bool pstring::operator< (const pstring& r) const
 {
-    size_t n = std::min(m_size, r.m_size);
-    const char* p1 = m_pos;
-    const char* p2 = r.m_pos;
-    for (size_t i = 0; i < n; ++i, ++p1, ++p2)
-    {
-        if (*p1 == *p2)
-            continue;
-
-        return *p1 < *p2;
-    }
-
-    return m_size < r.m_size;
+    return std::lexicographical_compare(m_pos, m_pos + m_size, r.m_pos, r.m_pos + r.m_size);
 }
 
 bool pstring::operator== (const char* _str) const
@@ -90,13 +86,9 @@ pstring pstring::trim() const
 {
     const char* p = m_pos;
     const char* p_end = p + m_size;
+
     // Find the first non-space character.
-    for ( ;p != p_end; ++p)
-    {
-        if (is_blank(*p))
-            continue;
-        break;
-    }
+    p = std::find_if_not(p, p_end, is_blank);
 
     if (p == p_end)
     {
@@ -105,15 +97,9 @@ pstring pstring::trim() const
     }
 
     // Find the last non-space character.
-    for (--p_end; p_end != p; --p_end)
-    {
-        if (is_blank(*p_end))
-            continue;
-        break;
-    }
+    auto last = std::find_if_not(std::reverse_iterator(p_end), std::reverse_iterator(p), is_blank);
 
-    ++p_end;
-    return pstring(p, p_end-p);
+    return pstring(p, last.base() - p);
 }
 
 void pstring::resize(size_t new_size)
@@ -124,24 +110,14 @@ void pstring::resize(size_t new_size)
 std::string operator+ (const std::string& left, const pstring& right)
 {
     std::string ret = left;
-    if (!right.empty())
-    {
-        const char* p = right.get();
-        const char* p_end = p + right.size();
-        for (; p != p_end; ++p)
-            ret.push_back(*p);
-    }
-    return ret;
+    return ret += right;
 }
 
 std::string& operator+= (std::string& left, const pstring& right)
 {
     if (!right.empty())
     {
-        const char* p = right.get();
-        const char* p_end = p + right.size();
-        for (; p != p_end; ++p)
-            left.push_back(*p);
+        left.append(right.get(), right.size());
     }
     return left;
 }

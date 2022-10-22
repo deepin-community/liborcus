@@ -5,12 +5,39 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/xml_writer.hpp"
-#include "orcus/global.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/string_pool.hpp"
+#include <orcus/xml_writer.hpp>
+#include <orcus/global.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/string_pool.hpp>
+#include "pstring.hpp"
 
 #include <vector>
+
+/** To markup code that coverity warns might throw exceptions
+    which won't throw in practice, or where std::terminate is
+    an acceptable response if they do
+*/
+#if defined(__COVERITY__)
+#define suppress_fun_call_w_exception(expr)                            \
+    do                                                                 \
+    {                                                                  \
+        try                                                            \
+        {                                                              \
+            expr;                                                      \
+        }                                                              \
+        catch (const std::exception& e)                                \
+        {                                                              \
+            std::cerr << "Fatal exception: " << e.what() << std::endl; \
+            std::terminate();                                          \
+        }                                                              \
+    } while (false)
+#else
+#define suppress_fun_call_w_exception(expr)                            \
+    do                                                                 \
+    {                                                                  \
+        expr;                                                          \
+    } while (false)
+#endif
 
 namespace orcus {
 
@@ -19,7 +46,7 @@ namespace {
 struct _elem
 {
     xml_name_t name;
-    std::vector<pstring> ns_aliases;
+    std::vector<std::string_view> ns_aliases;
     bool open;
 
     _elem(const xml_name_t& _name) : name(_name), open(true) {}
@@ -28,15 +55,15 @@ struct _elem
 struct _attr
 {
     xml_name_t name;
-    pstring value;
+    std::string_view value;
 
-    _attr(const xml_name_t& _name, const pstring& _value) :
+    _attr(const xml_name_t& _name, std::string_view _value) :
         name(_name),
         value(_value)
     {}
 };
 
-void write_content_encoded(const pstring& content, std::ostream& os)
+void write_content_encoded(std::string_view content, std::ostream& os)
 {
     auto _flush = [&os](const char*& p0, const char* p)
     {
@@ -101,12 +128,12 @@ struct xml_writer::scope::impl
 
     ~impl()
     {
-        parent->pop_element();
+        suppress_fun_call_w_exception(parent->pop_element());
     }
 };
 
 xml_writer::scope::scope(xml_writer* parent, const xml_name_t& elem) :
-    mp_impl(orcus::make_unique<impl>(parent, elem))
+    mp_impl(std::make_unique<impl>(parent, elem))
 {
 }
 
@@ -132,7 +159,7 @@ struct xml_writer::impl
     xmlns_repository& ns_repo;
     std::ostream& os;
     std::vector<_elem> elem_stack;
-    std::vector<pstring> ns_decls;
+    std::vector<std::string_view> ns_decls;
     std::vector<_attr> attrs;
 
     string_pool str_pool;
@@ -147,7 +174,7 @@ struct xml_writer::impl
 
     void print(const xml_name_t& name)
     {
-        pstring alias = cxt.get_alias(name.ns);
+        std::string_view alias = cxt.get_alias(name.ns);
         if (!alias.empty())
             os << alias << ':';
         os << name.name;
@@ -160,14 +187,14 @@ struct xml_writer::impl
         return interned;
     }
 
-    pstring intern(const pstring& value)
+    std::string_view intern(std::string_view value)
     {
         return str_pool.intern(value).first;
     }
 };
 
 xml_writer::xml_writer(xmlns_repository& ns_repo, std::ostream& os) :
-    mp_impl(orcus::make_unique<impl>(ns_repo, os))
+    mp_impl(std::make_unique<impl>(ns_repo, os))
 {
     os << "<?xml version=\"1.0\"?>";
 }
@@ -175,7 +202,7 @@ xml_writer::xml_writer(xmlns_repository& ns_repo, std::ostream& os) :
 xml_writer::xml_writer(xml_writer&& other) :
     mp_impl(std::move(other.mp_impl))
 {
-    other.mp_impl = orcus::make_unique<impl>(mp_impl->ns_repo, mp_impl->os);
+    other.mp_impl = std::make_unique<impl>(mp_impl->ns_repo, mp_impl->os);
 }
 
 xml_writer& xml_writer::operator= (xml_writer&& other)
@@ -185,11 +212,16 @@ xml_writer& xml_writer::operator= (xml_writer&& other)
     return *this;
 }
 
-xml_writer::~xml_writer()
+void xml_writer::pop_elements()
 {
     // Pop all the elements currently on the stack.
     while (!mp_impl->elem_stack.empty())
         pop_element();
+}
+
+xml_writer::~xml_writer()
+{
+    suppress_fun_call_w_exception(pop_elements());
 }
 
 void xml_writer::close_current_element()
@@ -216,7 +248,7 @@ void xml_writer::push_element(const xml_name_t& _name)
     os << '<';
     mp_impl->print(name);
 
-    for (const pstring& alias : mp_impl->ns_decls)
+    for (std::string_view alias : mp_impl->ns_decls)
     {
         os << " xmlns";
         if (!alias.empty())
@@ -240,20 +272,20 @@ void xml_writer::push_element(const xml_name_t& _name)
     mp_impl->elem_stack.emplace_back(name);
 }
 
-xmlns_id_t xml_writer::add_namespace(const pstring& alias, const pstring& value)
+xmlns_id_t xml_writer::add_namespace(std::string_view alias, std::string_view value)
 {
-    pstring alias_safe = mp_impl->intern(alias);
+    std::string_view alias_safe = mp_impl->intern(alias);
     xmlns_id_t ns = mp_impl->cxt.push(alias_safe, mp_impl->intern(value));
     mp_impl->ns_decls.push_back(alias_safe);
     return ns;
 }
 
-void xml_writer::add_attribute(const xml_name_t& name, const pstring& value)
+void xml_writer::add_attribute(const xml_name_t& name, std::string_view value)
 {
     mp_impl->attrs.emplace_back(mp_impl->intern(name), mp_impl->intern(value));
 }
 
-void xml_writer::add_content(const pstring& content)
+void xml_writer::add_content(std::string_view content)
 {
     close_current_element();
     write_content_encoded(content, mp_impl->os);
@@ -278,7 +310,7 @@ xml_name_t xml_writer::pop_element()
         os << '>';
     }
 
-    for (const pstring& alias : mp_impl->elem_stack.back().ns_aliases)
+    for (std::string_view alias : mp_impl->elem_stack.back().ns_aliases)
         mp_impl->cxt.pop(alias);
 
     mp_impl->elem_stack.pop_back();

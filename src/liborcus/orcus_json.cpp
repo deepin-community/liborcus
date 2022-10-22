@@ -5,14 +5,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/orcus_json.hpp"
-#include "orcus/json_document_tree.hpp"
-#include "orcus/json_structure_tree.hpp"
-#include "orcus/config.hpp"
-#include "orcus/spreadsheet/import_interface.hpp"
-#include "orcus/global.hpp"
-#include "orcus/json_parser.hpp"
-#include "orcus/stream.hpp"
+#include <orcus/orcus_json.hpp>
+#include <orcus/json_document_tree.hpp>
+#include <orcus/json_structure_tree.hpp>
+#include <orcus/config.hpp>
+#include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/global.hpp>
+#include <orcus/json_parser.hpp>
+#include <orcus/stream.hpp>
+
 #include "json_map_tree.hpp"
 #include "json_structure_mapper.hpp"
 
@@ -59,8 +60,7 @@ struct json_value
 
     void commit(spreadsheet::iface::import_factory& im_factory, const cell_position_t& pos) const
     {
-        spreadsheet::iface::import_sheet* sheet =
-            im_factory.get_sheet(pos.sheet.data(), pos.sheet.size());
+        spreadsheet::iface::import_sheet* sheet = im_factory.get_sheet(pos.sheet);
 
         if (!sheet)
             return;
@@ -73,7 +73,7 @@ struct json_value
                 if (!ss)
                     break;
 
-                size_t sid = ss->add(value.str.p, value.str.n);
+                size_t sid = ss->add({value.str.p, value.str.n});
                 sheet->set_string(pos.row, pos.col, sid);
                 break;
             }
@@ -137,7 +137,7 @@ public:
         push_node(json_map_tree::input_node_type::object);
     }
 
-    void object_key(const char* p, size_t len, bool transient)
+    void object_key(const char* p, size_t len, bool /*transient*/)
     {
         m_walker.set_object_key(p, len);
     }
@@ -168,7 +168,7 @@ public:
         pop_node(json_map_tree::input_node_type::value);
     }
 
-    void string(const char* p, size_t len, bool transient)
+    void string(const char* p, size_t len, bool /*transient*/)
     {
         push_node(json_map_tree::input_node_type::value);
         commit_value(json_value(p, len));
@@ -251,8 +251,7 @@ private:
             {
                 // Perform fill-downs for all anchored fields.
                 const cell_position_t& pos = fill_down_ref->pos;
-                spreadsheet::iface::import_sheet* sheet =
-                    m_im_factory.get_sheet(pos.sheet.data(), pos.sheet.size());
+                spreadsheet::iface::import_sheet* sheet = m_im_factory.get_sheet(pos.sheet);
 
                 if (sheet)
                 {
@@ -317,26 +316,26 @@ struct orcus_json::impl
 };
 
 orcus_json::orcus_json(spreadsheet::iface::import_factory* im_fact) :
-    mp_impl(orcus::make_unique<impl>(im_fact)) {}
+    mp_impl(std::make_unique<impl>(im_fact)) {}
 
 orcus_json::~orcus_json() {}
 
-void orcus_json::set_cell_link(const pstring& path, const pstring& sheet, spreadsheet::row_t row, spreadsheet::col_t col)
+void orcus_json::set_cell_link(std::string_view path, std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col)
 {
     mp_impl->map_tree.set_cell_link(path, cell_position_t(sheet, row, col));
 }
 
-void orcus_json::start_range(const pstring& sheet, spreadsheet::row_t row, spreadsheet::col_t col, bool row_header)
+void orcus_json::start_range(std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col, bool row_header)
 {
     mp_impl->map_tree.start_range(cell_position_t(sheet, row, col), row_header);
 }
 
-void orcus_json::append_field_link(const pstring& path, const pstring& label)
+void orcus_json::append_field_link(std::string_view path, std::string_view label)
 {
     mp_impl->map_tree.append_field_link(path, label);
 }
 
-void orcus_json::set_range_row_group(const pstring& path)
+void orcus_json::set_range_row_group(std::string_view path)
 {
     mp_impl->map_tree.set_range_row_group(path);
 }
@@ -346,15 +345,15 @@ void orcus_json::commit_range()
     mp_impl->map_tree.commit_range();
 }
 
-void orcus_json::append_sheet(const pstring& name)
+void orcus_json::append_sheet(std::string_view name)
 {
     if (name.empty())
         return;
 
-    mp_impl->im_factory->append_sheet(mp_impl->sheet_count++, name.data(), name.size());
+    mp_impl->im_factory->append_sheet(mp_impl->sheet_count++, name);
 }
 
-void orcus_json::read_stream(const char* p, size_t n)
+void orcus_json::read_stream(std::string_view stream)
 {
     if (!mp_impl->im_factory)
         return;
@@ -373,8 +372,7 @@ void orcus_json::read_stream(const char* p, size_t n)
 
         const cell_position_t& origin = ref.pos;
 
-        spreadsheet::iface::import_sheet* sheet =
-            mp_impl->im_factory->get_sheet(origin.sheet.data(), origin.sheet.size());
+        spreadsheet::iface::import_sheet* sheet = mp_impl->im_factory->get_sheet(origin.sheet);
 
         if (!sheet)
             continue;
@@ -383,19 +381,19 @@ void orcus_json::read_stream(const char* p, size_t n)
         {
             cell_position_t pos = origin;
             pos.col += field->column_pos;
-            size_t sid = ss->add(field->label.data(), field->label.size());
+            size_t sid = ss->add(field->label);
             sheet->set_string(pos.row, pos.col, sid);
         }
     }
 
     json_content_handler hdl(mp_impl->map_tree, *mp_impl->im_factory);
-    json_parser<json_content_handler> parser(p, n, hdl);
+    json_parser<json_content_handler> parser(stream.data(), stream.size(), hdl);
     parser.parse();
 
     mp_impl->im_factory->finalize();
 }
 
-void orcus_json::read_map_definition(const char* p, size_t n)
+void orcus_json::read_map_definition(std::string_view stream)
 {
     try
     {
@@ -407,7 +405,7 @@ void orcus_json::read_map_definition(const char* p, size_t n)
         jc.persistent_string_values = false;
         jc.resolve_references = false;
 
-        map_doc.load(p, n, jc);
+        map_doc.load(stream, jc);
         json::const_node root = map_doc.get_document_root();
 
         // Create sheets first.
@@ -474,14 +472,14 @@ void orcus_json::read_map_definition(const char* p, size_t n)
         std::ostringstream os;
         os << "Error parsing the map definition file:" << std::endl
             << std::endl
-            << create_parse_error_output(pstring(p, n), e.offset()) << std::endl
+            << create_parse_error_output(stream, e.offset()) << std::endl
             << e.what();
 
         throw invalid_map_error(os.str());
     }
 }
 
-void orcus_json::detect_map_definition(const char* p, size_t n)
+void orcus_json::detect_map_definition(std::string_view stream)
 {
     size_t range_count = 0;
     std::string sheet_name_prefix = "range-";
@@ -509,8 +507,7 @@ void orcus_json::detect_map_definition(const char* p, size_t n)
     };
 
     json::structure_tree structure;
-    structure.parse(p, n);
-    structure.dump_compact(std::cout);
+    structure.parse(stream);
     structure.process_ranges(rh);
 }
 

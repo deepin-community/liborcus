@@ -100,7 +100,8 @@ EXTRA_PROGRAMS = parser-test-string-pool$(EXEEXT) \
 	parser-test-zip-archive$(EXEEXT) parser-test-base$(EXEEXT) \
 	parser-test-global$(EXEEXT) \
 	parser-test-json-validation$(EXEEXT) \
-	parser-test-numeric$(EXEEXT) xml-writer-test$(EXEEXT)
+	parser-test-numeric$(EXEEXT) utf8-test$(EXEEXT) \
+	xml-writer-test$(EXEEXT)
 TESTS = parser-test-string-pool$(EXEEXT) \
 	parser-test-xml-namespace$(EXEEXT) parser-test-base64$(EXEEXT) \
 	css-parser-test$(EXEEXT) csv-parser-test$(EXEEXT) \
@@ -111,10 +112,12 @@ TESTS = parser-test-string-pool$(EXEEXT) \
 	parser-test-stream$(EXEEXT) parser-test-zip-archive$(EXEEXT) \
 	parser-test-base$(EXEEXT) parser-test-global$(EXEEXT) \
 	parser-test-json-validation$(EXEEXT) \
-	parser-test-numeric$(EXEEXT) xml-writer-test$(EXEEXT)
+	parser-test-numeric$(EXEEXT) utf8-test$(EXEEXT) \
+	xml-writer-test$(EXEEXT)
 subdir = src/parser
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_17.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
 	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
@@ -165,7 +168,7 @@ am_liborcus_parser_@ORCUS_API_VERSION@_la_OBJECTS = base64.lo \
 	json_parser_base.lo json_parser_thread.lo parser_base.lo \
 	parser_global.lo pstring.lo sax_parser_base.lo \
 	sax_token_parser.lo sax_token_parser_thread.lo stream.lo \
-	string_pool.lo tokens.lo types.lo xml_namespace.lo \
+	string_pool.lo tokens.lo types.lo utf8.lo xml_namespace.lo \
 	xml_writer.lo yaml_parser_base.lo zip_archive.lo \
 	zip_archive_stream.lo
 liborcus_parser_@ORCUS_API_VERSION@_la_OBJECTS =  \
@@ -270,6 +273,10 @@ am_sax_token_parser_test_OBJECTS =  \
 sax_token_parser_test_OBJECTS = $(am_sax_token_parser_test_OBJECTS)
 sax_token_parser_test_DEPENDENCIES =  \
 	liborcus-parser-@ORCUS_API_VERSION@.la
+am_utf8_test_OBJECTS = utf8_test-utf8.$(OBJEXT) \
+	utf8_test-utf8_test.$(OBJEXT)
+utf8_test_OBJECTS = $(am_utf8_test_OBJECTS)
+utf8_test_DEPENDENCIES = liborcus-parser-@ORCUS_API_VERSION@.la
 am_xml_writer_test_OBJECTS =  \
 	xml_writer_test-xml_writer_test.$(OBJEXT)
 xml_writer_test_OBJECTS = $(am_xml_writer_test_OBJECTS)
@@ -326,8 +333,10 @@ am__depfiles_remade = ./$(DEPDIR)/base64.Plo \
 	./$(DEPDIR)/sax_token_parser_test-sax_token_parser_test.Po \
 	./$(DEPDIR)/sax_token_parser_thread.Plo ./$(DEPDIR)/stream.Plo \
 	./$(DEPDIR)/string_pool.Plo ./$(DEPDIR)/tokens.Plo \
-	./$(DEPDIR)/types.Plo ./$(DEPDIR)/xml_namespace.Plo \
-	./$(DEPDIR)/xml_writer.Plo \
+	./$(DEPDIR)/types.Plo ./$(DEPDIR)/utf8.Plo \
+	./$(DEPDIR)/utf8_test-utf8.Po \
+	./$(DEPDIR)/utf8_test-utf8_test.Po \
+	./$(DEPDIR)/xml_namespace.Plo ./$(DEPDIR)/xml_writer.Plo \
 	./$(DEPDIR)/xml_writer_test-xml_writer_test.Po \
 	./$(DEPDIR)/yaml_parser_base.Plo \
 	./$(DEPDIR)/yaml_parser_test-yaml_parser_test.Po \
@@ -381,8 +390,8 @@ SOURCES = $(liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES) \
 	$(parser_test_xml_namespace_SOURCES) \
 	$(parser_test_zip_archive_SOURCES) \
 	$(sax_ns_parser_test_SOURCES) $(sax_parser_test_SOURCES) \
-	$(sax_token_parser_test_SOURCES) $(xml_writer_test_SOURCES) \
-	$(yaml_parser_test_SOURCES)
+	$(sax_token_parser_test_SOURCES) $(utf8_test_SOURCES) \
+	$(xml_writer_test_SOURCES) $(yaml_parser_test_SOURCES)
 DIST_SOURCES = $(liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES) \
 	$(css_parser_test_SOURCES) $(csv_parser_test_SOURCES) \
 	$(json_parser_test_SOURCES) $(parser_test_base_SOURCES) \
@@ -395,8 +404,8 @@ DIST_SOURCES = $(liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES) \
 	$(parser_test_xml_namespace_SOURCES) \
 	$(parser_test_zip_archive_SOURCES) \
 	$(sax_ns_parser_test_SOURCES) $(sax_parser_test_SOURCES) \
-	$(sax_token_parser_test_SOURCES) $(xml_writer_test_SOURCES) \
-	$(yaml_parser_test_SOURCES)
+	$(sax_token_parser_test_SOURCES) $(utf8_test_SOURCES) \
+	$(xml_writer_test_SOURCES) $(yaml_parser_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -651,7 +660,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
+HAVE_CXX17 = @HAVE_CXX17@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -798,6 +807,8 @@ liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES = \
 	string_pool.cpp \
 	tokens.cpp \
 	types.cpp \
+	utf8.hpp \
+	utf8.cpp \
 	xml_namespace.cpp \
 	xml_writer.cpp \
 	yaml_parser_base.cpp \
@@ -937,6 +948,14 @@ parser_test_json_validation_SOURCES = \
 
 parser_test_json_validation_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
 parser_test_json_validation_CPPFLAGS = $(AM_CPPFLAGS)
+
+# utf8-test
+utf8_test_SOURCES = \
+	utf8.cpp \
+	utf8_test.cpp
+
+utf8_test_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
+utf8_test_CPPFLAGS = $(AM_CPPFLAGS)
 
 # xml-writer-test
 xml_writer_test_SOURCES = xml_writer_test.cpp
@@ -1090,6 +1109,10 @@ sax-token-parser-test$(EXEEXT): $(sax_token_parser_test_OBJECTS) $(sax_token_par
 	@rm -f sax-token-parser-test$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(sax_token_parser_test_OBJECTS) $(sax_token_parser_test_LDADD) $(LIBS)
 
+utf8-test$(EXEEXT): $(utf8_test_OBJECTS) $(utf8_test_DEPENDENCIES) $(EXTRA_utf8_test_DEPENDENCIES) 
+	@rm -f utf8-test$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(utf8_test_OBJECTS) $(utf8_test_LDADD) $(LIBS)
+
 xml-writer-test$(EXEEXT): $(xml_writer_test_OBJECTS) $(xml_writer_test_DEPENDENCIES) $(EXTRA_xml_writer_test_DEPENDENCIES) 
 	@rm -f xml-writer-test$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(xml_writer_test_OBJECTS) $(xml_writer_test_LDADD) $(LIBS)
@@ -1143,6 +1166,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/string_pool.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tokens.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/types.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utf8.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utf8_test-utf8.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utf8_test-utf8_test.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_namespace.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_writer.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml_writer_test-xml_writer_test.Po@am__quote@ # am--include-marker
@@ -1457,6 +1483,34 @@ sax_token_parser_test-sax_token_parser_test.obj: sax_token_parser_test.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sax_token_parser_test.cpp' object='sax_token_parser_test-sax_token_parser_test.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(sax_token_parser_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o sax_token_parser_test-sax_token_parser_test.obj `if test -f 'sax_token_parser_test.cpp'; then $(CYGPATH_W) 'sax_token_parser_test.cpp'; else $(CYGPATH_W) '$(srcdir)/sax_token_parser_test.cpp'; fi`
+
+utf8_test-utf8.o: utf8.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT utf8_test-utf8.o -MD -MP -MF $(DEPDIR)/utf8_test-utf8.Tpo -c -o utf8_test-utf8.o `test -f 'utf8.cpp' || echo '$(srcdir)/'`utf8.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/utf8_test-utf8.Tpo $(DEPDIR)/utf8_test-utf8.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='utf8.cpp' object='utf8_test-utf8.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o utf8_test-utf8.o `test -f 'utf8.cpp' || echo '$(srcdir)/'`utf8.cpp
+
+utf8_test-utf8.obj: utf8.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT utf8_test-utf8.obj -MD -MP -MF $(DEPDIR)/utf8_test-utf8.Tpo -c -o utf8_test-utf8.obj `if test -f 'utf8.cpp'; then $(CYGPATH_W) 'utf8.cpp'; else $(CYGPATH_W) '$(srcdir)/utf8.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/utf8_test-utf8.Tpo $(DEPDIR)/utf8_test-utf8.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='utf8.cpp' object='utf8_test-utf8.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o utf8_test-utf8.obj `if test -f 'utf8.cpp'; then $(CYGPATH_W) 'utf8.cpp'; else $(CYGPATH_W) '$(srcdir)/utf8.cpp'; fi`
+
+utf8_test-utf8_test.o: utf8_test.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT utf8_test-utf8_test.o -MD -MP -MF $(DEPDIR)/utf8_test-utf8_test.Tpo -c -o utf8_test-utf8_test.o `test -f 'utf8_test.cpp' || echo '$(srcdir)/'`utf8_test.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/utf8_test-utf8_test.Tpo $(DEPDIR)/utf8_test-utf8_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='utf8_test.cpp' object='utf8_test-utf8_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o utf8_test-utf8_test.o `test -f 'utf8_test.cpp' || echo '$(srcdir)/'`utf8_test.cpp
+
+utf8_test-utf8_test.obj: utf8_test.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT utf8_test-utf8_test.obj -MD -MP -MF $(DEPDIR)/utf8_test-utf8_test.Tpo -c -o utf8_test-utf8_test.obj `if test -f 'utf8_test.cpp'; then $(CYGPATH_W) 'utf8_test.cpp'; else $(CYGPATH_W) '$(srcdir)/utf8_test.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/utf8_test-utf8_test.Tpo $(DEPDIR)/utf8_test-utf8_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='utf8_test.cpp' object='utf8_test-utf8_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(utf8_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o utf8_test-utf8_test.obj `if test -f 'utf8_test.cpp'; then $(CYGPATH_W) 'utf8_test.cpp'; else $(CYGPATH_W) '$(srcdir)/utf8_test.cpp'; fi`
 
 xml_writer_test-xml_writer_test.o: xml_writer_test.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xml_writer_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT xml_writer_test-xml_writer_test.o -MD -MP -MF $(DEPDIR)/xml_writer_test-xml_writer_test.Tpo -c -o xml_writer_test-xml_writer_test.o `test -f 'xml_writer_test.cpp' || echo '$(srcdir)/'`xml_writer_test.cpp
@@ -1804,6 +1858,13 @@ parser-test-numeric.log: parser-test-numeric$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+utf8-test.log: utf8-test$(EXEEXT)
+	@p='utf8-test$(EXEEXT)'; \
+	b='utf8-test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 xml-writer-test.log: xml-writer-test$(EXEEXT)
 	@p='xml-writer-test$(EXEEXT)'; \
 	b='xml-writer-test'; \
@@ -1945,6 +2006,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/string_pool.Plo
 	-rm -f ./$(DEPDIR)/tokens.Plo
 	-rm -f ./$(DEPDIR)/types.Plo
+	-rm -f ./$(DEPDIR)/utf8.Plo
+	-rm -f ./$(DEPDIR)/utf8_test-utf8.Po
+	-rm -f ./$(DEPDIR)/utf8_test-utf8_test.Po
 	-rm -f ./$(DEPDIR)/xml_namespace.Plo
 	-rm -f ./$(DEPDIR)/xml_writer.Plo
 	-rm -f ./$(DEPDIR)/xml_writer_test-xml_writer_test.Po
@@ -2036,6 +2100,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/string_pool.Plo
 	-rm -f ./$(DEPDIR)/tokens.Plo
 	-rm -f ./$(DEPDIR)/types.Plo
+	-rm -f ./$(DEPDIR)/utf8.Plo
+	-rm -f ./$(DEPDIR)/utf8_test-utf8.Po
+	-rm -f ./$(DEPDIR)/utf8_test-utf8_test.Po
 	-rm -f ./$(DEPDIR)/xml_namespace.Plo
 	-rm -f ./$(DEPDIR)/xml_writer.Plo
 	-rm -f ./$(DEPDIR)/xml_writer_test-xml_writer_test.Po

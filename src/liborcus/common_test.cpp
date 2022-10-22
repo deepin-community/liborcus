@@ -5,15 +5,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <orcus/global.hpp>
+#include <orcus/measurement.hpp>
+#include <orcus/spreadsheet/types.hpp>
+#include "pstring.hpp"
+
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
 #include <sstream>
 #include <cmath>
-
-#include "orcus/global.hpp"
-#include "orcus/measurement.hpp"
-#include "orcus/spreadsheet/types.hpp"
 
 using namespace std;
 using namespace orcus;
@@ -157,9 +158,8 @@ void test_string2number_conversion()
     for (size_t i = 0, n = sizeof(tests)/sizeof(tests[0]); i < n; ++i)
     {
         const char* p = tests[i].str;
-        const char* p_end = p + strlen(p);
         const char* p_parse_ended = nullptr;
-        double converted = to_double(p, p_end, &p_parse_ended);
+        double converted = to_double(p, &p_parse_ended);
         cout << "original: '" << tests[i].str << "', converted: " << converted
             << ", expected: " << tests[i].expected << endl;
 
@@ -195,9 +195,8 @@ void test_string2long_conversion()
     for (size_t i = 0, n = sizeof(tests)/sizeof(tests[0]); i < n; ++i)
     {
         const char* p = tests[i].str;
-        const char* p_end = p + strlen(p);
         const char* p_parse_ended = nullptr;
-        long converted = to_long(p, p_end, &p_parse_ended);
+        long converted = to_long(p, &p_parse_ended);
         cout << "original: '" << tests[i].str << "', converted: " << converted
             << ", expected: " << tests[i].expected << endl;
 
@@ -262,7 +261,7 @@ void test_spreadsheet_types()
         std::ostringstream os;
         os << ev;
         std::string s = os.str();
-        auto converted = spreadsheet::to_error_value_enum(s.data(), s.size());
+        auto converted = spreadsheet::to_error_value_enum(s);
         assert(converted == ev);
     }
 }

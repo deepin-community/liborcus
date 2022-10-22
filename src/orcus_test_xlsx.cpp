@@ -6,7 +6,7 @@
  */
 
 #include "orcus/orcus_xlsx.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/global.hpp"
 #include "orcus/stream.hpp"
 #include "orcus/config.hpp"
@@ -31,24 +31,29 @@
 #include <ixion/address.hpp>
 #include <ixion/formula_name_resolver.hpp>
 
+#include <boost/filesystem.hpp>
+
 using namespace orcus;
 using namespace orcus::spreadsheet;
 namespace ss = orcus::spreadsheet;
+namespace fs = boost::filesystem;
+
 using namespace std;
 
 namespace {
 
 config test_config(format_t::xlsx);
 
-std::unique_ptr<spreadsheet::document> load_doc(const pstring& path)
+std::unique_ptr<spreadsheet::document> load_doc(const pstring& path, bool recalc = true)
 {
     spreadsheet::range_size_t ss{1048576, 16384};
-    std::unique_ptr<spreadsheet::document> doc = orcus::make_unique<spreadsheet::document>(ss);
+    std::unique_ptr<spreadsheet::document> doc = std::make_unique<spreadsheet::document>(ss);
     spreadsheet::import_factory factory(*doc);
     orcus_xlsx app(&factory);
     app.read_file(path.str());
     app.set_config(test_config);
-    doc->recalc_formula_cells();
+    if (recalc)
+        doc->recalc_formula_cells();
 
     return doc;
 }
@@ -70,24 +75,32 @@ const pivot_cache* get_pivot_cache(
     ixion::abs_address_t origin(0,0,0);
 
     ixion::formula_name_t fn =
-        resolver->resolve(range_name.get(), range_name.size(), origin);
+        resolver->resolve({range_name.get(), range_name.size()}, origin);
 
     if (fn.type != ixion::formula_name_t::range_reference)
         return nullptr;
 
-    ixion::abs_range_t range = ixion::to_range(fn.range).to_abs(origin);
+    ixion::abs_range_t range = std::get<ixion::range_t>(fn.value).to_abs(origin);
     return pc.get_cache(sheet_name, range);
 }
 
-vector<const char*> dirs = {
-    SRCDIR"/test/xlsx/raw-values-1/",
-    SRCDIR"/test/xlsx/boolean-values/",
-    SRCDIR"/test/xlsx/empty-shared-strings/",
-    SRCDIR"/test/xlsx/formula-array-1/",
-    SRCDIR"/test/xlsx/formula-cells/",
-    SRCDIR"/test/xlsx/formula-shared/",
-    SRCDIR"/test/xlsx/named-expression/",
-    SRCDIR"/test/xlsx/named-expression-sheet-local/",
+std::vector<fs::path> dirs_recalc = {
+    SRCDIR"/test/xlsx/raw-values-1",
+    SRCDIR"/test/xlsx/boolean-values",
+    SRCDIR"/test/xlsx/empty-shared-strings",
+    SRCDIR"/test/xlsx/formula-array-1",
+    SRCDIR"/test/xlsx/formula-cells",
+    SRCDIR"/test/xlsx/formula-shared",
+    SRCDIR"/test/xlsx/formula-with-string-results",
+    SRCDIR"/test/xlsx/named-expression",
+    SRCDIR"/test/xlsx/named-expression-sheet-local",
+};
+
+std::vector<fs::path> dirs_non_recalc = {
+    SRCDIR"/test/xlsx/formula-array-1",
+    SRCDIR"/test/xlsx/formula-cells",
+    SRCDIR"/test/xlsx/formula-shared",
+    SRCDIR"/test/xlsx/formula-with-string-results",
 };
 
 /**
@@ -97,13 +110,11 @@ vector<const char*> dirs = {
  */
 void test_xlsx_import()
 {
-    for (const char* dir : dirs)
+    auto run_check = [](const fs::path& dir, bool recalc)
     {
-        string path(dir);
-
         // Read the input.xlsx document.
-        path.append("input.xlsx");
-        auto doc = load_doc(path);
+        fs::path filepath = dir / "input.xlsx";
+        auto doc = load_doc(filepath.string(), recalc);
 
         // Dump the content of the model.
         ostringstream os;
@@ -111,9 +122,8 @@ void test_xlsx_import()
         string check = os.str();
 
         // Check that against known control.
-        path = dir;
-        path.append("check.txt");
-        file_content control(path.data());
+        filepath = dir / "check.txt";
+        file_content control(filepath.string().data());
 
         assert(!check.empty());
         assert(!control.empty());
@@ -121,6 +131,16 @@ void test_xlsx_import()
         pstring s1(&check[0], check.size());
         pstring s2 = control.str();
         assert(s1.trim() == s2.trim());
+    };
+
+    for (const fs::path& dir : dirs_recalc)
+    {
+        run_check(dir, true);
+    }
+
+    for (const fs::path& dir : dirs_non_recalc)
+    {
+        run_check(dir, false);
     }
 }
 
@@ -799,10 +819,10 @@ void test_xlsx_pivot_two_pivot_caches()
         // This field should contain 4 string items 'A', 'B', 'C' and 'D'.
         std::set<pivot_cache_item_t> expected =
         {
-            pivot_cache_item_t(ORCUS_ASCII("A")),
-            pivot_cache_item_t(ORCUS_ASCII("B")),
-            pivot_cache_item_t(ORCUS_ASCII("C")),
-            pivot_cache_item_t(ORCUS_ASCII("D")),
+            pivot_cache_item_t(std::string_view{"A"}),
+            pivot_cache_item_t(std::string_view{"B"}),
+            pivot_cache_item_t(std::string_view{"C"}),
+            pivot_cache_item_t(std::string_view{"D"}),
         };
 
         std::set<pivot_cache_item_t> actual(fld->items.begin(), fld->items.end());
@@ -845,10 +865,10 @@ void test_xlsx_pivot_two_pivot_caches()
     {
         std::set<pivot_cache_item_t> expected =
         {
-            pivot_cache_item_t(ORCUS_ASCII("W")),
-            pivot_cache_item_t(ORCUS_ASCII("X")),
-            pivot_cache_item_t(ORCUS_ASCII("Y")),
-            pivot_cache_item_t(ORCUS_ASCII("Z")),
+            pivot_cache_item_t(std::string_view{"W"}),
+            pivot_cache_item_t(std::string_view{"X"}),
+            pivot_cache_item_t(std::string_view{"Y"}),
+            pivot_cache_item_t(std::string_view{"Z"}),
         };
 
         std::set<pivot_cache_item_t> actual;
@@ -910,9 +930,9 @@ void test_xlsx_pivot_mixed_type_field()
         // items 1 and 2.
         std::set<pivot_cache_item_t> expected =
         {
-            pivot_cache_item_t(ORCUS_ASCII("A")),
-            pivot_cache_item_t(ORCUS_ASCII("B")),
-            pivot_cache_item_t(ORCUS_ASCII("C")),
+            pivot_cache_item_t(std::string_view{"A"}),
+            pivot_cache_item_t(std::string_view{"B"}),
+            pivot_cache_item_t(std::string_view{"C"}),
             pivot_cache_item_t(1.0),
             pivot_cache_item_t(2.0),
         };
@@ -963,9 +983,9 @@ void test_xlsx_pivot_mixed_type_field()
         // items 1, 2, 3.5 and 5.
         std::set<pivot_cache_item_t> expected =
         {
-            pivot_cache_item_t(ORCUS_ASCII("A")),
-            pivot_cache_item_t(ORCUS_ASCII("B")),
-            pivot_cache_item_t(ORCUS_ASCII("C")),
+            pivot_cache_item_t(std::string_view{"A"}),
+            pivot_cache_item_t(std::string_view{"B"}),
+            pivot_cache_item_t(std::string_view{"C"}),
             pivot_cache_item_t(1.0),
             pivot_cache_item_t(2.0),
             pivot_cache_item_t(3.5),
@@ -1033,10 +1053,10 @@ void test_xlsx_pivot_group_field()
         // This field should contain 4 string items 'A', 'B', 'C' and 'D'.
         std::set<pivot_cache_item_t> expected =
         {
-            pivot_cache_item_t(ORCUS_ASCII("A")),
-            pivot_cache_item_t(ORCUS_ASCII("B")),
-            pivot_cache_item_t(ORCUS_ASCII("C")),
-            pivot_cache_item_t(ORCUS_ASCII("D")),
+            pivot_cache_item_t(std::string_view{"A"}),
+            pivot_cache_item_t(std::string_view{"B"}),
+            pivot_cache_item_t(std::string_view{"C"}),
+            pivot_cache_item_t(std::string_view{"D"}),
         };
 
         std::set<pivot_cache_item_t> actual(fld->items.begin(), fld->items.end());
@@ -1069,8 +1089,8 @@ void test_xlsx_pivot_group_field()
         // It should have two items - Group1 and Group2.
         std::set<pivot_cache_item_t> expected =
         {
-            pivot_cache_item_t(ORCUS_ASCII("Group1")),
-            pivot_cache_item_t(ORCUS_ASCII("Group2")),
+            pivot_cache_item_t(std::string_view{"Group1"}),
+            pivot_cache_item_t(std::string_view{"Group2"}),
         };
 
         std::set<pivot_cache_item_t> actual;
@@ -1134,8 +1154,8 @@ void test_xlsx_pivot_group_by_numbers()
     for (const pivot_cache_item_t& item : fld->items)
     {
         assert(item.type == pivot_cache_item_t::item_type::numeric);
-        assert(*fld->min_value <= item.value.numeric);
-        assert(item.value.numeric <= *fld->max_value);
+        assert(*fld->min_value <= std::get<double>(item.value));
+        assert(std::get<double>(item.value) <= *fld->max_value);
     }
 
     // This field is also gruop field with 7 numeric intervals of width 2.
@@ -1145,13 +1165,13 @@ void test_xlsx_pivot_group_by_numbers()
 
     pivot_cache_items_t expected =
     {
-        pivot_cache_item_t(ORCUS_ASCII("<0")),
-        pivot_cache_item_t(ORCUS_ASCII("0-2")),
-        pivot_cache_item_t(ORCUS_ASCII("2-4")),
-        pivot_cache_item_t(ORCUS_ASCII("4-6")),
-        pivot_cache_item_t(ORCUS_ASCII("6-8")),
-        pivot_cache_item_t(ORCUS_ASCII("8-10")),
-        pivot_cache_item_t(ORCUS_ASCII(">10")),
+        pivot_cache_item_t(std::string_view{"<0"}),
+        pivot_cache_item_t(std::string_view{"0-2"}),
+        pivot_cache_item_t(std::string_view{"2-4"}),
+        pivot_cache_item_t(std::string_view{"4-6"}),
+        pivot_cache_item_t(std::string_view{"6-8"}),
+        pivot_cache_item_t(std::string_view{"8-10"}),
+        pivot_cache_item_t(std::string_view{">10"}),
     };
 
     assert(grp.items == expected);
@@ -1233,20 +1253,20 @@ void test_xlsx_pivot_group_by_dates()
 
     expected =
     {
-        pivot_cache_item_t(ORCUS_ASCII("<1/1/2014")),
-        pivot_cache_item_t(ORCUS_ASCII("Jan")),
-        pivot_cache_item_t(ORCUS_ASCII("Feb")),
-        pivot_cache_item_t(ORCUS_ASCII("Mar")),
-        pivot_cache_item_t(ORCUS_ASCII("Apr")),
-        pivot_cache_item_t(ORCUS_ASCII("May")),
-        pivot_cache_item_t(ORCUS_ASCII("Jun")),
-        pivot_cache_item_t(ORCUS_ASCII("Jul")),
-        pivot_cache_item_t(ORCUS_ASCII("Aug")),
-        pivot_cache_item_t(ORCUS_ASCII("Sep")),
-        pivot_cache_item_t(ORCUS_ASCII("Oct")),
-        pivot_cache_item_t(ORCUS_ASCII("Nov")),
-        pivot_cache_item_t(ORCUS_ASCII("Dec")),
-        pivot_cache_item_t(ORCUS_ASCII(">12/2/2014")),
+        pivot_cache_item_t(std::string_view{"<1/1/2014"}),
+        pivot_cache_item_t(std::string_view{"Jan"}),
+        pivot_cache_item_t(std::string_view{"Feb"}),
+        pivot_cache_item_t(std::string_view{"Mar"}),
+        pivot_cache_item_t(std::string_view{"Apr"}),
+        pivot_cache_item_t(std::string_view{"May"}),
+        pivot_cache_item_t(std::string_view{"Jun"}),
+        pivot_cache_item_t(std::string_view{"Jul"}),
+        pivot_cache_item_t(std::string_view{"Aug"}),
+        pivot_cache_item_t(std::string_view{"Sep"}),
+        pivot_cache_item_t(std::string_view{"Oct"}),
+        pivot_cache_item_t(std::string_view{"Nov"}),
+        pivot_cache_item_t(std::string_view{"Dec"}),
+        pivot_cache_item_t(std::string_view{">12/2/2014"}),
     };
 
     assert(gd.items == expected);
@@ -1279,12 +1299,12 @@ void test_xlsx_pivot_group_by_dates()
 
     expected =
     {
-        pivot_cache_item_t(ORCUS_ASCII("<1/1/2014")),
-        pivot_cache_item_t(ORCUS_ASCII("Qtr1")),
-        pivot_cache_item_t(ORCUS_ASCII("Qtr2")),
-        pivot_cache_item_t(ORCUS_ASCII("Qtr3")),
-        pivot_cache_item_t(ORCUS_ASCII("Qtr4")),
-        pivot_cache_item_t(ORCUS_ASCII(">12/2/2014")),
+        pivot_cache_item_t(std::string_view{"<1/1/2014"}),
+        pivot_cache_item_t(std::string_view{"Qtr1"}),
+        pivot_cache_item_t(std::string_view{"Qtr2"}),
+        pivot_cache_item_t(std::string_view{"Qtr3"}),
+        pivot_cache_item_t(std::string_view{"Qtr4"}),
+        pivot_cache_item_t(std::string_view{">12/2/2014"}),
     };
 
     assert(gd_qtrs.items == expected);
@@ -1315,10 +1335,10 @@ void test_xlsx_pivot_error_values()
     // This field should contain 4 string items 'A', 'B', 'C' and 'D'.
     std::set<pivot_cache_item_t> expected =
     {
-        pivot_cache_item_t(ORCUS_ASCII("A")),
-        pivot_cache_item_t(ORCUS_ASCII("B")),
-        pivot_cache_item_t(ORCUS_ASCII("C")),
-        pivot_cache_item_t(ORCUS_ASCII("D")),
+        pivot_cache_item_t(std::string_view{"A"}),
+        pivot_cache_item_t(std::string_view{"B"}),
+        pivot_cache_item_t(std::string_view{"C"}),
+        pivot_cache_item_t(std::string_view{"D"}),
     };
 
     std::set<pivot_cache_item_t> actual(fld->items.begin(), fld->items.end());
@@ -1364,7 +1384,7 @@ void test_xlsx_view_cursor_per_sheet()
     assert(resolver);
 
     // On Sheet1, the cursor should be set to C4.
-    spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("C4")));
+    spreadsheet::range_t expected = to_rc_range(resolver->resolve_range("C4"));
     spreadsheet::range_t actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 
@@ -1372,7 +1392,7 @@ void test_xlsx_view_cursor_per_sheet()
     assert(sv);
 
     // On Sheet2, the cursor should be set to D8.
-    expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("D8")));
+    expected = to_rc_range(resolver->resolve_range("D8"));
     actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 
@@ -1380,7 +1400,7 @@ void test_xlsx_view_cursor_per_sheet()
     assert(sv);
 
     // On Sheet3, the cursor should be set to D2.
-    expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("D2")));
+    expected = to_rc_range(resolver->resolve_range("D2"));
     actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 
@@ -1388,7 +1408,7 @@ void test_xlsx_view_cursor_per_sheet()
     assert(sv);
 
     // On Sheet4, the cursor should be set to C5:E8.
-    expected = to_rc_range(resolver->resolve_range(ORCUS_ASCII("C5:E8")));
+    expected = to_rc_range(resolver->resolve_range("C5:E8"));
     actual = sv->get_selection(spreadsheet::sheet_pane_t::top_left);
     assert(expected == actual);
 }
@@ -1428,7 +1448,7 @@ void test_xlsx_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 1800.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("F6")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("F6"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1444,7 +1464,7 @@ void test_xlsx_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1458,7 +1478,7 @@ void test_xlsx_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 2400.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("F8")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("F8"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1474,7 +1494,7 @@ void test_xlsx_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1488,7 +1508,7 @@ void test_xlsx_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 1500.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("A5")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("A5"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1502,7 +1522,7 @@ void test_xlsx_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1516,7 +1536,7 @@ void test_xlsx_view_cursor_split_pane()
     assert(sv->get_split_pane().ver_split == 0.0);
 
     {
-        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address(ORCUS_ASCII("E1")));
+        spreadsheet::address_t expected = to_rc_address(resolver->resolve_address("E1"));
         spreadsheet::address_t actual = sv->get_split_pane().top_left_cell;
         assert(expected == actual);
     }
@@ -1530,7 +1550,7 @@ void test_xlsx_view_cursor_split_pane()
     for (const expected_selection& es : expected_selections)
     {
         // cursor in the top-left pane.
-        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range(es.sel, es.sel_n));
+        spreadsheet::range_t expected = to_rc_range(resolver->resolve_range({es.sel, es.sel_n}));
         spreadsheet::range_t actual = sv->get_selection(es.pane);
         assert(expected == actual);
     }
@@ -1561,7 +1581,7 @@ void test_xlsx_view_frozen_pane()
     {
         // Sheet1 is vertically frozen between columns A and B.
         const spreadsheet::frozen_pane_t& fp = sv->get_frozen_pane();
-        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address(ORCUS_ASCII("B1"))));
+        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address("B1")));
         assert(fp.visible_columns == 1);
         assert(fp.visible_rows == 0);
         assert(sv->get_active_pane() == spreadsheet::sheet_pane_t::top_right);
@@ -1573,7 +1593,7 @@ void test_xlsx_view_frozen_pane()
     {
         // Sheet2 is horizontally frozen between rows 1 and 2.
         const spreadsheet::frozen_pane_t& fp = sv->get_frozen_pane();
-        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address(ORCUS_ASCII("A2"))));
+        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address("A2")));
         assert(fp.visible_columns == 0);
         assert(fp.visible_rows == 1);
         assert(sv->get_active_pane() == spreadsheet::sheet_pane_t::bottom_left);
@@ -1585,7 +1605,7 @@ void test_xlsx_view_frozen_pane()
     {
         // Sheet3 is frozen both horizontally and vertically.
         const spreadsheet::frozen_pane_t& fp = sv->get_frozen_pane();
-        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address(ORCUS_ASCII("E9"))));
+        assert(fp.top_left_cell == to_rc_address(resolver->resolve_address("E9")));
         assert(fp.visible_columns == 4);
         assert(fp.visible_rows == 8);
         assert(sv->get_active_pane() == spreadsheet::sheet_pane_t::bottom_right);

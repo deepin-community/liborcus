@@ -25,15 +25,15 @@
 namespace orcus {
 
 void import_xlsx::read_table(
-    const char* p, size_t n,
+    std::string_view s,
     spreadsheet::iface::import_table& table,
     spreadsheet::iface::import_reference_resolver& resolver)
 {
-    if (!p || !n)
+    if (s.empty())
         return;
 
     session_context cxt;
-    auto handler = orcus::make_unique<xlsx_table_xml_handler>(cxt, ooxml_tokens, table, resolver);
+    auto handler = std::make_unique<xlsx_table_xml_handler>(cxt, ooxml_tokens, table, resolver);
 
     xmlns_repository ns_repo;
     ns_repo.add_predefined_values(NS_ooxml_all);
@@ -43,7 +43,7 @@ void import_xlsx::read_table(
     orcus::config config(format_t::xlsx);
     xml_stream_parser parser(
         config, ns_repo, ooxml_tokens,
-        p, n);
+        s.data(), s.size());
     parser.set_handler(handler.get());
     parser.parse();
 }

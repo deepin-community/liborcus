@@ -33,7 +33,7 @@ namespace orcus {
 
 namespace {
 
-class col_attr_parser : public std::unary_function<xml_token_attr_t, void>
+class col_attr_parser
 {
     long m_min;
     long m_max;
@@ -50,26 +50,23 @@ public:
         if (attr.value.empty())
             return;
 
-        const char* p = attr.value.get();
-        const char* p_end = p + attr.value.size();
-
         switch (attr.name)
         {
             case XML_min:
-                m_min = to_long(p, p_end);
+                m_min = to_long(attr.value);
             break;
             case XML_max:
-                m_max = to_long(p, p_end);
+                m_max = to_long(attr.value);
             break;
             case XML_width:
-                m_width = to_double(p, p_end);
+                m_width = to_double(attr.value);
                 m_contains_width = true;
             break;
             case XML_customWidth:
-                m_custom_width = to_long(p, p_end);
+                m_custom_width = to_long(attr.value);
             break;
             case XML_hidden:
-                m_hidden = to_long(p, p_end);
+                m_hidden = to_long(attr.value);
             break;
             default:
                 ;
@@ -84,7 +81,7 @@ public:
     bool is_hidden() const { return m_hidden; }
 };
 
-class row_attr_parser : public std::unary_function<xml_token_attr_t, void>
+class row_attr_parser
 {
     spreadsheet::row_t m_row;
     length_t m_height;
@@ -130,94 +127,6 @@ public:
     bool is_hidden() const { return m_hidden; }
 };
 
-class cell_attr_parser : public std::unary_function<xml_token_attr_t, void>
-{
-    struct address
-    {
-        spreadsheet::row_t row;
-        spreadsheet::col_t col;
-        address(spreadsheet::row_t _row, spreadsheet::col_t _col) : row(_row), col(_col) {}
-    };
-
-    xlsx_cell_t m_type;
-    address m_address;
-    size_t m_xf;
-    bool m_contains_address;
-
-public:
-    cell_attr_parser() :
-        m_type(xlsx_ct_numeric),
-        m_address(0,0),
-        m_xf(0),
-        m_contains_address(false) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        switch (attr.name)
-        {
-            case XML_r:
-                // cell address in A1 notation.
-                m_address = to_cell_address(attr.value);
-                m_contains_address = true;
-            break;
-            case XML_t:
-                // cell type
-                m_type = to_xlsx_cell_type(attr.value);
-            break;
-            case XML_s:
-                // cell style
-                m_xf = to_long(attr.value);
-            break;
-        }
-    }
-
-    xlsx_cell_t get_cell_type() const { return m_type; }
-
-    spreadsheet::row_t get_row() const { return m_address.row; }
-    spreadsheet::col_t get_col() const { return m_address.col; }
-    size_t get_xf() const { return m_xf; }
-    bool contains_address() const { return m_contains_address; }
-
-private:
-
-    address to_cell_address(const pstring& s) const
-    {
-        spreadsheet::row_t row = 0;
-        spreadsheet::col_t col = 0;
-        const char* p = s.get();
-        size_t n = s.size();
-        for (size_t i = 0; i < n; ++i, ++p)
-        {
-            char c = *p;
-            if ('A' <= c && c <= 'Z')
-            {
-                col *= 26;
-                col += static_cast<spreadsheet::col_t>(c - 'A' + 1);
-            }
-            else if ('0' <= c && c <= '9')
-            {
-                row *= 10;
-                row += static_cast<spreadsheet::row_t>(c - '0');
-            }
-            else
-            {
-                std::ostringstream os;
-                os << "invalid cell address: " << s;
-                throw xml_structure_error(os.str());
-            }
-        }
-
-        if (!row || !col)
-        {
-            std::ostringstream os;
-            os << "invalid cell address: " << s;
-            throw xml_structure_error(os.str());
-        }
-
-        return address(row-1, col-1); // switch from 1-based to 0-based.
-    }
-};
-
 namespace sheet_pane {
 
 typedef mdds::sorted_string_map<spreadsheet::sheet_pane_t> map_type;
@@ -255,7 +164,7 @@ const map_type& get()
     return mt;
 }
 
-}
+} // namespace pane_state
 
 namespace formula_type {
 
@@ -275,9 +184,9 @@ const map_type& get()
     return mt;
 }
 
-}
+} // namespace formula_type
 
-}
+} // anonymous namespace
 
 xlsx_sheet_context::formula::formula() :
     type(spreadsheet::formula_t::unknown),
@@ -318,16 +227,6 @@ xlsx_sheet_context::xlsx_sheet_context(
 
 xlsx_sheet_context::~xlsx_sheet_context()
 {
-}
-
-bool xlsx_sheet_context::can_handle_element(xmlns_id_t ns, xml_token_t name) const
-{
-    if (ns == NS_ooxml_xlsx && name == XML_autoFilter)
-        return false;
-    else if (ns == NS_ooxml_xlsx && name == XML_conditionalFormatting && m_sheet.get_conditional_format())
-        return false;
-
-    return true;
 }
 
 xml_context_base* xlsx_sheet_context::create_child_context(xmlns_id_t ns, xml_token_t name)
@@ -419,7 +318,7 @@ void xlsx_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
                     pstring ref = for_each(
                         attrs.begin(), attrs.end(), single_attr_getter(m_pool, NS_ooxml_xlsx, XML_ref)).get_value();
 
-                    spreadsheet::src_range_t range = m_resolver.resolve_range(ref.get(), ref.size());
+                    spreadsheet::src_range_t range = m_resolver.resolve_range(ref);
                     sheet_props->set_merge_cell_range(to_rc_range(range));
                 }
                 break;
@@ -476,28 +375,7 @@ void xlsx_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
             }
             case XML_c:
             {
-                xml_element_expected(parent, NS_ooxml_xlsx, XML_row);
-                cell_attr_parser func;
-                func = for_each(attrs.begin(), attrs.end(), func);
-
-                if (func.contains_address())
-                {
-                    if (m_cur_row != func.get_row())
-                    {
-                        std::ostringstream os;
-                        os << "row numbers differ! (current=" << m_cur_row << ")";
-                        throw xml_structure_error(os.str());
-                    }
-
-                    m_cur_col = func.get_col();
-                }
-                else
-                {
-                    ++m_cur_col;
-                }
-
-                m_cur_cell_type = func.get_cell_type();
-                m_cur_cell_xf = func.get_xf();
+                start_element_cell(parent, attrs);
                 break;
             }
             case XML_f:
@@ -556,7 +434,7 @@ bool xlsx_sheet_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_sheet_context::characters(const pstring& str, bool transient)
+void xlsx_sheet_context::characters(std::string_view str, bool transient)
 {
     m_cur_str = intern_in_context(str, transient);
 }
@@ -582,8 +460,7 @@ void xlsx_sheet_context::start_element_formula(const xml_token_pair_t& parent, c
                 m_cur_formula.type = formula_type::get().find(attr.value.data(), attr.value.size());
                 break;
             case XML_ref:
-                m_cur_formula.ref = to_rc_range(
-                    m_resolver.resolve_range(attr.value.data(), attr.value.size()));
+                m_cur_formula.ref = to_rc_range(m_resolver.resolve_range(attr.value));
                 break;
             case XML_si:
                 m_cur_formula.shared_id = to_long(attr.value);
@@ -658,6 +535,9 @@ void xlsx_sheet_context::start_element_selection(
 
     spreadsheet::sheet_pane_t pane = spreadsheet::sheet_pane_t::unspecified;
     spreadsheet::range_t range;
+    range.first.column = -1;
+    range.first.row = -1;
+    range.last = range.first;
 
     for (const xml_token_attr_t& attr : attrs)
     {
@@ -678,7 +558,7 @@ void xlsx_sheet_context::start_element_selection(
                 {
                     // Single cell address for a non-range cursor, or range
                     // address if a range selection is present.
-                    range = to_rc_range(m_resolver.resolve_range(attr.value.data(), attr.value.size()));
+                    range = to_rc_range(m_resolver.resolve_range(attr.value));
                     break;
                 }
                 default:
@@ -726,7 +606,7 @@ void xlsx_sheet_context::start_element_pane(
                 ysplit = to_double(attr.value);
                 break;
             case XML_topLeftCell:
-                top_left_cell = to_rc_address(m_resolver.resolve_address(attr.value.data(), attr.value.size()));
+                top_left_cell = to_rc_address(m_resolver.resolve_address(attr.value));
                 break;
             case XML_activePane:
                 active_pane = sheet_pane::get().find(attr.value.data(), attr.value.size());
@@ -762,12 +642,65 @@ void xlsx_sheet_context::start_element_pane(
     }
 }
 
+void xlsx_sheet_context::start_element_cell(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+{
+    xlsx_cell_t cell_type = xlsx_ct_numeric;
+    spreadsheet::address_t address;
+    address.column = 0;
+    address.row = 0;
+    size_t xf = 0;
+    bool contains_address = false;
+
+    xml_element_expected(parent, NS_ooxml_xlsx, XML_row);
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        switch (attr.name)
+        {
+            case XML_r:
+                // cell address in A1 notation.
+                address = to_rc_address(
+                    m_resolver.resolve_address(attr.value));
+
+                contains_address = true;
+                break;
+            case XML_t:
+                // cell type
+                cell_type = to_xlsx_cell_type(attr.value);
+                break;
+            case XML_s:
+                // cell style
+                xf = to_long(attr.value);
+                break;
+        }
+    }
+
+    if (contains_address)
+    {
+        if (m_cur_row != address.row)
+        {
+            std::ostringstream os;
+            os << "row numbers differ! (current=" << m_cur_row << ")";
+            throw xml_structure_error(os.str());
+        }
+
+        m_cur_col = address.column;
+    }
+    else
+    {
+        ++m_cur_col;
+    }
+
+    m_cur_cell_type = cell_type;
+    m_cur_cell_xf = xf;
+}
+
 void xlsx_sheet_context::end_element_cell()
 {
     session_context& cxt = get_session_context();
     xlsx_session_data& session_data = static_cast<xlsx_session_data&>(*cxt.mp_data);
 
-    bool array_formula_result = handle_array_formula_result();
+    bool array_formula_result = handle_array_formula_result(session_data);
 
     if (array_formula_result)
     {
@@ -779,35 +712,44 @@ void xlsx_sheet_context::end_element_cell()
         {
             // shared formula expression
             session_data.m_shared_formulas.push_back(
-                orcus::make_unique<xlsx_session_data::shared_formula>(
+                std::make_unique<xlsx_session_data::shared_formula>(
                     m_sheet_id, m_cur_row, m_cur_col, m_cur_formula.shared_id,
                     m_cur_formula.str.str()));
+
+            xlsx_session_data::shared_formula& f = *session_data.m_shared_formulas.back();
+            push_raw_cell_result(f.result, session_data);
         }
         else if (m_cur_formula.type == spreadsheet::formula_t::array)
         {
             // array formula expression
             session_data.m_array_formulas.push_back(
-                orcus::make_unique<xlsx_session_data::array_formula>(
+                std::make_unique<xlsx_session_data::array_formula>(
                     m_sheet_id, m_cur_formula.ref, m_cur_formula.str.str()));
 
             xlsx_session_data::array_formula& af = *session_data.m_array_formulas.back();
-            push_raw_cell_result(*af.results, 0, 0);
+            push_raw_cell_result(*af.results, 0, 0, session_data);
             m_array_formula_results.push_back(std::make_pair(m_cur_formula.ref, af.results));
         }
         else
         {
             // normal (non-shared) formula expression
             session_data.m_formulas.push_back(
-                orcus::make_unique<xlsx_session_data::formula>(
+                std::make_unique<xlsx_session_data::formula>(
                     m_sheet_id, m_cur_row, m_cur_col, m_cur_formula.str.str()));
+
+            xlsx_session_data::formula& f = *session_data.m_formulas.back();
+            push_raw_cell_result(f.result, session_data);
         }
     }
     else if (m_cur_formula.type == spreadsheet::formula_t::shared && m_cur_formula.shared_id >= 0)
     {
         // shared formula without formula expression
         session_data.m_shared_formulas.push_back(
-            orcus::make_unique<xlsx_session_data::shared_formula>(
+            std::make_unique<xlsx_session_data::shared_formula>(
                 m_sheet_id, m_cur_row, m_cur_col, m_cur_formula.shared_id));
+
+        xlsx_session_data::shared_formula& f = *session_data.m_shared_formulas.back();
+        push_raw_cell_result(f.result, session_data);
     }
     else if (m_cur_formula.type == spreadsheet::formula_t::data_table)
     {
@@ -820,10 +762,10 @@ void xlsx_sheet_context::end_element_cell()
                 dt->set_type(spreadsheet::data_table_type_t::both);
                 dt->set_range(m_cur_formula.ref);
                 dt->set_first_reference(
-                    m_cur_formula.data_table_ref1.get(), m_cur_formula.data_table_ref1.size(),
+                    m_cur_formula.data_table_ref1,
                     m_cur_formula.data_table_ref1_deleted);
                 dt->set_second_reference(
-                    m_cur_formula.data_table_ref2.get(), m_cur_formula.data_table_ref2.size(),
+                    m_cur_formula.data_table_ref2,
                     m_cur_formula.data_table_ref2_deleted);
             }
             else if (m_cur_formula.data_table_row_based)
@@ -831,7 +773,7 @@ void xlsx_sheet_context::end_element_cell()
                 dt->set_type(spreadsheet::data_table_type_t::row);
                 dt->set_range(m_cur_formula.ref);
                 dt->set_first_reference(
-                    m_cur_formula.data_table_ref1.get(), m_cur_formula.data_table_ref1.size(),
+                    m_cur_formula.data_table_ref1,
                     m_cur_formula.data_table_ref1_deleted);
             }
             else
@@ -839,7 +781,7 @@ void xlsx_sheet_context::end_element_cell()
                 dt->set_type(spreadsheet::data_table_type_t::column);
                 dt->set_range(m_cur_formula.ref);
                 dt->set_first_reference(
-                    m_cur_formula.data_table_ref1.get(), m_cur_formula.data_table_ref1.size(),
+                    m_cur_formula.data_table_ref1,
                     m_cur_formula.data_table_ref1_deleted);
             }
             dt->commit();
@@ -896,20 +838,13 @@ void xlsx_sheet_context::push_raw_cell_value()
 }
 
 void xlsx_sheet_context::push_raw_cell_result(
-    range_formula_results& res, size_t row_offset, size_t col_offset)
+    range_formula_results& res, size_t row_offset, size_t col_offset, xlsx_session_data& /*session_data*/) const
 {
     if (m_cur_value.empty())
         return;
 
     switch (m_cur_cell_type)
     {
-        case xlsx_ct_shared_string:
-        {
-            // string cell
-            size_t str_id = to_long(m_cur_value);
-            res.set(row_offset, col_offset, str_id);
-            break;
-        }
         case xlsx_ct_numeric:
         {
             // value cell
@@ -929,7 +864,32 @@ void xlsx_sheet_context::push_raw_cell_result(
     }
 }
 
-bool xlsx_sheet_context::handle_array_formula_result()
+void xlsx_sheet_context::push_raw_cell_result(formula_result& res, xlsx_session_data& session_data) const
+{
+    switch (m_cur_cell_type)
+    {
+        case xlsx_ct_numeric:
+            res.type = formula_result::result_type::numeric;
+            res.value_numeric = to_double(m_cur_value);
+            break;
+        case xlsx_ct_formula_string:
+        {
+            pstring interned = session_data.m_formula_result_strings.intern(m_cur_value).first;
+            res.type = formula_result::result_type::string;
+            res.value_string.p = interned.data();
+            res.value_string.n = interned.size();
+            break;
+        }
+        default:
+        {
+            std::ostringstream os;
+            os << "unhandled cached formula result (type=" << m_cur_cell_type << ")";
+            warn(os.str().data());
+        }
+    }
+}
+
+bool xlsx_sheet_context::handle_array_formula_result(xlsx_session_data& session_data)
 {
     // See if the current cell is within an array formula range.
     auto it = m_array_formula_results.begin(), ite = m_array_formula_results.end();
@@ -958,7 +918,7 @@ bool xlsx_sheet_context::handle_array_formula_result()
         size_t row_offset = m_cur_row - ref.first.row;
         size_t col_offset = m_cur_col - ref.first.column;
         range_formula_results& res = *it->second;
-        push_raw_cell_result(res, row_offset, col_offset);
+        push_raw_cell_result(res, row_offset, col_offset, session_data);
 
         return true;
     }

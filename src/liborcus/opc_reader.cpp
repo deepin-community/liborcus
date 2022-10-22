@@ -22,7 +22,7 @@ namespace orcus {
 
 namespace {
 
-class print_xml_content_types : unary_function<void, xml_part_t>
+class print_xml_content_types
 {
 public:
     print_xml_content_types(const char* prefix) :
@@ -50,7 +50,7 @@ opc_reader::opc_reader(const config& opt, xmlns_repository& ns_repo, session_con
     m_ns_repo(ns_repo),
     m_session_cxt(cxt),
     m_handler(handler),
-    m_opc_rel_handler(new opc_relations_context(m_session_cxt, opc_tokens)) {}
+    m_opc_rel_handler(m_session_cxt, opc_tokens, std::make_unique<opc_relations_context>(m_session_cxt, opc_tokens)) {}
 
 void opc_reader::read_file(std::unique_ptr<zip_archive_stream>&& stream)
 {
@@ -247,8 +247,9 @@ void opc_reader::read_content_types()
         m_config, m_ns_repo, opc_tokens,
         reinterpret_cast<const char*>(&buffer[0]), buffer.size());
 
-    auto handler = orcus::make_unique<xml_simple_stream_handler>(
-        new opc_content_types_context(m_session_cxt, opc_tokens));
+    auto handler = std::make_unique<xml_simple_stream_handler>(
+        m_session_cxt, opc_tokens,
+        std::make_unique<opc_content_types_context>(m_session_cxt, opc_tokens));
 
     parser.set_handler(handler.get());
     parser.parse();

@@ -7,7 +7,7 @@
 
 #include "xpath_parser.hpp"
 #include "orcus/xml_namespace.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 
 #include <iostream>
 #include <cassert>
@@ -64,7 +64,7 @@ void test_attributes()
     assert(token.attribute);
 }
 
-int main(int argc, char** argv)
+int main()
 {
     test_elements();
     test_attributes();

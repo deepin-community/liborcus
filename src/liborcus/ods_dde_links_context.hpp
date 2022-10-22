@@ -22,8 +22,6 @@ public:
     ods_dde_links_context(session_context& session_cxt, const tokens& tokens);
     virtual ~ods_dde_links_context();
 
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const override;
-
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) override;
 
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base *child) override;
@@ -32,7 +30,7 @@ public:
 
     virtual bool end_element(xmlns_id_t ns, xml_token_t name) override;
 
-    virtual void characters(const pstring &str, bool transient) override;
+    virtual void characters(std::string_view str, bool transient) override;
 
     void reset();
 };

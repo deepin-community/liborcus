@@ -5,10 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/json_structure_tree.hpp"
-#include "orcus/json_parser.hpp"
-#include "orcus/global.hpp"
-#include "orcus/string_pool.hpp"
+#include <orcus/json_structure_tree.hpp>
+#include <orcus/json_parser.hpp>
+#include <orcus/global.hpp>
+#include <orcus/string_pool.hpp>
+#include "pstring.hpp"
 
 #include "json_structure_mapper.hpp"
 
@@ -234,12 +235,12 @@ struct structure_tree::impl
         push_value();
     }
 
-    void string(const char* p, size_t len, bool transient)
+    void string(const char* /*p*/, size_t /*len*/, bool /*transient*/)
     {
         push_value();
     }
 
-    void number(double val)
+    void number(double /*val*/)
     {
         push_value();
     }
@@ -497,9 +498,9 @@ struct structure_tree::walker::impl
     }
 };
 
-structure_tree::walker::walker() : mp_impl(orcus::make_unique<impl>()) {}
-structure_tree::walker::walker(const walker& other) : mp_impl(orcus::make_unique<impl>(*other.mp_impl)) {}
-structure_tree::walker::walker(const structure_tree::impl* parent_impl) : mp_impl(orcus::make_unique<impl>(parent_impl)) {}
+structure_tree::walker::walker() : mp_impl(std::make_unique<impl>()) {}
+structure_tree::walker::walker(const walker& other) : mp_impl(std::make_unique<impl>(*other.mp_impl)) {}
+structure_tree::walker::walker(const structure_tree::impl* parent_impl) : mp_impl(std::make_unique<impl>(parent_impl)) {}
 structure_tree::walker::~walker() {}
 
 void structure_tree::walker::root()
@@ -661,12 +662,12 @@ std::string structure_tree::walker::build_row_group_path() const
     return os.str();
 }
 
-structure_tree::structure_tree() : mp_impl(orcus::make_unique<impl>()) {}
+structure_tree::structure_tree() : mp_impl(std::make_unique<impl>()) {}
 structure_tree::~structure_tree() {}
 
-void structure_tree::parse(const char* p, size_t n)
+void structure_tree::parse(std::string_view stream)
 {
-    json_parser<impl> parser(p, n, *mp_impl);
+    json_parser<impl> parser(stream.data(), stream.size(), *mp_impl);
     parser.parse();
 }
 

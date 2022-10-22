@@ -6,7 +6,7 @@
  */
 
 #include "orcus_filter_global.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/config.hpp"
 #include "orcus/interface.hpp"
 #include "orcus/global.hpp"
@@ -117,7 +117,7 @@ bool parse_import_filter_args(
     bool debug = false;
     bool recalc_formula_cells = false;
 
-    po::options_description desc("Allowed options");
+    po::options_description desc("Options");
     desc.add_options()
         ("help,h", "Print this help.")
         ("debug,d", po::bool_switch(&debug), help_debug)
@@ -175,7 +175,7 @@ bool parse_import_filter_args(
     if (vm.count("output-format"))
     {
         std::string outformat_s = vm["output-format"].as<string>();
-        outformat = to_dump_format_enum(outformat_s.data(), outformat_s.size());
+        outformat = to_dump_format_enum(outformat_s);
     }
 
     if (vm.count("row-size"))
@@ -183,7 +183,7 @@ bool parse_import_filter_args(
 
     std::string error_policy_s = vm["error-policy"].as<std::string>();
     spreadsheet::formula_error_policy_t error_policy =
-        spreadsheet::to_formula_error_policy(error_policy_s.data(), error_policy_s.size());
+        spreadsheet::to_formula_error_policy(error_policy_s);
 
     if (error_policy == spreadsheet::formula_error_policy_t::unknown)
     {

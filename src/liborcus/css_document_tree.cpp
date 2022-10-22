@@ -5,9 +5,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/css_document_tree.hpp"
-#include "orcus/css_parser.hpp"
-#include "orcus/string_pool.hpp"
+#include <orcus/css_document_tree.hpp>
+#include <orcus/css_parser.hpp>
+#include <orcus/string_pool.hpp>
+#include "pstring.hpp"
 
 #define ORCUS_DEBUG_CSS_DOCTREE 0
 
@@ -16,6 +17,7 @@
 #include <map>
 #include <algorithm>
 #include <iterator>
+#include <string_view>
 
 using namespace std;
 
@@ -52,6 +54,9 @@ public:
     {
 #if ORCUS_DEBUG_CSS_DOCTREE
         cout << "@" << string(p, n).c_str();
+#else
+        (void)p;
+        (void)n;
 #endif
     }
 
@@ -78,7 +83,7 @@ public:
 
     void simple_selector_id(const char* p, size_t n)
     {
-        m_cur_simple_selector.id = pstring(p, n);
+        m_cur_simple_selector.id = std::string_view(p, n);
     }
 
     void end_simple_selector()
@@ -124,8 +129,8 @@ public:
 
     void value(const char* p, size_t n)
     {
-        pstring pv(p, n);
-        m_cur_prop_values.push_back(pv);
+        std::string_view s(p, n);
+        m_cur_prop_values.push_back(s);
 #if ORCUS_DEBUG_CSS_DOCTREE
         cout << " '" << string(p, n).c_str() << "'";
 #endif
@@ -138,9 +143,7 @@ public:
 #endif
         css_property_value_t val;
         val.type = css::property_value_t::rgb;
-        val.red = red;
-        val.green = green;
-        val.blue = blue;
+        val.value = css::rgba_color_t{red, green, blue, 0.0};
         m_cur_prop_values.push_back(val);
     }
 
@@ -151,10 +154,7 @@ public:
 #endif
         css_property_value_t val;
         val.type = css::property_value_t::rgba;
-        val.red = red;
-        val.green = green;
-        val.blue = blue;
-        val.alpha = alpha;
+        val.value = css::rgba_color_t{red, green, blue, alpha};
         m_cur_prop_values.push_back(val);
     }
 
@@ -165,9 +165,7 @@ public:
 #endif
         css_property_value_t val;
         val.type = css::property_value_t::hsl;
-        val.hue = hue;
-        val.saturation = sat;
-        val.lightness = light;
+        val.value = css::hsla_color_t{hue, sat, light, 0.0};
         m_cur_prop_values.push_back(val);
     }
 
@@ -178,10 +176,7 @@ public:
 #endif
         css_property_value_t val;
         val.type = css::property_value_t::hsla;
-        val.hue = hue;
-        val.saturation = sat;
-        val.lightness = light;
-        val.alpha = alpha;
+        val.value = css::hsla_color_t{hue, sat, light, alpha};
         m_cur_prop_values.push_back(val);
     }
 
@@ -192,8 +187,7 @@ public:
 #endif
         css_property_value_t val;
         val.type = orcus::css::property_value_t::url;
-        val.str = p;
-        val.length = n;
+        val.value = std::string_view(p, n);
         m_cur_prop_values.push_back(val);
     }
 
@@ -306,7 +300,7 @@ css_selector_t intern(string_pool& sp, const css_selector_t& sel)
     return interned;
 }
 
-class intern_inserter : std::unary_function<css_property_value_t, void>
+class intern_inserter
 {
     string_pool& m_sp;
     std::vector<css_property_value_t>& m_dest;
@@ -323,10 +317,11 @@ public:
             {
                 // String value needs interning.
                 css_property_value_t interned = v;
-                interned.str = m_sp.intern(v.str, v.length).first.get();
+                auto s = std::get<std::string_view>(v.value);
+                interned.value = m_sp.intern(s).first;
                 m_dest.push_back(interned);
+                break;
             }
-            break;
             default:
                 m_dest.push_back(v);
         }
@@ -535,22 +530,35 @@ struct css_document_tree::impl
     simple_selectors_type m_root;
 };
 
-css_document_tree::css_document_tree() : mp_impl(new impl)
+css_document_tree::css_document_tree() : mp_impl(std::make_unique<impl>())
 {
+}
+
+css_document_tree::css_document_tree(css_document_tree&& other) :
+    mp_impl(std::move(other.mp_impl))
+{
+    other.mp_impl = std::make_unique<impl>();
 }
 
 css_document_tree::~css_document_tree()
 {
-    delete mp_impl;
 }
 
-void css_document_tree::load(const char* p, size_t n)
+css_document_tree& css_document_tree::operator=(css_document_tree&& other)
 {
-    if (!n)
+    css_document_tree tmp(std::move(other));
+    swap(tmp);
+
+    return *this;
+}
+
+void css_document_tree::load(std::string_view stream)
+{
+    if (stream.empty())
         return;
 
     parser_handler handler(*this);
-    css_parser<parser_handler> parser(p, n, handler);
+    css_parser<parser_handler> parser(stream.data(), stream.size(), handler);
     parser.parse();
 }
 
@@ -634,6 +642,11 @@ void css_document_tree::dump() const
         for (; it_comb != ite_comb; ++it_comb)
             dump_chained_recursive(selector, it_comb->first, it_comb->second);
     }
+}
+
+void css_document_tree::swap(css_document_tree& other) noexcept
+{
+    mp_impl.swap(other.mp_impl);
 }
 
 }

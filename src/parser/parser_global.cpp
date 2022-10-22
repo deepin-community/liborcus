@@ -5,10 +5,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/parser_global.hpp"
-#include "orcus/cell_buffer.hpp"
-#include "orcus/global.hpp"
-#include "orcus/exception.hpp"
+#include <orcus/parser_global.hpp>
+#include <orcus/cell_buffer.hpp>
+#include <orcus/global.hpp>
+#include <orcus/exception.hpp>
 
 #include "numeric_parser.hpp"
 
@@ -16,6 +16,8 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <algorithm>
+#include <cctype>
 
 namespace orcus {
 
@@ -24,53 +26,27 @@ const size_t parse_quoted_string_state::error_illegal_escape_char = 2;
 
 bool is_blank(char c)
 {
-    return is_in(c, ORCUS_ASCII(" \t\n\r"));
+    return is_in(c, " \t\n\r");
 }
 
 bool is_alpha(char c)
 {
-    if ('a' <= c && c <= 'z')
-        return true;
-    if ('A' <= c && c <= 'Z')
-        return true;
-    return false;
-}
-
-bool is_name_char(char c)
-{
-    return is_in(c, ORCUS_ASCII("-_"));
+    return std::isalpha(static_cast<unsigned char>(c));
 }
 
 bool is_numeric(char c)
 {
-    return ('0' <= c && c <= '9');
+    return std::isdigit(static_cast<unsigned char>(c));
 }
 
-bool is_in(char c, const char* allowed, size_t n_allowed)
+bool is_in(char c, std::string_view allowed)
 {
 #ifdef __ORCUS_DEBUG_UTILS
-    if (allowed && !n_allowed)
-        throw std::invalid_argument("'allowed' pointer is non-null but the value of 'n_allowed' is 0.");
+    if (allowed.empty())
+        throw std::invalid_argument("'allowed' string should not be empty.");
 #endif
-
-    const char* p_end = allowed + n_allowed;
-
-    for (; allowed != p_end; ++allowed)
-    {
-        if (c == *allowed)
-            return true;
-    }
-    return false;
-}
-
-void write_to(std::ostringstream& os, const char* p, size_t n)
-{
-    if (!p)
-        return;
-
-    const char* pend = p + n;
-    for (; p != pend; ++p)
-        os << *p;
+    auto f = [c](char c_allowed) { return c == c_allowed; };
+    return std::any_of(allowed.begin(), allowed.end(), f);
 }
 
 double parse_numeric(const char*& p, size_t max_length)
@@ -235,6 +211,7 @@ parse_quoted_string_state parse_single_quoted_string_buffered(
 
     parse_quoted_string_state ret;
     ret.transient = true;
+    ret.has_control_character = false;
 
     for (; p != p_end; ++p)
     {
@@ -299,6 +276,7 @@ parse_quoted_string_state parse_single_quoted_string(
     ret.str = p;
     ret.length = 0;
     ret.transient = false;
+    ret.has_control_character = false;
 
     if (p == p_end)
     {
@@ -505,13 +483,25 @@ const char* parse_to_closing_double_quote(const char* p, size_t max_length)
     return nullptr;
 }
 
-double clip(double input, double low, double high)
+std::string_view trim(std::string_view str)
 {
-    if (input < low)
-        input = low;
-    if (input > high)
-        input = high;
-    return input;
+    const char* p = str.data();
+    const char* p_end = p + str.size();
+
+    // Find the first non-space character.
+    p = std::find_if_not(p, p_end, is_blank);
+
+    if (p == p_end)
+    {
+        // This string is empty.
+        return std::string_view{};
+    }
+
+    // Find the last non-space character.
+    auto last = std::find_if_not(std::reverse_iterator(p_end), std::reverse_iterator(p), is_blank);
+    std::size_t n = std::distance(p, last.base());
+
+    return std::string_view{p, n};
 }
 
 }

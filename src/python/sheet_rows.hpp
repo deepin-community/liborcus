@@ -8,10 +8,9 @@
 #ifndef INCLUDED_ORCUS_PYTHON_SHEET_ROWS_HPP
 #define INCLUDED_ORCUS_PYTHON_SHEET_ROWS_HPP
 
-#include "orcus/spreadsheet/sheet_range.hpp"
-
 #include <Python.h>
 #include <ixion/address.hpp>
+#include <ixion/model_iterator.hpp>
 
 namespace ixion {
 
@@ -35,13 +34,10 @@ struct sheet_rows_data
 {
     const spreadsheet::document* m_doc;
     const spreadsheet::sheet* m_sheet;
-    spreadsheet::sheet_range m_sheet_range;
     ixion::abs_range_t m_range;
+    ixion::model_iterator m_range_iterator;
 
     ixion::row_t m_current_row;
-
-    spreadsheet::sheet_range::const_row_iterator m_row_pos;
-    spreadsheet::sheet_range::const_row_iterator m_row_end;
 
     sheet_rows_data();
     ~sheet_rows_data();

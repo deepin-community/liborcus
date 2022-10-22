@@ -47,10 +47,10 @@ public:
     struct ORCUS_DLLPUBLIC entity_name
     {
         xmlns_id_t ns;
-        pstring name;
+        std::string_view name;
 
         entity_name();
-        entity_name(xmlns_id_t _ns, const pstring& _name);
+        entity_name(xmlns_id_t _ns, std::string_view _name);
 
         bool operator< (const entity_name& r) const;
         bool operator== (const entity_name& r) const;
@@ -100,12 +100,14 @@ public:
         element root();
 
         /**
-         * Descend into specified child element.
+         * Descend into a specified child element.
          *
-         * @param ns namespace of child element
-         * @param name name of child element
+         * @param name name of a child element.
          *
          * @return child element
+         *
+         * @throw general_error if no child elements exist for the specified
+         *        name.
          */
         element descend(const entity_name& name);
 
@@ -175,7 +177,7 @@ public:
     xml_structure_tree(xml_structure_tree&& other);
     ~xml_structure_tree();
 
-    void parse(const char* p, size_t n);
+    void parse(std::string_view s);
 
     void dump_compact(std::ostream& os) const;
 

@@ -8,12 +8,12 @@
 #ifndef INCLUDED_ORCUS_SPREADSHEET_STYLES_HPP
 #define INCLUDED_ORCUS_SPREADSHEET_STYLES_HPP
 
-#include "orcus/pstring.hpp"
-#include "orcus/env.hpp"
-#include "orcus/measurement.hpp"
-#include "orcus/spreadsheet/types.hpp"
+#include "../env.hpp"
+#include "../measurement.hpp"
+#include "types.hpp"
 
 #include <memory>
+#include <string_view>
 
 namespace orcus { namespace spreadsheet {
 
@@ -25,6 +25,7 @@ struct ORCUS_SPM_DLLPUBLIC color_t
     color_elem_t blue;
 
     color_t();
+    color_t(color_elem_t _red, color_elem_t _green, color_elem_t _blue);
     color_t(color_elem_t _alpha, color_elem_t _red, color_elem_t _green, color_elem_t _blue);
 
     void reset();
@@ -35,7 +36,7 @@ struct ORCUS_SPM_DLLPUBLIC color_t
 
 struct ORCUS_SPM_DLLPUBLIC font_t
 {
-    pstring name;
+    std::string_view name;
     double size;
     bool bold:1;
     bool italic:1;
@@ -54,6 +55,33 @@ struct ORCUS_SPM_DLLPUBLIC font_t
     void reset();
 };
 
+/**
+ * Specifies whether each attribute of font_t is active or not.
+ */
+struct ORCUS_SPM_DLLPUBLIC font_active_t
+{
+    bool name = false;
+    bool size = false;
+    bool bold = false;
+    bool italic = false;
+    bool underline_style = false;
+    bool underline_width = false;
+    bool underline_mode = false;
+    bool underline_type = false;
+    bool underline_color = false;
+    bool color = false;
+    bool strikethrough_style = false;
+    bool strikethrough_width = false;
+    bool strikethrough_type = false;
+    bool strikethrough_text = false;
+
+    void set() noexcept;
+    void reset();
+
+    bool operator== (const font_active_t& other) const noexcept;
+    bool operator!= (const font_active_t& other) const noexcept;
+};
+
 struct ORCUS_SPM_DLLPUBLIC fill_t
 {
     fill_pattern_t pattern_type;
@@ -64,6 +92,22 @@ struct ORCUS_SPM_DLLPUBLIC fill_t
     void reset();
 };
 
+/**
+ * Specifies whether each attribute of fill_t is active or not.
+ */
+struct ORCUS_SPM_DLLPUBLIC fill_active_t
+{
+    bool pattern_type = false;
+    bool fg_color = false;
+    bool bg_color = false;
+
+    void set() noexcept;
+    void reset();
+
+    bool operator== (const fill_active_t& other) const noexcept;
+    bool operator!= (const fill_active_t& other) const noexcept;
+};
+
 struct ORCUS_SPM_DLLPUBLIC border_attrs_t
 {
     border_style_t style;
@@ -72,6 +116,22 @@ struct ORCUS_SPM_DLLPUBLIC border_attrs_t
 
     border_attrs_t();
     void reset();
+};
+
+/**
+ * Specifies whether each attribute of border_attrs_t is active or not.
+ */
+struct ORCUS_SPM_DLLPUBLIC border_attrs_active_t
+{
+    bool style = false;
+    bool border_color = false;
+    bool border_width = false;
+
+    void set() noexcept;
+    void reset();
+
+    bool operator== (const border_attrs_active_t& other) const noexcept;
+    bool operator!= (const border_attrs_active_t& other) const noexcept;
 };
 
 struct ORCUS_SPM_DLLPUBLIC border_t
@@ -88,6 +148,26 @@ struct ORCUS_SPM_DLLPUBLIC border_t
     void reset();
 };
 
+/**
+ * Active attribute flags associated with border_t.
+ */
+struct ORCUS_SPM_DLLPUBLIC border_active_t
+{
+    border_attrs_active_t top;
+    border_attrs_active_t bottom;
+    border_attrs_active_t left;
+    border_attrs_active_t right;
+    border_attrs_active_t diagonal;
+    border_attrs_active_t diagonal_bl_tr;
+    border_attrs_active_t diagonal_tl_br;
+
+    void set() noexcept;
+    void reset();
+
+    bool operator== (const border_active_t& other) const noexcept;
+    bool operator!= (const border_active_t& other) const noexcept;
+};
+
 struct ORCUS_SPM_DLLPUBLIC protection_t
 {
     bool locked;
@@ -99,14 +179,48 @@ struct ORCUS_SPM_DLLPUBLIC protection_t
     void reset();
 };
 
+/**
+ * Active attribute flags associated with protection_t.
+ */
+struct ORCUS_SPM_DLLPUBLIC protection_active_t
+{
+    bool locked = false;
+    bool hidden = false;
+    bool print_content = false;
+    bool formula_hidden = false;
+
+    void set() noexcept;
+    void reset();
+
+    bool operator== (const protection_active_t& other) const noexcept;
+    bool operator!= (const protection_active_t& other) const noexcept;
+};
+
 struct ORCUS_SPM_DLLPUBLIC number_format_t
 {
     size_t identifier;
-    pstring format_string;
+    std::string_view format_string;
 
     number_format_t();
     void reset();
-    bool operator== (const number_format_t& r) const;
+
+    bool operator== (const number_format_t& other) const; // TODO:API: noexcept
+    bool operator!= (const number_format_t& other) const; // TODO:API: noexcept
+};
+
+/**
+ * Active attribute flags associated with number_format_t.
+ */
+struct ORCUS_SPM_DLLPUBLIC number_format_active_t
+{
+    bool identifier = false;
+    bool format_string = false;
+
+    void set() noexcept;
+    void reset();
+
+    bool operator== (const number_format_active_t& other) const noexcept;
+    bool operator!= (const number_format_active_t& other) const noexcept;
 };
 
 /**
@@ -135,14 +249,30 @@ struct ORCUS_SPM_DLLPUBLIC cell_format_t
 
 struct ORCUS_SPM_DLLPUBLIC cell_style_t
 {
-    pstring name;
+    std::string_view name;
     size_t xf;
     size_t builtin;
-    pstring parent_name;
+    std::string_view parent_name;
 
     cell_style_t();
     void reset();
 };
+
+namespace detail {
+
+template<typename T>
+struct to_active_type;
+
+template<> struct to_active_type<font_t> { using type = font_active_t; };
+template<> struct to_active_type<fill_t> { using type = fill_active_t; };
+template<> struct to_active_type<border_t> { using type = border_active_t; };
+template<> struct to_active_type<protection_t> { using type = protection_active_t; };
+template<> struct to_active_type<number_format_t> { using type = number_format_active_t; };
+
+} // namespace detail
+
+template<typename T>
+using style_attrs_t = std::pair<T, typename detail::to_active_type<T>::type>;
 
 ORCUS_SPM_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const color_t& c);
 
@@ -157,17 +287,22 @@ public:
 
     void reserve_font_store(size_t n);
     size_t append_font(const font_t& font);
+    size_t append_font(const font_t& value, const font_active_t& active);
 
     void reserve_fill_store(size_t n);
     size_t append_fill(const fill_t& fill);
+    size_t append_fill(const fill_t& value, const fill_active_t& active);
 
     void reserve_border_store(size_t n);
     size_t append_border(const border_t& border);
+    size_t append_border(const border_t& value, const border_active_t& active);
 
     size_t append_protection(const protection_t& protection);
+    size_t append_protection(const protection_t& value, const protection_active_t& active);
 
     void reserve_number_format_store(size_t n);
     size_t append_number_format(const number_format_t& nf);
+    size_t append_number_format(const number_format_t& value, const number_format_active_t& active);
 
     void reserve_cell_style_format_store(size_t n);
     size_t append_cell_style_format(const cell_format_t& cf);
@@ -182,10 +317,20 @@ public:
     size_t append_cell_style(const cell_style_t& cs);
 
     const font_t* get_font(size_t index) const;
+    const style_attrs_t<font_t>* get_font_state(size_t index) const;
+
     const fill_t* get_fill(size_t index) const;
+    const style_attrs_t<fill_t>* get_fill_state(size_t index) const;
+
     const border_t* get_border(size_t index) const;
+    const style_attrs_t<border_t>* get_border_state(size_t index) const;
+
     const protection_t* get_protection(size_t index) const;
+    const style_attrs_t<protection_t>* get_protection_state(size_t index) const;
+
     const number_format_t* get_number_format(size_t index) const;
+    const style_attrs_t<number_format_t>* get_number_format_state(size_t index) const;
+
     const cell_format_t* get_cell_format(size_t index) const;
     const cell_format_t* get_cell_style_format(size_t index) const;
     const cell_format_t* get_dxf_format(size_t index) const;
@@ -200,6 +345,8 @@ public:
     size_t get_cell_style_formats_count() const;
     size_t get_dxf_count() const;
     size_t get_cell_styles_count() const;
+
+    void clear();
 };
 
 }}

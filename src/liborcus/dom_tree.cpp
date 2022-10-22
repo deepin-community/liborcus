@@ -5,13 +5,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/dom_tree.hpp"
-#include "orcus/exception.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/global.hpp"
-#include "orcus/sax_ns_parser.hpp"
-
-#include "orcus/string_pool.hpp"
+#include <orcus/dom_tree.hpp>
+#include <orcus/exception.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/global.hpp>
+#include <orcus/sax_ns_parser.hpp>
+#include <orcus/string_pool.hpp>
+#include "pstring.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -32,7 +32,7 @@ namespace {
 /**
  * Escape certain characters with backslash (\).
  */
-void escape(ostream& os, const pstring& val)
+void escape(ostream& os, std::string_view val)
 {
     if (val.empty())
         return;
@@ -53,9 +53,9 @@ void escape(ostream& os, const pstring& val)
 struct attr
 {
     dom::entity_name name;
-    pstring value;
+    std::string_view value;
 
-    attr(xmlns_id_t _ns, const pstring& _name, const pstring& _value);
+    attr(xmlns_id_t _ns, std::string_view _name, std::string_view _value);
 };
 
 struct entity_name_hash
@@ -101,7 +101,7 @@ struct element : public node
     std::vector<size_t> child_elem_positions;
 
     element() = delete;
-    element(xmlns_id_t _ns, const pstring& _name);
+    element(xmlns_id_t _ns, std::string_view _name);
     virtual void print(std::ostream& os, const xmlns_context& cxt) const;
     virtual ~element();
 };
@@ -134,12 +134,12 @@ void print(std::ostream& os, const attr& at, const xmlns_context& cxt)
     os << '"';
 }
 
-attr::attr(xmlns_id_t _ns, const pstring& _name, const pstring& _value) :
+attr::attr(xmlns_id_t _ns, std::string_view _name, std::string_view _value) :
     name(_ns, _name), value(_value) {}
 
 node::~node() {}
 
-element::element(xmlns_id_t _ns, const pstring& _name) :
+element::element(xmlns_id_t _ns, std::string_view _name) :
     node(node_type::element), name(_ns, _name) {}
 
 void element::print(ostream& os, const xmlns_context& cxt) const
@@ -164,10 +164,10 @@ content::~content() {}
 
 entity_name::entity_name() : ns(XMLNS_UNKNOWN_ID) {}
 
-entity_name::entity_name(const pstring& _name) :
+entity_name::entity_name(std::string_view _name) :
     ns(XMLNS_UNKNOWN_ID), name(_name) {}
 
-entity_name::entity_name(xmlns_id_t _ns, const pstring& _name) :
+entity_name::entity_name(xmlns_id_t _ns, std::string_view _name) :
     ns(_ns), name(_name) {}
 
 bool entity_name::operator== (const entity_name& other) const
@@ -228,8 +228,8 @@ struct const_node::impl
 };
 
 const_node::const_node(std::unique_ptr<impl>&& _impl) : mp_impl(std::move(_impl)) {}
-const_node::const_node() : mp_impl(orcus::make_unique<impl>()) {}
-const_node::const_node(const const_node& other) : mp_impl(orcus::make_unique<impl>(*other.mp_impl)) {}
+const_node::const_node() : mp_impl(std::make_unique<impl>()) {}
+const_node::const_node(const const_node& other) : mp_impl(std::make_unique<impl>(*other.mp_impl)) {}
 const_node::const_node(const_node&& other) : mp_impl(std::move(other.mp_impl)) {}
 const_node::~const_node() {}
 
@@ -268,7 +268,7 @@ const_node const_node::child(size_t index) const
             const dom::node* child_node = p->child_nodes[elem_pos].get();
             assert(child_node->type == node_type::element);
 
-            auto v = orcus::make_unique<impl>(static_cast<const dom::element*>(child_node));
+            auto v = std::make_unique<impl>(static_cast<const dom::element*>(child_node));
             return const_node(std::move(v));
         }
         default:
@@ -293,7 +293,7 @@ entity_name const_node::name() const
     return entity_name();
 }
 
-pstring const_node::attribute(const entity_name& name) const
+std::string_view const_node::attribute(const entity_name& name) const
 {
     switch (mp_impl->type)
     {
@@ -315,7 +315,7 @@ pstring const_node::attribute(const entity_name& name) const
     return pstring();
 }
 
-pstring const_node::attribute(const pstring& name) const
+std::string_view const_node::attribute(std::string_view name) const
 {
     switch (mp_impl->type)
     {
@@ -366,7 +366,7 @@ const_node const_node::parent() const
     if (!p)
         return const_node();
 
-    auto v = orcus::make_unique<impl>(p);
+    auto v = std::make_unique<impl>(p);
     return const_node(std::move(v));
 }
 
@@ -413,7 +413,7 @@ bool const_node::operator!= (const const_node& other) const
 struct document_tree::impl
 {
     typedef std::vector<dom::element*> element_stack_type;
-    typedef std::unordered_map<pstring, dom::declaration, pstring::hash> declarations_type;
+    typedef std::unordered_map<std::string_view, dom::declaration> declarations_type;
 
     xmlns_context& m_ns_cxt;
     string_pool m_pool;
@@ -491,7 +491,7 @@ void document_tree::impl::start_element(const sax_ns_parser_element& elem)
     if (!m_root)
     {
         // This must be the root element!
-        m_root = orcus::make_unique<dom::element>(ns, name_safe);
+        m_root = std::make_unique<dom::element>(ns, name_safe);
         m_elem_stack.push_back(m_root.get());
         p = m_elem_stack.back();
         p->attrs.swap(m_cur_attrs);
@@ -505,7 +505,7 @@ void document_tree::impl::start_element(const sax_ns_parser_element& elem)
     size_t elem_pos = p->child_nodes.size();
     p->child_elem_positions.push_back(elem_pos);
 
-    p->child_nodes.push_back(orcus::make_unique<dom::element>(ns, name_safe));
+    p->child_nodes.push_back(std::make_unique<dom::element>(ns, name_safe));
     const dom::element* parent = p;
     p = static_cast<dom::element*>(p->child_nodes.back().get());
     p->parent = parent;
@@ -527,7 +527,7 @@ void document_tree::impl::end_element(const sax_ns_parser_element& elem)
     m_elem_stack.pop_back();
 }
 
-void document_tree::impl::characters(const pstring& val, bool transient)
+void document_tree::impl::characters(const pstring& val, bool /*transient*/)
 {
     if (m_elem_stack.empty())
         // No root element has been encountered.  Ignore this.
@@ -539,7 +539,7 @@ void document_tree::impl::characters(const pstring& val, bool transient)
 
     dom::element* p = m_elem_stack.back();
     val2 = m_pool.intern(val2).first; // Make sure the string is persistent.
-    auto child = orcus::make_unique<dom::content>(val2);
+    auto child = std::make_unique<dom::content>(val2);
     child->parent = p;
     p->child_nodes.push_back(std::move(child));
 }
@@ -557,7 +557,7 @@ void document_tree::impl::set_attribute(xmlns_id_t ns, const pstring& name, cons
 
 void document_tree::impl::doctype(const sax::doctype_declaration& dtd)
 {
-    m_doctype = orcus::make_unique<sax::doctype_declaration>(dtd);  // make a copy.
+    m_doctype = std::make_unique<sax::doctype_declaration>(dtd);  // make a copy.
 
     sax::doctype_declaration& this_dtd = *m_doctype;
     string_pool& pool = m_pool;
@@ -569,45 +569,38 @@ void document_tree::impl::doctype(const sax::doctype_declaration& dtd)
 }
 
 document_tree::document_tree(xmlns_context& cxt) :
-    mp_impl(orcus::make_unique<impl>(cxt)) {}
+    mp_impl(std::make_unique<impl>(cxt)) {}
 
 document_tree::document_tree(document_tree&& other) :
     mp_impl(std::move(other.mp_impl))
 {
-    other.mp_impl = orcus::make_unique<impl>(mp_impl->m_ns_cxt);
+    other.mp_impl = std::make_unique<impl>(mp_impl->m_ns_cxt);
 }
 
 document_tree::~document_tree() {}
 
-void document_tree::load(const std::string& strm)
+void document_tree::load(std::string_view strm)
 {
     sax_ns_parser<impl> parser(
-        strm.c_str(), strm.size(), mp_impl->m_ns_cxt, *mp_impl);
-    parser.parse();
-}
-
-void document_tree::load(const char* p_strm, size_t n_strm)
-{
-    sax_ns_parser<impl> parser(
-        p_strm, n_strm, false, mp_impl->m_ns_cxt, *mp_impl);
+        strm.data(), strm.size(), mp_impl->m_ns_cxt, *mp_impl);
     parser.parse();
 }
 
 dom::const_node document_tree::root() const
 {
     const dom::element* p = mp_impl->m_root.get();
-    auto v = orcus::make_unique<const_node::impl>(p);
+    auto v = std::make_unique<const_node::impl>(p);
     return dom::const_node(std::move(v));
 }
 
-dom::const_node document_tree::declaration(const pstring& name) const
+dom::const_node document_tree::declaration(std::string_view name) const
 {
     impl::declarations_type::const_iterator it = mp_impl->m_decls.find(name);
     if (it == mp_impl->m_decls.end())
         return dom::const_node();
 
     const dom::declaration* decl = &it->second;
-    auto v = orcus::make_unique<dom::const_node::impl>(decl);
+    auto v = std::make_unique<dom::const_node::impl>(decl);
     return dom::const_node(std::move(v));
 }
 

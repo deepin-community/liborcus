@@ -5,13 +5,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/xml_structure_tree.hpp"
-#include "orcus/sax_ns_parser.hpp"
-#include "orcus/xml_namespace.hpp"
-#include "orcus/global.hpp"
-#include "orcus/exception.hpp"
+#include <orcus/xml_structure_tree.hpp>
+#include <orcus/sax_ns_parser.hpp>
+#include <orcus/xml_namespace.hpp>
+#include <orcus/global.hpp>
+#include <orcus/exception.hpp>
+#include <orcus/string_pool.hpp>
 
-#include "orcus/string_pool.hpp"
 #include "string_helper.hpp"
 #include "xml_structure_mapper.hpp"
 
@@ -125,11 +125,11 @@ public:
 
     void doctype(const sax::doctype_declaration&) {}
 
-    void start_declaration(const pstring& name)
+    void start_declaration(const pstring& /*name*/)
     {
     }
 
-    void end_declaration(const pstring& name)
+    void end_declaration(const pstring& /*name*/)
     {
         m_attrs.clear();
     }
@@ -185,7 +185,7 @@ public:
         m_stack.push_back(ref);
     }
 
-    void end_element(const sax_ns_parser_element& elem)
+    void end_element(const sax_ns_parser_element& /*elem*/)
     {
         if (m_stack.empty())
             throw general_error("Element stack is empty.");
@@ -201,7 +201,7 @@ public:
         m_stack.pop_back();
     }
 
-    void characters(const pstring&, bool)
+    void characters(std::string_view, bool)
     {
         if (m_stack.empty())
             return;
@@ -226,7 +226,7 @@ public:
     }
 };
 
-struct sort_by_appearance : std::binary_function<element_ref, element_ref, bool>
+struct sort_by_appearance
 {
     bool operator() (const element_ref& left, const element_ref& right) const
     {
@@ -323,7 +323,7 @@ struct xml_structure_tree::walker_impl
 xml_structure_tree::entity_name::entity_name() :
     ns(XMLNS_UNKNOWN_ID) {}
 
-xml_structure_tree::entity_name::entity_name(xmlns_id_t _ns, const pstring& _name) :
+xml_structure_tree::entity_name::entity_name(xmlns_id_t _ns, std::string_view _name) :
     ns(_ns), name(_name) {}
 
 bool xml_structure_tree::entity_name::operator< (const entity_name& r) const
@@ -354,12 +354,12 @@ xml_structure_tree::element::element(const entity_name& _name, bool _repeat, boo
     name(_name), repeat(_repeat), has_content(_has_content) {}
 
 xml_structure_tree::walker::walker(const xml_structure_tree::impl& parent_impl) :
-    mp_impl(orcus::make_unique<walker_impl>(parent_impl))
+    mp_impl(std::make_unique<walker_impl>(parent_impl))
 {
 }
 
 xml_structure_tree::walker::walker(const walker& r) :
-    mp_impl(orcus::make_unique<walker_impl>(*r.mp_impl))
+    mp_impl(std::make_unique<walker_impl>(*r.mp_impl))
 {
 }
 
@@ -517,20 +517,20 @@ xml_structure_tree::element xml_structure_tree::walker::move_to(const std::strin
 }
 
 xml_structure_tree::xml_structure_tree(xmlns_context& xmlns_cxt) :
-    mp_impl(orcus::make_unique<impl>(xmlns_cxt)) {}
+    mp_impl(std::make_unique<impl>(xmlns_cxt)) {}
 
 xml_structure_tree::xml_structure_tree(xml_structure_tree&& other) :
     mp_impl(std::move(other.mp_impl))
 {
-    other.mp_impl = orcus::make_unique<impl>(mp_impl->m_xmlns_cxt);
+    other.mp_impl = std::make_unique<impl>(mp_impl->m_xmlns_cxt);
 }
 
 xml_structure_tree::~xml_structure_tree() {}
 
-void xml_structure_tree::parse(const char* p, size_t n)
+void xml_structure_tree::parse(std::string_view s)
 {
     xml_sax_handler hdl(mp_impl->m_pool);
-    sax_ns_parser<xml_sax_handler> parser(p, n, mp_impl->m_xmlns_cxt, hdl);
+    sax_ns_parser<xml_sax_handler> parser(s.data(), s.size(), mp_impl->m_xmlns_cxt, hdl);
     parser.parse();
     mp_impl->mp_root = hdl.release_root_element();
 }
@@ -547,7 +547,7 @@ void xml_structure_tree::dump_compact(std::ostream& os) const
     cxt.dump(os);
 
     element_ref ref(mp_impl->mp_root->name, &mp_impl->mp_root->prop);
-    scopes.push_back(orcus::make_unique<scope>(entity_name(), false, ref));
+    scopes.push_back(std::make_unique<scope>(entity_name(), false, ref));
     while (!scopes.empty())
     {
         bool new_scope = false;
@@ -596,7 +596,7 @@ void xml_structure_tree::dump_compact(std::ostream& os) const
 
             // Push a new scope, and restart the loop with the new scope.
             ++cur_scope.current_pos;
-            scopes.push_back(orcus::make_unique<scope>(this_elem.name, this_elem.prop->repeat));
+            scopes.push_back(std::make_unique<scope>(this_elem.name, this_elem.prop->repeat));
             scope& child_scope = *scopes.back();
             child_scope.elements.swap(elems);
             child_scope.current_pos = child_scope.elements.begin();

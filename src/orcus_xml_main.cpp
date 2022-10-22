@@ -113,7 +113,7 @@ bool parse_and_dump_structure(const file_content& content, const std::string& ou
     xmlns_repository repo;
     xmlns_context cxt = repo.create_context();
     xml_structure_tree tree(cxt);
-    tree.parse(content.data(), content.size());
+    tree.parse(content.str());
 
     if (output.empty())
     {
@@ -138,14 +138,14 @@ void dump_document_structure(const file_content& content, output_stream& os)
     xmlns_repository repo;
     xmlns_context cxt = repo.create_context();
     dom::document_tree tree(cxt);
-    tree.load(content.data(), content.size());
+    tree.load(content.str());
 
     tree.dump_compact(os.get());
 }
 
 } // anonymous namespace
 
-int main(int argc, char** argv)
+int main(int argc, char** argv) try
 {
     po::options_description desc("Options");
     desc.add_options()
@@ -211,17 +211,31 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    std::string input_path = vm["input"].as<std::string>();
+    fs::path input_path = vm["input"].as<std::string>();
 
-    std::string map_path;
+    if (!fs::is_regular_file(input_path))
+    {
+        cerr << input_path << " is not a valid file." << endl;
+        return EXIT_FAILURE;
+    }
+
+    fs::path map_path;
     if (vm.count("map"))
+    {
         map_path = vm["map"].as<std::string>();
+
+        if (!fs::is_regular_file(map_path))
+        {
+            cerr << map_path << " is not a valid map file." << endl;
+            return EXIT_FAILURE;
+        }
+    }
 
     std::string output;
     if (vm.count("output"))
         output = vm["output"].as<std::string>();
 
-    file_content content(input_path.data());
+    file_content content(input_path.string().data());
 
     try
     {
@@ -243,7 +257,7 @@ int main(int argc, char** argv)
                 output_stream os(vm);
                 xmlns_repository repo;
                 orcus_xml app(repo, nullptr, nullptr);
-                app.write_map_definition(content.data(), content.size(), os.get());
+                app.write_map_definition(content.str(), os.get());
                 return EXIT_SUCCESS;
             }
             default:
@@ -259,14 +273,14 @@ int main(int argc, char** argv)
         orcus_xml app(repo, &import_fact, &export_fact);
 
         if (map_path.empty())
-            app.detect_map_definition(content.data(), content.size());
+            app.detect_map_definition(content.str());
         else
         {
-            file_content map_content(map_path.data());
-            app.read_map_definition(map_content.data(), map_content.size());
+            file_content map_content(map_path.string().data());
+            app.read_map_definition(map_content.str());
         }
 
-        app.read_stream(content.data(), content.size());
+        app.read_stream(content.str());
 
         switch (mode)
         {
@@ -278,7 +292,7 @@ int main(int argc, char** argv)
                 if (vm.count("output-format"))
                 {
                     s = vm["output-format"].as<std::string>();
-                    format = to_dump_format_enum(s.data(), s.size());
+                    format = to_dump_format_enum(s);
                 }
                 else
                 {
@@ -313,7 +327,7 @@ int main(int argc, char** argv)
                 }
 
                 // Write transformed xml content to file.
-                app.write(content.data(), content.size(), file);
+                app.write(content.str(), file);
                 break;
             }
             default:
@@ -326,13 +340,13 @@ int main(int argc, char** argv)
         cerr << e.what() << endl;
         return EXIT_FAILURE;
     }
-    catch (const std::exception& e)
-    {
-        cerr << e.what() << endl;
-        return EXIT_FAILURE;
-    }
 
     return EXIT_SUCCESS;
+}
+catch (const std::exception& e)
+{
+    cerr << e.what() << endl;
+    return EXIT_FAILURE;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

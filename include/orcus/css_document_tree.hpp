@@ -12,6 +12,7 @@
 #include "orcus/exception.hpp"
 
 #include <string>
+#include <memory>
 
 namespace orcus {
 
@@ -21,7 +22,7 @@ namespace orcus {
 class ORCUS_DLLPUBLIC css_document_tree
 {
     struct impl;
-    impl* mp_impl;
+    std::unique_ptr<impl> mp_impl;
 
 public:
 
@@ -31,17 +32,21 @@ public:
         insertion_error(const std::string& msg);
     };
 
+    css_document_tree(const css_document_tree&) = delete;
+
     css_document_tree();
+    css_document_tree(css_document_tree&& other);
     ~css_document_tree();
+
+    css_document_tree& operator=(css_document_tree&& other);
 
     /**
      * Load raw string stream containing CSS rules to populate the document
      * tree.
      *
-     * @param p pointer to the buffer that contains raw CSS rules.
-     * @param n size of the above buffer.
+     * @param stream raw CSS rules.
      */
-    void load(const char* p, size_t n);
+    void load(std::string_view stream);
 
     /**
      * Insert or replace properties for given selector and pseudo element
@@ -84,6 +89,8 @@ public:
         get_all_properties(const css_selector_t& selector) const;
 
     void dump() const;
+
+    void swap(css_document_tree& other) noexcept;
 };
 
 }

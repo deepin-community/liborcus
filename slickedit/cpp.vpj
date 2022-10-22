@@ -144,6 +144,8 @@
             Name="Other Files"
             Filters=""></Folder>
     </CustomFolders>
+    <List Name="RTE">
+    </List>
     <Files AutoFolders="DirectoryView">
         <Folder Name="../benchmark">
             <F N="../benchmark/json_parser.cpp"/>
@@ -161,18 +163,11 @@
             <F N="../doc_example/spreadsheet_doc_2_sheets_with_string_pool.cpp"/>
             <F N="../doc_example/xml_mapping_1.cpp"/>
         </Folder>
-        <Folder Name="../example">
-            <F N="../example/json.cpp"/>
-            <F N="../example/json_parser.cpp"/>
-        </Folder>
         <Folder Name="../include">
             <Folder Name="orcus">
                 <Folder Name="detail">
                     <F N="../include/orcus/detail/parser_token_buffer.hpp"/>
                     <F N="../include/orcus/detail/thread.hpp"/>
-                </Folder>
-                <Folder Name="mso">
-                    <F N="../include/orcus/mso/encryption_info.hpp"/>
                 </Folder>
                 <Folder Name="spreadsheet">
                     <F N="../include/orcus/spreadsheet/auto_filter.hpp"/>
@@ -186,7 +181,6 @@
                     <F N="../include/orcus/spreadsheet/pivot.hpp"/>
                     <F N="../include/orcus/spreadsheet/shared_strings.hpp"/>
                     <F N="../include/orcus/spreadsheet/sheet.hpp"/>
-                    <F N="../include/orcus/spreadsheet/sheet_range.hpp"/>
                     <F N="../include/orcus/spreadsheet/styles.hpp"/>
                     <F N="../include/orcus/spreadsheet/types.hpp"/>
                     <F N="../include/orcus/spreadsheet/view.hpp"/>
@@ -227,7 +221,6 @@
                 <F N="../include/orcus/orcus_xml.hpp"/>
                 <F N="../include/orcus/parser_base.hpp"/>
                 <F N="../include/orcus/parser_global.hpp"/>
-                <F N="../include/orcus/pstring.hpp"/>
                 <F N="../include/orcus/sax_ns_parser.hpp"/>
                 <F N="../include/orcus/sax_parser.hpp"/>
                 <F N="../include/orcus/sax_parser_base.hpp"/>
@@ -251,8 +244,12 @@
         </Folder>
         <Folder Name="../src">
             <Folder Name="include">
+                <Folder Name="mso">
+                    <F N="../src/include/mso/encryption_info.hpp"/>
+                </Folder>
                 <F N="../src/include/cpu_features.hpp"/>
                 <F N="../src/include/numeric_parser.hpp"/>
+                <F N="../src/include/pstring.hpp"/>
                 <F N="../src/include/test_global.hpp"/>
             </Folder>
             <Folder Name="liborcus">
@@ -425,6 +422,10 @@
                 <F N="../src/liborcus/xml_context_base.hpp"/>
                 <F N="../src/liborcus/xml_context_global.cpp"/>
                 <F N="../src/liborcus/xml_context_global.hpp"/>
+                <F N="../src/liborcus/xml_element_validator.cpp"/>
+                <F N="../src/liborcus/xml_element_validator.hpp"/>
+                <F N="../src/liborcus/xml_empty_context.cpp"/>
+                <F N="../src/liborcus/xml_empty_context.hpp"/>
                 <F N="../src/liborcus/xml_map_tree.cpp"/>
                 <F N="../src/liborcus/xml_map_tree.hpp"/>
                 <F N="../src/liborcus/xml_map_tree_test.cpp"/>
@@ -438,6 +439,8 @@
                 <F N="../src/liborcus/xml_structure_mapper.hpp"/>
                 <F N="../src/liborcus/xml_structure_tree.cpp"/>
                 <F N="../src/liborcus/xml_structure_tree_test.cpp"/>
+                <F N="../src/liborcus/xml_util.cpp"/>
+                <F N="../src/liborcus/xml_util.hpp"/>
                 <F N="../src/liborcus/xpath_parser.cpp"/>
                 <F N="../src/liborcus/xpath_parser.hpp"/>
                 <F N="../src/liborcus/xpath_parser_test.cpp"/>
@@ -482,6 +485,9 @@
                 <F N="../src/parser/threaded_sax_token_parser_test.cpp"/>
                 <F N="../src/parser/tokens.cpp"/>
                 <F N="../src/parser/types.cpp"/>
+                <F N="../src/parser/utf8.cpp"/>
+                <F N="../src/parser/utf8.hpp"/>
+                <F N="../src/parser/utf8_test.cpp"/>
                 <F N="../src/parser/win_stdint.h"/>
                 <F N="../src/parser/xml_namespace.cpp"/>
                 <F N="../src/parser/xml_namespace_test.cpp"/>
@@ -494,10 +500,6 @@
                 <F N="../src/parser/zip_archive_test.cpp"/>
             </Folder>
             <Folder Name="python">
-                <Folder Name="orcus">
-                    <F N="../src/python/orcus/ods.py"/>
-                    <F N="../src/python/orcus/xlsx.py"/>
-                </Folder>
                 <F N="../src/python/cell.cpp"/>
                 <F N="../src/python/cell.hpp"/>
                 <F N="../src/python/csv.cpp"/>
@@ -535,6 +537,8 @@
             </Folder>
             <Folder Name="spreadsheet">
                 <F N="../src/spreadsheet/auto_filter.cpp"/>
+                <F N="../src/spreadsheet/check_dumper.cpp"/>
+                <F N="../src/spreadsheet/check_dumper.hpp"/>
                 <F N="../src/spreadsheet/config.cpp"/>
                 <F N="../src/spreadsheet/csv_dumper.cpp"/>
                 <F N="../src/spreadsheet/csv_dumper.hpp"/>
@@ -567,13 +571,16 @@
                 <F N="../src/spreadsheet/shared_formula.hpp"/>
                 <F N="../src/spreadsheet/shared_strings.cpp"/>
                 <F N="../src/spreadsheet/sheet.cpp"/>
-                <F N="../src/spreadsheet/sheet_range.cpp"/>
+                <F N="../src/spreadsheet/sheet_impl.cpp"/>
+                <F N="../src/spreadsheet/sheet_impl.hpp"/>
                 <F N="../src/spreadsheet/styles.cpp"/>
                 <F N="../src/spreadsheet/view.cpp"/>
             </Folder>
+            <Folder Name="test">
+                <F N="../src/test/test_global.cpp"/>
+            </Folder>
             <F N="../src/cli_global.cpp"/>
             <F N="../src/cli_global.hpp"/>
-            <F N="../src/odf_styles_context_test.cpp"/>
             <F N="../src/orcus_css_dump.cpp"/>
             <F N="../src/orcus_csv_main.cpp"/>
             <F N="../src/orcus_detect_main.cpp"/>
@@ -591,6 +598,7 @@
             <F N="../src/orcus_test_global.cpp"/>
             <F N="../src/orcus_test_global.hpp"/>
             <F N="../src/orcus_test_gnumeric.cpp"/>
+            <F N="../src/orcus_test_import_ods.cpp"/>
             <F N="../src/orcus_test_json_mapped.cpp"/>
             <F N="../src/orcus_test_ods.cpp"/>
             <F N="../src/orcus_test_xls_xml.cpp"/>
@@ -602,15 +610,7 @@
             <F N="../src/orcus_xml_main.cpp"/>
             <F N="../src/orcus_yaml_main.cpp"/>
             <F N="../src/orcus_zip_dump.cpp"/>
-        </Folder>
-        <Folder Name="../test">
-            <Folder Name="python">
-                <F N="../test/python/csv_export.py"/>
-                <F N="../test/python/file_load_common.py"/>
-                <F N="../test/python/ods.py"/>
-                <F N="../test/python/xls_xml.py"/>
-                <F N="../test/python/xlsx.py"/>
-            </Folder>
+            <F N="../src/test_global.cpp"/>
         </Folder>
     </Files>
 </Project>

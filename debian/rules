@@ -6,7 +6,7 @@
 include /usr/share/dpkg/architecture.mk
 
 %:
-	dh $@  --with python3 --with sphinxdoc
+	dh $@
 
 override_dh_auto_clean:
 	rm -rf src/python/orcus/__pycache__/
@@ -38,7 +38,7 @@ override_dh_auto_install:
 	mkdir -p debian/tmp
 	if [ -d src/.libs ]; then dh_auto_install; \
 	find debian/tmp/usr/lib/python* -name "*.*a" -exec rm {} \; ; \
-	chrpath -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/liborcus-0.16.so.0.0.0; \
+	chrpath -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/liborcus-0.17.so.0.0.0; \
 	else dh_auto_install -- -pliborcus-doc; fi
 
 override_dh_makeshlibs:

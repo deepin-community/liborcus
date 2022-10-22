@@ -65,7 +65,7 @@ private:
     size_t m_unique_count;
 };
 
-class color_attr_parser : unary_function<xml_token_attr_t, void>
+class color_attr_parser
 {
     pstring m_rgb;
 public:
@@ -93,11 +93,6 @@ xlsx_shared_strings_context::xlsx_shared_strings_context(session_context& sessio
     xml_context_base(session_cxt, tokens), mp_strings(strings), m_in_segments(false) {}
 
 xlsx_shared_strings_context::~xlsx_shared_strings_context() {}
-
-bool xlsx_shared_strings_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
 
 xml_context_base* xlsx_shared_strings_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -177,8 +172,8 @@ void xlsx_shared_strings_context::start_element(xmlns_id_t ns, xml_token_t name,
         {
             // font
             xml_element_expected(parent, NS_ooxml_xlsx, XML_rPr);
-            pstring font = for_each(attrs.begin(), attrs.end(), single_attr_getter(m_pool, NS_ooxml_xlsx, XML_val)).get_value();
-            mp_strings->set_segment_font_name(font.get(), font.size());
+            std::string_view font = for_each(attrs.begin(), attrs.end(), single_attr_getter(m_pool, NS_ooxml_xlsx, XML_val)).get_value();
+            mp_strings->set_segment_font_name(font);
         }
         break;
         case XML_family:
@@ -218,7 +213,7 @@ bool xlsx_shared_strings_context::end_element(xmlns_id_t ns, xml_token_t name)
             mp_strings->set_segment_italic(true);
         break;
         case XML_r:
-            mp_strings->append_segment(m_cur_str.get(), m_cur_str.size());
+            mp_strings->append_segment(m_cur_str);
         break;
         case XML_si:
         {
@@ -228,7 +223,7 @@ bool xlsx_shared_strings_context::end_element(xmlns_id_t ns, xml_token_t name)
             else
             {
                 // unformatted text should only have one text segment.
-                mp_strings->append(m_cur_str.get(), m_cur_str.size());
+                mp_strings->append(m_cur_str);
             }
         }
         break;
@@ -236,9 +231,9 @@ bool xlsx_shared_strings_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_shared_strings_context::characters(const pstring& str, bool transient)
+void xlsx_shared_strings_context::characters(std::string_view str, bool transient)
 {
-    xml_token_pair_t& cur_token = get_current_element();
+    xml_token_pair_t cur_token = get_current_element();
     if (cur_token.first == NS_ooxml_xlsx && cur_token.second == XML_t)
     {
         m_cur_str = str;
@@ -270,9 +265,7 @@ void xlsx_shared_strings_context::characters(const pstring& str, bool transient)
                 // Append the tail end.
                 m_cell_buffer.append(p0, std::distance(p0, p));
 
-            m_cur_str = m_pool.intern(
-                m_cell_buffer.get(), m_cell_buffer.size()).first;
-
+            m_cur_str = m_pool.intern({m_cell_buffer.get(), m_cell_buffer.size()}).first;
             transient = false;
         }
 
@@ -352,7 +345,7 @@ const map_type& get()
 
 }
 
-class border_attr_parser : public unary_function<xml_token_attr_t, void>
+class border_attr_parser
 {
     spreadsheet::border_direction_t m_dir;
     spreadsheet::iface::import_styles& m_styles;
@@ -367,14 +360,14 @@ public:
             case XML_style:
             {
                 m_styles.set_border_style(m_dir,
-                    border_style::get().find(attr.value.get(), attr.value.size()));
+                    border_style::get().find(attr.value.data(), attr.value.size()));
             }
             break;
         }
     }
 };
 
-class cell_style_attr_parser : public unary_function<xml_token_attr_t, void>
+class cell_style_attr_parser
 {
     spreadsheet::iface::import_styles& m_styles;
 public:
@@ -386,7 +379,7 @@ public:
         switch (attr.name)
         {
             case XML_name:
-                m_styles.set_cell_style_name(attr.value.get(), attr.value.size());
+                m_styles.set_cell_style_name(attr.value);
             break;
             case XML_xfId:
             {
@@ -404,7 +397,7 @@ public:
     }
 };
 
-class xf_attr_parser : public unary_function<xml_token_attr_t, void>
+class xf_attr_parser
 {
     spreadsheet::iface::import_styles& m_styles;
 public:
@@ -463,7 +456,7 @@ public:
     }
 };
 
-class fill_color_attr_parser : public unary_function<xml_token_attr_t, void>
+class fill_color_attr_parser
 {
     spreadsheet::iface::import_styles& m_styles;
     const tokens& m_tokens;
@@ -502,7 +495,7 @@ public:
     }
 };
 
-class cell_protection_attr_parser : public unary_function<xml_token_attr_t, void>
+class cell_protection_attr_parser
 {
     spreadsheet::iface::import_styles& m_styles;
 public:
@@ -530,7 +523,7 @@ public:
     }
 };
 
-class cell_alignment_attr_parser : public unary_function<xml_token_attr_t, void>
+class cell_alignment_attr_parser
 {
     spreadsheet::hor_alignment_t m_hor_align;
     spreadsheet::ver_alignment_t m_ver_align;
@@ -599,11 +592,6 @@ xlsx_styles_context::xlsx_styles_context(session_context& session_cxt, const tok
     m_cell_style_xf(false) {}
 
 xlsx_styles_context::~xlsx_styles_context() {}
-
-bool xlsx_styles_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
 
 xml_context_base* xlsx_styles_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -718,8 +706,8 @@ void xlsx_styles_context::start_element(xmlns_id_t ns, xml_token_t name, const x
             case XML_name:
             {
                 xml_element_expected(parent, NS_ooxml_xlsx, XML_font);
-                pstring ps = for_each(attrs.begin(), attrs.end(), single_attr_getter(m_pool, NS_ooxml_xlsx, XML_val)).get_value();
-                mp_styles->set_font_name(ps.get(), ps.size());
+                std::string_view ps = for_each(attrs.begin(), attrs.end(), single_attr_getter(m_pool, NS_ooxml_xlsx, XML_val)).get_value();
+                mp_styles->set_font_name(ps);
             }
             break;
             case XML_family:
@@ -978,7 +966,7 @@ bool xlsx_styles_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_styles_context::characters(const pstring& /*str*/, bool /*transient*/)
+void xlsx_styles_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
     // not used in the styles.xml part.
 }
@@ -1007,7 +995,7 @@ void xlsx_styles_context::start_element_number_format(const xml_token_pair_t& pa
                 }
                 case XML_formatCode:
                 {
-                    mp_styles->set_number_format_code(attr.value.data(), attr.value.size());
+                    mp_styles->set_number_format_code(attr.value);
                     break;
                 }
             }

@@ -8,19 +8,20 @@
 #ifndef INCLUDED_ORCUS_SPREADSHEET_FACTORY_SHEET_HPP
 #define INCLUDED_ORCUS_SPREADSHEET_FACTORY_SHEET_HPP
 
-#include "orcus/spreadsheet/import_interface.hpp"
-#include "orcus/spreadsheet/import_interface_view.hpp"
-#include "orcus/spreadsheet/auto_filter.hpp"
+#include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/spreadsheet/import_interface_view.hpp>
+#include <orcus/spreadsheet/auto_filter.hpp>
 
-#include "orcus/spreadsheet/export_interface.hpp"
+#include <orcus/spreadsheet/export_interface.hpp>
 
 #include "factory_table.hpp"
 #include "shared_formula.hpp"
 
 #include <memory>
+#include <optional>
 #include <ixion/formula_name_resolver.hpp>
 #include <ixion/formula_result.hpp>
-#include <boost/optional.hpp>
+#include <ixion/matrix.hpp>
 
 namespace orcus {
 
@@ -37,19 +38,19 @@ class import_sheet_named_exp : public iface::import_named_expression
 {
     document& m_doc;
     sheet_t m_sheet_index;
-    pstring m_name;
+    std::string_view m_name;
     ixion::abs_address_t m_base;
     ixion::formula_tokens_t m_tokens;
 
-    void define(const char* p_name, size_t n_name, const char* p_exp, size_t n_exp, formula_ref_context_t ref_cxt);
+    void define(std::string_view name, std::string_view expression, formula_ref_context_t ref_cxt);
 
 public:
     import_sheet_named_exp(document& doc, sheet_t sheet_index);
     virtual ~import_sheet_named_exp() override;
 
     virtual void set_base_position(const src_address_t& pos) override;
-    virtual void set_named_expression(const char* p_name, size_t n_name, const char* p_exp, size_t n_exp) override;
-    virtual void set_named_range(const char* p_name, size_t n_name, const char* p_range, size_t n_range) override;
+    virtual void set_named_expression(std::string_view name, std::string_view expression) override;
+    virtual void set_named_range(std::string_view name, std::string_view range) override;
     virtual void commit();
 };
 
@@ -85,9 +86,9 @@ public:
 
     virtual void set_range(const range_t& range) override;
 
-    virtual void set_first_reference(const char* p_ref, size_t n_ref, bool deleted) override;
+    virtual void set_first_reference(std::string_view ref, bool deleted) override;
 
-    virtual void set_second_reference(const char* p_ref, size_t n_ref, bool deleted) override;
+    virtual void set_second_reference(std::string_view ref, bool deleted) override;
 
     virtual void commit() override;
 };
@@ -109,7 +110,7 @@ public:
 
     virtual void set_column(col_t col) override;
 
-    virtual void append_column_match_value(const char* p, size_t n) override;
+    virtual void append_column_match_value(std::string_view value) override;
 
     virtual void commit_column() override;
 
@@ -123,7 +124,8 @@ class import_array_formula : public iface::import_array_formula
 
     range_t m_range;
     ixion::formula_tokens_t m_tokens;
-    boost::optional<ixion::formula_result> m_result;
+    ixion::formula_result m_missing_formula_result;
+    ixion::matrix m_result_mtx;
     formula_error_policy_t m_error_policy;
 
 public:
@@ -132,11 +134,11 @@ public:
 
     virtual void set_range(const range_t& range) override;
 
-    virtual void set_formula(formula_grammar_t grammar, const char* p, size_t n) override;
+    virtual void set_formula(formula_grammar_t grammar, std::string_view formula) override;
 
     virtual void set_result_value(row_t row, col_t col, double value) override;
 
-    virtual void set_result_string(row_t row, col_t col, size_t sindex) override;
+    virtual void set_result_string(row_t row, col_t col, std::string_view value) override;
 
     virtual void set_result_empty(row_t row, col_t col) override;
 
@@ -163,7 +165,7 @@ class import_formula : public iface::import_formula
     bool m_shared;
 
     ixion::formula_tokens_store_ptr_t m_tokens_store;
-    boost::optional<ixion::formula_result> m_result;
+    std::optional<ixion::formula_result> m_result;
     formula_error_policy_t m_error_policy;
 
 public:
@@ -171,10 +173,10 @@ public:
     virtual ~import_formula() override;
 
     virtual void set_position(row_t row, col_t col) override;
-    virtual void set_formula(formula_grammar_t grammar, const char* p, size_t n) override;
+    virtual void set_formula(formula_grammar_t grammar, std::string_view formula) override;
     virtual void set_shared_formula_index(size_t index) override;
     virtual void set_result_value(double value) override;
-    virtual void set_result_string(size_t sindex) override;
+    virtual void set_result_string(std::string_view value) override;
     virtual void set_result_empty() override;
     virtual void set_result_bool(bool value) override;
     virtual void commit() override;
@@ -216,12 +218,12 @@ public:
     virtual iface::import_table* get_table() override;
     virtual iface::import_formula* get_formula() override;
     virtual iface::import_array_formula* get_array_formula() override;
-    virtual void set_auto(row_t row, col_t col, const char* p, size_t n) override;
+    virtual void set_auto(row_t row, col_t col, std::string_view s) override;
     virtual void set_bool(row_t row, col_t col, bool value) override;
     virtual void set_date_time(row_t row, col_t col, int year, int month, int day, int hour, int minute, double second) override;
     virtual void set_format(row_t row, col_t col, size_t xf_index) override;
     virtual void set_format(row_t row_start, col_t col_start, row_t row_end, col_t col_end, size_t xf_index) override;
-    virtual void set_string(row_t row, col_t col, size_t sindex) override;
+    virtual void set_string(row_t row, col_t col, string_id_t sindex) override;
     virtual void set_value(row_t row, col_t col, double value) override;
     virtual void fill_down_cells(row_t src_row, col_t src_col, row_t range_size) override;
     virtual range_size_t get_sheet_size() const override;

@@ -1,4 +1,4 @@
-SUBDIRS = include parser mso liborcus spreadsheet python
+SUBDIRS = include test parser mso liborcus spreadsheet python
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
@@ -358,6 +358,7 @@ orcus_test_csv_SOURCES = \
 orcus_test_csv_LDADD = \
 	liborcus/liborcus-@ORCUS_API_VERSION@.la \
 	parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	./test/liborcus-test.a \
 	spreadsheet/liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la
 
 orcus_test_csv_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS) -DSRCDIR=\""$(top_srcdir)"\"
@@ -376,6 +377,7 @@ orcus_test_xml_mapped_LDFLAGS = \
 orcus_test_xml_mapped_LDADD = \
 	liborcus/liborcus-@ORCUS_API_VERSION@.la \
 	parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	./test/liborcus-test.a \
 	spreadsheet/liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la \
 	$(BOOST_FILESYSTEM_LIBS) \
 	$(BOOST_SYSTEM_LIBS)
@@ -425,24 +427,30 @@ orcus_test_ods_CPPFLAGS = $(AM_CPPFLAGS) \
 
 TESTS += orcus-test-ods
 
-# orcus-odf-styles-context-test
+# orcus-test-import-ods
 
 EXTRA_PROGRAMS += \
-	orcus-odf-styles-context-test
+	orcus-test-import-ods
 
-orcus_odf_styles_context_test_SOURCES = \
-	odf_styles_context_test.cpp
+orcus_test_import_ods_SOURCES = \
+	orcus_test_import_ods.cpp
 
-orcus_odf_styles_context_test_LDADD = \
+orcus_test_import_ods_LDADD = \
 	liborcus/liborcus-@ORCUS_API_VERSION@.la \
 	parser/liborcus-parser-@ORCUS_API_VERSION@.la \
-	spreadsheet/liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la
+	spreadsheet/liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la \
+	$(BOOST_FILESYSTEM_LIBS) \
+	$(BOOST_SYSTEM_LIBS)
 
-orcus_odf_styles_context_test_CPPFLAGS = $(AM_CPPFLAGS) \
+orcus_test_importy_ods_LDFLAGS = \
+	$(BOOST_FILESYSTEM_LDFLAGS) \
+	$(BOOST_SYSTEM_LDFLAGS)
+
+orcus_test_import_ods_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(top_builddir)/lib/liborcus/liborcus.la -DSRCDIR=\""$(top_srcdir)"\"
 
 TESTS += \
-	 orcus-odf-styles-context-test
+	orcus-test-import-ods
 
 endif # WITH_ODS_FILTER
 
@@ -456,11 +464,17 @@ EXTRA_PROGRAMS += \
 orcus_test_xlsx_SOURCES = \
 	orcus_test_xlsx.cpp
 
+orcus_test_xlsx_LDFLAGS = \
+	$(BOOST_FILESYSTEM_LDFLAGS) \
+	$(BOOST_SYSTEM_LDFLAGS)
+
 orcus_test_xlsx_LDADD = \
 	liborcus/liborcus-@ORCUS_API_VERSION@.la \
 	parser/liborcus-parser-@ORCUS_API_VERSION@.la \
 	spreadsheet/liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la \
-	@LIBIXION_LIBS@
+	@LIBIXION_LIBS@ \
+	$(BOOST_FILESYSTEM_LIBS) \
+	$(BOOST_SYSTEM_LIBS)
 
 orcus_test_xlsx_CPPFLAGS = \
 	@LIBIXION_CFLAGS@  $(AM_CPPFLAGS) \
@@ -484,6 +498,7 @@ orcus_test_xls_xml_SOURCES = \
 orcus_test_xls_xml_LDADD = \
 	liborcus/liborcus-@ORCUS_API_VERSION@.la \
 	parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	./test/liborcus-test.a \
 	spreadsheet/liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la \
 	@LIBIXION_LIBS@
 
@@ -507,6 +522,7 @@ orcus_test_gnumeric_SOURCES = \
 orcus_test_gnumeric_LDADD = \
 	liborcus/liborcus-@ORCUS_API_VERSION@.la \
 	parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	./test/liborcus-test.a \
 	spreadsheet/liborcus-spreadsheet-model-@ORCUS_API_VERSION@.la
 
 orcus_test_gnumeric_CPPFLAGS = \

@@ -47,7 +47,7 @@ struct gnumeric_cell_data
 
 namespace {
 
-class cell_attr_parser : public unary_function<xml_token_attr_t, void>
+class cell_attr_parser
 {
 public:
     cell_attr_parser()
@@ -63,14 +63,14 @@ public:
         switch (attr.name)
         {
             case XML_Row:
-                cell_data.row = atoi(attr.value.get());
+                cell_data.row = atoi(attr.value.data());
                 break;
             case XML_Col:
-                cell_data.col = atoi(attr.value.get());
+                cell_data.col = atoi(attr.value.data());
                 break;
             case XML_ValueType:
             {
-                int value_type = atoi(attr.value.get());
+                int value_type = atoi(attr.value.data());
                 switch (value_type)
                 {
                     case 20:
@@ -86,15 +86,15 @@ public:
             }
             break;
             case XML_ExprID:
-                cell_data.shared_formula_id = atoi(attr.value.get());
+                cell_data.shared_formula_id = atoi(attr.value.data());
                 cell_data.cell_type = cell_type_shared_formula;
                 break;
             case XML_Rows:
-                cell_data.array_rows = atoi(attr.value.get());
+                cell_data.array_rows = atoi(attr.value.data());
                 cell_data.cell_type = cell_type_array;
                 break;
             case XML_Cols:
-                cell_data.array_cols = atoi(attr.value.get());
+                cell_data.array_cols = atoi(attr.value.data());
                 cell_data.cell_type = cell_type_array;
                 break;
         }
@@ -122,11 +122,6 @@ gnumeric_cell_context::gnumeric_cell_context(session_context& session_cxt, const
 
 gnumeric_cell_context::~gnumeric_cell_context()
 {
-}
-
-bool gnumeric_cell_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
 }
 
 xml_context_base* gnumeric_cell_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
@@ -173,7 +168,7 @@ bool gnumeric_cell_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void gnumeric_cell_context::characters(const pstring& str, bool transient)
+void gnumeric_cell_context::characters(std::string_view str, bool transient)
 {
     if (transient)
         chars = m_pool.intern(str).first;
@@ -200,7 +195,7 @@ void gnumeric_cell_context::end_cell()
     {
         case cell_type_value:
         {
-            double val = atof(chars.get());
+            double val = atof(chars.data());
             mp_sheet->set_value(row, col, val);
         }
         break;
@@ -210,7 +205,7 @@ void gnumeric_cell_context::end_cell()
             if (!shared_strings)
                 break;
 
-            size_t id = shared_strings->add(chars.get(), chars.size());
+            size_t id = shared_strings->add(chars);
             mp_sheet->set_string(row, col, id);
         }
         break;
@@ -221,7 +216,7 @@ void gnumeric_cell_context::end_cell()
                 break;
 
             xformula->set_position(row, col);
-            xformula->set_formula(spreadsheet::formula_grammar_t::gnumeric, chars.data(), chars.size());
+            xformula->set_formula(spreadsheet::formula_grammar_t::gnumeric, chars);
             xformula->commit();
             break;
         }
@@ -234,7 +229,7 @@ void gnumeric_cell_context::end_cell()
             xformula->set_position(row, col);
 
             if (!chars.empty())
-                xformula->set_formula(spreadsheet::formula_grammar_t::gnumeric, chars.data(), chars.size());
+                xformula->set_formula(spreadsheet::formula_grammar_t::gnumeric, chars);
 
             xformula->set_shared_formula_index(mp_cell_data->shared_formula_id);
             xformula->commit();
@@ -252,7 +247,7 @@ void gnumeric_cell_context::end_cell()
             if (af)
             {
                 af->set_range(range);
-                af->set_formula(spreadsheet::formula_grammar_t::gnumeric, chars.get(), chars.size());
+                af->set_formula(spreadsheet::formula_grammar_t::gnumeric, chars);
                 af->commit();
             }
         }

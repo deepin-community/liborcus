@@ -58,7 +58,6 @@ struct parse_quoted_string_state
 
 ORCUS_PSR_DLLPUBLIC bool is_blank(char c);
 ORCUS_PSR_DLLPUBLIC bool is_alpha(char c);
-ORCUS_PSR_DLLPUBLIC bool is_name_char(char c);
 ORCUS_PSR_DLLPUBLIC bool is_numeric(char c);
 
 /**
@@ -66,15 +65,12 @@ ORCUS_PSR_DLLPUBLIC bool is_numeric(char c);
  * only specify up to 16 allowed characters.
  *
  * @param c character to check.
- * @param allowed character array containing all allowed characters.
- * @param n_allowed length of the character array.
+ * @param allowed string containing all allowed characters.
  *
  * @return true if the character is one of the allowed characters, false
  *         otherwise.
  */
-ORCUS_PSR_DLLPUBLIC bool is_in(char c, const char* allowed, size_t n_allowed);
-
-ORCUS_PSR_DLLPUBLIC void write_to(std::ostringstream& os, const char* p, size_t n);
+ORCUS_PSR_DLLPUBLIC bool is_in(char c, std::string_view allowed);
 
 ORCUS_PSR_DLLPUBLIC double parse_numeric(const char*& p, size_t max_length);
 
@@ -128,16 +124,7 @@ ORCUS_PSR_DLLPUBLIC const char* parse_to_closing_double_quote(
  */
 ORCUS_PSR_DLLPUBLIC string_escape_char_t get_string_escape_char_type(char c);
 
-/**
- * Clip input value to specified range in case it falls outside the range.
- *
- * @param input original input value.
- * @param low lower bound.
- * @param high upper bound.
- *
- * @return clipped value.
- */
-ORCUS_PSR_DLLPUBLIC double clip(double input, double low, double high);
+ORCUS_PSR_DLLPUBLIC std::string_view trim(std::string_view str);
 
 }
 

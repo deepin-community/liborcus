@@ -20,73 +20,31 @@ namespace orcus { namespace sax {
 
 parse_token::parse_token() : type(parse_token_t::unknown) {}
 
-parse_token::parse_token(const pstring& _characters) :
-    type(parse_token_t::characters)
+parse_token::parse_token(std::string_view _characters) :
+    type(parse_token_t::characters),
+    value(_characters)
 {
-    characters.p = _characters.get();
-    characters.n = _characters.size();
 }
 
 parse_token::parse_token(parse_token_t _type, const xml_token_element_t* _element) :
-    type(_type), element(_element)
+    type(_type), value(_element)
 {
 }
 
-parse_token::parse_token(parse_token_t _type, const char* p, size_t len, std::ptrdiff_t offset) :
-    type(_type)
+parse_token::parse_token(std::string_view msg, std::ptrdiff_t offset) :
+    type(parse_token_t::parse_error),
+    value(parse_error_value_t{msg, offset})
 {
-    error_value.p = p;
-    error_value.len = len;
-    error_value.offset = offset;
 }
 
 parse_token::parse_token(const parse_token& other) :
-    type(other.type)
+    type(other.type), value(other.value)
 {
-    switch (type)
-    {
-        case parse_token_t::start_element:
-        case parse_token_t::end_element:
-            element = other.element;
-            break;
-        case parse_token_t::characters:
-            characters.p = other.characters.p;
-            characters.n = other.characters.n;
-            break;
-        case parse_token_t::parse_error:
-            error_value.p = other.error_value.p;
-            error_value.len = other.error_value.len;
-            error_value.offset = other.error_value.offset;
-            break;
-        case parse_token_t::unknown:
-        default:
-            ;
-    }
 }
 
 bool parse_token::operator== (const parse_token& other) const
 {
-    if (type != other.type)
-        return false;
-
-    switch (type)
-    {
-        case parse_token_t::start_element:
-        case parse_token_t::end_element:
-            return element == other.element;
-        case parse_token_t::characters:
-            return characters.p == other.characters.p &&
-                characters.n == other.characters.n;
-        case parse_token_t::parse_error:
-            return error_value.p == other.error_value.p &&
-                error_value.len == other.error_value.len &&
-                error_value.offset == other.error_value.offset;
-        case parse_token_t::unknown:
-        default:
-            ;
-    }
-
-    return true;
+    return type == other.type && value == other.value;
 }
 
 bool parse_token::operator!= (const parse_token& other) const
@@ -128,13 +86,13 @@ struct parser_thread::impl
         m_token_buffer.abort();
     }
 
-    void declaration(const orcus::xml_declaration_t& decl)
+    void declaration(const orcus::xml_declaration_t& /*decl*/)
     {
     }
 
     void start_element(const orcus::xml_token_element_t& elem)
     {
-        m_element_store.emplace_back(orcus::make_unique<orcus::xml_token_element_t>(elem));
+        m_element_store.emplace_back(std::make_unique<orcus::xml_token_element_t>(elem));
         orcus::xml_token_element_t& this_elem = *m_element_store.back();
 
         // Go through all attributes and intern transient strings.
@@ -157,12 +115,12 @@ struct parser_thread::impl
     {
         assert(elem.attrs.empty());
 
-        m_element_store.emplace_back(orcus::make_unique<orcus::xml_token_element_t>(elem));
+        m_element_store.emplace_back(std::make_unique<orcus::xml_token_element_t>(elem));
         m_parser_tokens.emplace_back(parse_token_t::end_element, m_element_store.back().get());
         check_and_notify();
     }
 
-    void characters(const orcus::pstring& val, bool transient)
+    void characters(std::string_view val, bool transient)
     {
         if (transient)
             m_parser_tokens.emplace_back(m_pool.intern(val).first);
@@ -183,8 +141,8 @@ struct parser_thread::impl
             }
             catch (const malformed_xml_error& e)
             {
-                pstring s = m_pool.intern(e.what()).first;
-                m_parser_tokens.emplace_back(parse_token_t::parse_error, s.get(), s.size(), e.offset());
+                std::string_view s = m_pool.intern(e.what()).first;
+                m_parser_tokens.emplace_back(s, e.offset());
             }
 
             // TODO : add more exceptions that need to be tokenized and processed by the client thread.
@@ -210,12 +168,12 @@ struct parser_thread::impl
 
 parser_thread::parser_thread(
     const char* p, size_t n, const orcus::tokens& tks, xmlns_context& ns_cxt, size_t min_token_size) :
-    mp_impl(orcus::make_unique<parser_thread::impl>(
+    mp_impl(std::make_unique<parser_thread::impl>(
         p, n, tks, ns_cxt, min_token_size, std::numeric_limits<size_t>::max()/2)) {}
 
 parser_thread::parser_thread(
     const char* p, size_t n, const orcus::tokens& tks, xmlns_context& ns_cxt, size_t min_token_size, size_t max_token_size) :
-    mp_impl(orcus::make_unique<parser_thread::impl>(
+    mp_impl(std::make_unique<parser_thread::impl>(
         p, n, tks, ns_cxt, min_token_size, max_token_size)) {}
 
 parser_thread::~parser_thread()

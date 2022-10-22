@@ -23,7 +23,7 @@ namespace orcus {
 
 namespace {
 
-class table_attr_parser : public unary_function<xml_token_attr_t, void>
+class table_attr_parser
 {
     string_pool* m_pool;
 
@@ -77,7 +77,7 @@ public:
     pstring get_ref() const { return m_ref; }
 };
 
-class table_column_attr_parser : public unary_function<xml_token_attr_t, void>
+class table_column_attr_parser
 {
     string_pool* m_pool;
 
@@ -99,22 +99,20 @@ public:
         {
             case XML_id:
                 m_id = to_long(attr.value);
-            break;
+                break;
             case XML_name:
                 m_name = attr.value;
                 if (attr.transient)
                     m_name = m_pool->intern(m_name).first;
-            break;
+                break;
             case XML_totalsRowLabel:
                 m_totals_row_label = attr.value;
                 if (attr.transient)
                     m_totals_row_label = m_pool->intern(m_totals_row_label).first;
-            break;
+                break;
             case XML_totalsRowFunction:
-                m_totals_row_func =
-                    spreadsheet::to_totals_row_function_enum(
-                        attr.value.get(), attr.value.size());
-            break;
+                m_totals_row_func = spreadsheet::to_totals_row_function_enum(attr.value);
+                break;
             default:
                 ;
         }
@@ -126,7 +124,7 @@ public:
     spreadsheet::totals_row_function_t get_totals_row_function() const { return m_totals_row_func; }
 };
 
-class table_style_info_attr_parser : public unary_function<xml_token_attr_t, void>
+class table_style_info_attr_parser
 {
     spreadsheet::iface::import_table* mp_table;
     bool m_debug;
@@ -145,7 +143,7 @@ public:
         switch (attr.name)
         {
             case XML_name:
-                mp_table->set_style_name(attr.value.get(), attr.value.size());
+                mp_table->set_style_name(attr.value);
                 if (m_debug)
                     cout << "  * table style info (name=" << attr.value << ")" << endl;
             break;
@@ -188,14 +186,6 @@ xlsx_table_context::xlsx_table_context(
     xml_context_base(session_cxt, tokens), m_table(table), m_resolver(resolver) {}
 
 xlsx_table_context::~xlsx_table_context() {}
-
-bool xlsx_table_context::can_handle_element(xmlns_id_t ns, xml_token_t name) const
-{
-    if (ns == NS_ooxml_xlsx && name == XML_autoFilter)
-        return false;
-
-    return true;
-}
 
 xml_context_base* xlsx_table_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
@@ -247,11 +237,11 @@ void xlsx_table_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
 
             m_table.set_identifier(func.get_id());
             str = func.get_ref();
-            m_table.set_range(str.get(), str.size());
+            m_table.set_range(str);
             str = func.get_name();
-            m_table.set_name(str.get(), str.size());
+            m_table.set_name(str);
             str = func.get_display_name();
-            m_table.set_display_name(str.get(), str.size());
+            m_table.set_display_name(str);
             m_table.set_totals_row_count(func.get_totals_row_count());
         }
         break;
@@ -280,9 +270,9 @@ void xlsx_table_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
 
             m_table.set_column_identifier(func.get_id());
             str = func.get_name();
-            m_table.set_column_name(str.get(), str.size());
+            m_table.set_column_name(str);
             str = func.get_totals_row_label();
-            m_table.set_column_totals_row_label(str.get(), str.size());
+            m_table.set_column_totals_row_label(str);
             m_table.set_column_totals_row_function(func.get_totals_row_function());
         }
         break;
@@ -319,7 +309,7 @@ bool xlsx_table_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_table_context::characters(const pstring& str, bool transient)
+void xlsx_table_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 

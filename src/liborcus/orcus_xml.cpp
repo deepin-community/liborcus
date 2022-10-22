@@ -5,13 +5,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/orcus_xml.hpp"
-#include "orcus/global.hpp"
-#include "orcus/sax_ns_parser.hpp"
-#include "orcus/spreadsheet/import_interface.hpp"
-#include "orcus/spreadsheet/export_interface.hpp"
-#include "orcus/stream.hpp"
-#include "orcus/string_pool.hpp"
+#include <orcus/orcus_xml.hpp>
+#include <orcus/global.hpp>
+#include <orcus/sax_ns_parser.hpp>
+#include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/spreadsheet/export_interface.hpp>
+#include <orcus/stream.hpp>
+#include <orcus/string_pool.hpp>
+#include "pstring.hpp"
 
 #include "orcus_xml_impl.hpp"
 
@@ -40,7 +41,7 @@ class xml_data_sax_handler
 
         xml_map_tree::element_type type;
 
-        scope(xmlns_id_t _ns, const pstring& _name) :
+        scope(xmlns_id_t _ns, std::string_view _name) :
             name(_ns, _name),
             element_open_begin(0),
             element_open_end(0),
@@ -57,7 +58,7 @@ class xml_data_sax_handler
     xml_map_tree::walker m_map_tree_walker;
 
     xml_map_tree::element* mp_current_elem;
-    pstring m_current_chars;
+    std::string_view m_current_chars;
     bool m_in_range_ref;
     xml_map_tree::range_reference* mp_increment_row;
 
@@ -73,25 +74,25 @@ private:
         return nullptr;
     }
 
-    void set_single_link_cell(const xml_map_tree::cell_reference& ref, const pstring& val)
+    void set_single_link_cell(const xml_map_tree::cell_reference& ref, std::string_view val)
     {
-        spreadsheet::iface::import_sheet* sheet = m_factory.get_sheet(ref.pos.sheet.get(), ref.pos.sheet.size());
+        spreadsheet::iface::import_sheet* sheet = m_factory.get_sheet(ref.pos.sheet);
         if (sheet)
-            sheet->set_auto(ref.pos.row, ref.pos.col, val.get(), val.size());
+            sheet->set_auto(ref.pos.row, ref.pos.col, val);
     }
 
-    void set_field_link_cell(xml_map_tree::field_in_range& field, const pstring& val)
+    void set_field_link_cell(xml_map_tree::field_in_range& field, std::string_view val)
     {
         assert(field.ref);
         assert(!field.ref->pos.sheet.empty());
 
         const xml_map_tree::cell_position& pos = field.ref->pos;
-        spreadsheet::iface::import_sheet* sheet = m_factory.get_sheet(pos.sheet.get(), pos.sheet.size());
+        spreadsheet::iface::import_sheet* sheet = m_factory.get_sheet(pos.sheet);
         if (sheet)
             sheet->set_auto(
                pos.row + field.ref->row_position,
                pos.col + field.column_pos,
-               val.get(), val.size());
+               val);
     }
 
 public:
@@ -111,11 +112,11 @@ public:
     {
     }
 
-    void start_declaration(const pstring&)
+    void start_declaration(std::string_view)
     {
     }
 
-    void end_declaration(const pstring&)
+    void end_declaration(std::string_view)
     {
         m_attrs.clear();
     }
@@ -126,7 +127,7 @@ public:
         scope& cur = m_scopes.back();
         cur.element_open_begin = elem.begin_pos;
         cur.element_open_end = elem.end_pos;
-        m_current_chars.clear();
+        m_current_chars = std::string_view{};
 
         mp_current_elem = m_map_tree_walker.push_element({elem.ns, elem.name});
         if (mp_current_elem)
@@ -150,7 +151,7 @@ public:
 
                 // This attribute is linked. Import its value.
 
-                pstring val_trimmed = p->value.trim();
+                std::string_view val_trimmed = trim(p->value);
                 switch (linked_attr.ref_type)
                 {
                     case xml_map_tree::reference_cell:
@@ -208,8 +209,7 @@ public:
                     // cell values.
                     const xml_map_tree::range_reference& ref = *mp_current_elem->row_group;
 
-                    spreadsheet::iface::import_sheet* sheet = m_factory.get_sheet(
-                        ref.pos.sheet.get(), ref.pos.sheet.size());
+                    spreadsheet::iface::import_sheet* sheet = m_factory.get_sheet(ref.pos.sheet);
 
                     if (sheet)
                     {
@@ -254,17 +254,17 @@ public:
         mp_current_elem = m_map_tree_walker.pop_element({elem.ns, elem.name});
     }
 
-    void characters(const pstring& val, bool transient)
+    void characters(std::string_view val, bool transient)
     {
         if (!mp_current_elem)
             return;
 
-        m_current_chars = val.trim();
+        m_current_chars = trim(val);
         if (transient)
             m_current_chars = m_pool.intern(m_current_chars).first;
     }
 
-    void attribute(const pstring& /*name*/, const pstring& /*val*/)
+    void attribute(std::string_view /*name*/, std::string_view /*val*/)
     {
         // Ignore attributes in XML declaration.
     }
@@ -350,8 +350,7 @@ void write_opening_element(
 
         const xml_map_tree::cell_position& pos = attr.cell_ref->pos;
 
-        const spreadsheet::iface::export_sheet* sheet =
-            fact.get_sheet(pos.sheet.get(), pos.sheet.size());
+        const spreadsheet::iface::export_sheet* sheet = fact.get_sheet(pos.sheet);
         if (!sheet)
             continue;
 
@@ -379,14 +378,14 @@ void write_range_reference_group(
    ostream& os, const xml_map_tree::element& root, const xml_map_tree::range_reference& ref,
    const spreadsheet::iface::export_factory& factory)
 {
-    const spreadsheet::iface::export_sheet* sheet = factory.get_sheet(ref.pos.sheet.get(), ref.pos.sheet.size());
+    const spreadsheet::iface::export_sheet* sheet = factory.get_sheet(ref.pos.sheet);
     if (!sheet)
         return;
 
     scopes_type scopes;
     for (spreadsheet::row_t current_row = 0; current_row < ref.row_position; ++current_row)
     {
-        scopes.push_back(orcus::make_unique<scope>(root)); // root element
+        scopes.push_back(std::make_unique<scope>(root)); // root element
 
         while (!scopes.empty())
         {
@@ -421,7 +420,7 @@ void write_range_reference_group(
                     // This is a non-leaf element.  Push a new scope with this
                     // element and re-start the loop.
                     ++cur_scope.current_child_pos;
-                    scopes.push_back(orcus::make_unique<scope>(child_elem));
+                    scopes.push_back(std::make_unique<scope>(child_elem));
                     new_scope = true;
                     break;
                 }
@@ -476,7 +475,7 @@ void write_range_reference(ostream& os, const xml_map_tree::element& elem_top, c
        os, **elem_top.child_elements->begin(), *elem_top.range_parent, factory);
 }
 
-struct less_by_opening_elem_pos : std::binary_function<xml_map_tree::element*, xml_map_tree::element*, bool>
+struct less_by_opening_elem_pos
 {
     bool operator() (const xml_map_tree::element* left, const xml_map_tree::element* right) const
     {
@@ -487,7 +486,7 @@ struct less_by_opening_elem_pos : std::binary_function<xml_map_tree::element*, x
 } // anonymous namespace
 
 orcus_xml::orcus_xml(xmlns_repository& ns_repo, spreadsheet::iface::import_factory* im_fact, spreadsheet::iface::export_factory* ex_fact) :
-    mp_impl(orcus::make_unique<impl>(ns_repo))
+    mp_impl(std::make_unique<impl>(ns_repo))
 {
     mp_impl->im_factory = im_fact;
     mp_impl->ex_factory = ex_fact;
@@ -495,30 +494,30 @@ orcus_xml::orcus_xml(xmlns_repository& ns_repo, spreadsheet::iface::import_facto
 
 orcus_xml::~orcus_xml() {}
 
-void orcus_xml::set_namespace_alias(const pstring& alias, const pstring& uri, bool default_ns)
+void orcus_xml::set_namespace_alias(std::string_view alias, std::string_view uri, bool default_ns)
 {
     mp_impl->map_tree.set_namespace_alias(alias, uri, default_ns);
 }
 
-void orcus_xml::set_cell_link(const pstring& xpath, const pstring& sheet, spreadsheet::row_t row, spreadsheet::col_t col)
+void orcus_xml::set_cell_link(std::string_view xpath, std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col)
 {
     pstring sheet_safe = mp_impl->map_tree.intern_string(sheet);
     mp_impl->map_tree.set_cell_link(xpath, xml_map_tree::cell_position(sheet_safe, row, col));
 }
 
-void orcus_xml::start_range(const pstring& sheet, spreadsheet::row_t row, spreadsheet::col_t col)
+void orcus_xml::start_range(std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col)
 {
     pstring sheet_safe = mp_impl->map_tree.intern_string(sheet);
     mp_impl->cur_range_ref = xml_map_tree::cell_position(sheet_safe, row, col);
     mp_impl->map_tree.start_range(mp_impl->cur_range_ref);
 }
 
-void orcus_xml::append_field_link(const pstring& xpath, const pstring& label)
+void orcus_xml::append_field_link(std::string_view xpath, std::string_view label)
 {
     mp_impl->map_tree.append_range_field_link(xpath, label);
 }
 
-void orcus_xml::set_range_row_group(const pstring& xpath)
+void orcus_xml::set_range_row_group(std::string_view xpath)
 {
     mp_impl->map_tree.set_range_row_group(xpath);
 }
@@ -529,23 +528,17 @@ void orcus_xml::commit_range()
     mp_impl->map_tree.commit_range();
 }
 
-void orcus_xml::append_sheet(const pstring& name)
+void orcus_xml::append_sheet(std::string_view name)
 {
     if (name.empty())
         return;
 
-    mp_impl->im_factory->append_sheet(mp_impl->sheet_count++, name.get(), name.size());
+    mp_impl->im_factory->append_sheet(mp_impl->sheet_count++, name);
 }
 
-void orcus_xml::read_stream(const char* p, size_t n)
+void orcus_xml::read_stream(std::string_view stream)
 {
-    pstring strm(p, n);
-    read_impl(strm);
-}
-
-void orcus_xml::read_impl(const pstring& strm)
-{
-    if (strm.empty())
+    if (stream.empty())
         return;
 
     // Insert the range headers and reset the row size counters.
@@ -557,8 +550,7 @@ void orcus_xml::read_impl(const pstring& strm)
         xml_map_tree::range_reference& range_ref = *ref_pair.second;
         range_ref.row_position = 1; // Reset the row offset.
 
-        spreadsheet::iface::import_sheet* sheet =
-            mp_impl->im_factory->get_sheet(ref.sheet.get(), ref.sheet.size());
+        spreadsheet::iface::import_sheet* sheet = mp_impl->im_factory->get_sheet(ref.sheet);
 
         if (!sheet)
             continue;
@@ -573,10 +565,10 @@ void orcus_xml::read_impl(const pstring& strm)
                 // No custom header label. Create a label from the name of the linkable.
                 std::string s = e->name.to_string(mp_impl->ns_repo);
                 if (!s.empty())
-                    sheet->set_auto(row, col, s.data(), s.size());
+                    sheet->set_auto(row, col, s);
             }
             else
-                sheet->set_auto(row, col, e->label.data(), e->label.size());
+                sheet->set_auto(row, col, e->label);
 
             ++col;
         }
@@ -587,7 +579,7 @@ void orcus_xml::read_impl(const pstring& strm)
     xml_data_sax_handler handler(
        *mp_impl->im_factory, mp_impl->link_positions, mp_impl->map_tree);
 
-    sax_ns_parser<xml_data_sax_handler> parser(strm.data(), strm.size(), ns_cxt, handler);
+    sax_ns_parser<xml_data_sax_handler> parser(stream.data(), stream.size(), ns_cxt, handler);
     parser.parse();
 }
 
@@ -604,13 +596,13 @@ void dump_links(const xml_map_tree::const_element_list_type& links)
 
 #endif
 
-void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
+void orcus_xml::write(std::string_view stream, std::ostream& out) const
 {
     if (!mp_impl->ex_factory)
         // We can't export data witout export factory.
         return;
 
-    if (!n_in)
+    if (stream.empty())
         // Source input stream is empty.
         return;
 
@@ -629,9 +621,7 @@ void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
     dump_links(links);
 #endif
 
-    pstring strm(p_in, n_in);
-
-    const char* p0 = p_in;
+    const char* p0 = stream.data();
     std::ptrdiff_t begin_pos = 0;
 
     for (; it != it_end; ++it)
@@ -642,8 +632,7 @@ void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
             // Single cell link
             const xml_map_tree::cell_position& pos = elem.cell_ref->pos;
 
-            const spreadsheet::iface::export_sheet* sheet =
-                fact.get_sheet(pos.sheet.get(), pos.sheet.size());
+            const spreadsheet::iface::export_sheet* sheet = fact.get_sheet(pos.sheet);
             if (!sheet)
                 continue;
 
@@ -656,7 +645,7 @@ void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
 
             write_opening_element(out, elem, fact, false);
             sheet->write_string(out, pos.row, pos.col);
-            out << pstring(p0+close_begin, close_end-close_begin); // closing element.
+            out << std::string_view(p0+close_begin, close_end-close_begin); // closing element.
             begin_pos = close_end;
         }
         else if (elem.range_parent)
@@ -665,8 +654,7 @@ void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
             const xml_map_tree::range_reference& ref = *elem.range_parent;
             const xml_map_tree::cell_position& pos = ref.pos;
 
-            const spreadsheet::iface::export_sheet* sheet =
-                fact.get_sheet(pos.sheet.get(), pos.sheet.size());
+            const spreadsheet::iface::export_sheet* sheet = fact.get_sheet(pos.sheet);
             if (!sheet)
                 continue;
 
@@ -675,11 +663,11 @@ void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
             std::ptrdiff_t close_end   = elem.stream_pos.close_end;
 
             assert(open_begin > begin_pos);
-            out << pstring(p0+begin_pos, open_begin-begin_pos); // stream since last linked element.
+            out << std::string_view(p0+begin_pos, open_begin-begin_pos); // stream since last linked element.
 
             write_opening_element(out, elem, fact, false);
             write_range_reference(out, elem, fact);
-            out << pstring(p0+close_begin, close_end-close_begin); // closing element.
+            out << std::string_view(p0+close_begin, close_end-close_begin); // closing element.
             begin_pos = close_end;
         }
         else if (elem.unlinked_attribute_anchor())
@@ -693,7 +681,7 @@ void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
             bool self_close = elem.stream_pos.open_begin == elem.stream_pos.close_begin;
 
             assert(open_begin > begin_pos);
-            out << pstring(p0+begin_pos, open_begin-begin_pos); // stream since last linked element.
+            out << std::string_view(p0+begin_pos, open_begin-begin_pos); // stream since last linked element.
 
             write_opening_element(out, elem, fact, self_close);
             begin_pos = open_end;
@@ -703,7 +691,7 @@ void orcus_xml::write(const char* p_in, size_t n_in, std::ostream& out) const
     }
 
     // Flush the remaining stream.
-    out << pstring(p0+begin_pos, strm.size()-begin_pos);
+    out << std::string_view(p0+begin_pos, stream.size()-begin_pos);
 }
 
 }

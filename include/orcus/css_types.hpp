@@ -8,9 +8,10 @@
 #ifndef INCLUDED_ORCUS_CSS_TYPES_HPP
 #define INCLUDED_ORCUS_CSS_TYPES_HPP
 
-#include "orcus/env.hpp"
+#include "env.hpp"
+
 #include <cstdlib>
-#include <inttypes.h>
+#include <cstdint>
 #include <string>
 
 namespace orcus { namespace css {
@@ -47,6 +48,22 @@ enum class property_value_t
     rgb,
     rgba,
     url
+};
+
+struct rgba_color_t
+{
+    uint8_t red;   /// 0 to 255
+    uint8_t green; /// 0 to 255
+    uint8_t blue;  /// 0 to 255
+    double alpha;
+};
+
+struct hsla_color_t
+{
+    uint8_t hue;        /// 0 to 255
+    uint8_t saturation; /// 0 to 255
+    uint8_t lightness;  /// 0 to 255
+    double alpha;
 };
 
 using pseudo_element_t = uint16_t;
@@ -103,17 +120,17 @@ ORCUS_PSR_DLLPUBLIC extern const pseudo_class_t pseudo_class_visited;
  * Convert a textural representation of a pseudo element into its numerical
  * representation.
  */
-ORCUS_PSR_DLLPUBLIC pseudo_element_t to_pseudo_element(const char* p, size_t n);
+ORCUS_PSR_DLLPUBLIC pseudo_element_t to_pseudo_element(std::string_view s);
 
 /**
  * Convert a textural representation of a pseudo class into its numerical
  * representation.
  */
-ORCUS_PSR_DLLPUBLIC pseudo_class_t to_pseudo_class(const char* p, size_t n);
+ORCUS_PSR_DLLPUBLIC pseudo_class_t to_pseudo_class(std::string_view s);
 
 ORCUS_PSR_DLLPUBLIC std::string pseudo_class_to_string(pseudo_class_t val);
 
-ORCUS_PSR_DLLPUBLIC property_function_t to_property_function(const char* p, size_t n);
+ORCUS_PSR_DLLPUBLIC property_function_t to_property_function(std::string_view s);
 
 }}
 

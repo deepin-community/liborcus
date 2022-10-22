@@ -36,6 +36,7 @@ cmd_params::cmd_params() {}
 
 cmd_params::cmd_params(cmd_params&& other) :
     config(std::move(other.config)),
+    os(std::move(other.os)),
     mode(other.mode),
     map_file(std::move(other.map_file))
 {
@@ -76,8 +77,10 @@ const char* help_json_output =
 
 const char* help_json_output_format =
 "Specify the format of output file.  Supported format types are:\n"
+"\n"
 "  * XML (xml)\n"
 "  * JSON (json)\n"
+"  * YAML (yaml)\n"
 "  * flat tree dump (check)\n"
 "  * no output (none)";
 
@@ -120,7 +123,7 @@ void parse_args_for_convert(
     if (vm.count("output-format"))
     {
         std::string s = vm["output-format"].as<string>();
-        params.config->output_format = to_dump_format_enum(s.data(), s.size());
+        params.config->output_format = to_dump_format_enum(s);
 
         if (params.config->output_format == dump_format_t::unknown)
         {
@@ -172,7 +175,7 @@ detail::cmd_params parse_json_args(int argc, char** argv)
 {
     detail::cmd_params params;
 
-    po::options_description desc("Allowed options");
+    po::options_description desc("Options");
     desc.add_options()
         ("help,h", "Print this help.")
         ("mode", po::value<std::string>(), build_mode_help_text().data())
@@ -224,7 +227,7 @@ detail::cmd_params parse_json_args(int argc, char** argv)
         }
     }
 
-    params.config = orcus::make_unique<json_config>();
+    params.config = std::make_unique<json_config>();
 
     if (vm.count("input"))
         params.config->input_path = vm["input"].as<string>();
@@ -253,10 +256,10 @@ detail::cmd_params parse_json_args(int argc, char** argv)
         case detail::mode_t::map_gen:
         case detail::mode_t::structure:
             // Structure and map-gen modes only need input and output parameters.
-            params.os = orcus::make_unique<output_stream>(vm);
+            params.os = std::make_unique<output_stream>(vm);
             break;
         case detail::mode_t::convert:
-            params.os = orcus::make_unique<output_stream>(vm);
+            params.os = std::make_unique<output_stream>(vm);
             parse_args_for_convert(params, desc, vm);
             break;
         case detail::mode_t::map:
@@ -271,8 +274,8 @@ detail::cmd_params parse_json_args(int argc, char** argv)
 
 std::unique_ptr<json::document_tree> load_doc(const orcus::file_content& content, const json_config& config)
 {
-    std::unique_ptr<json::document_tree> doc(orcus::make_unique<json::document_tree>());
-    doc->load(content.data(), content.size(), config);
+    std::unique_ptr<json::document_tree> doc(std::make_unique<json::document_tree>());
+    doc->load(content.str(), config);
     return doc;
 }
 
@@ -291,6 +294,11 @@ void build_doc_and_dump(const orcus::file_content& content, detail::cmd_params& 
         case dump_format_t::json:
         {
             os << doc->dump();
+            break;
+        }
+        case dump_format_t::yaml:
+        {
+            os << doc->dump_yaml();
             break;
         }
         case dump_format_t::check:
@@ -319,7 +327,7 @@ void parse_and_write_map_file(const orcus::file_content& content, detail::cmd_pa
     };
 
     json::structure_tree tree;
-    tree.parse(content.data(), content.size());
+    tree.parse(content.str());
 
     tree.process_ranges(rh);
 
@@ -344,6 +352,7 @@ void parse_and_write_map_file(const orcus::file_content& content, detail::cmd_pa
             {"sheet", sheet},
             {"row", 0},
             {"column", 0},
+            {"row-header", true},
             {"fields", json::array()},
             {"row-groups", json::array()},
         });
@@ -392,7 +401,7 @@ int main(int argc, char** argv)
             case detail::mode_t::structure:
             {
                 json::structure_tree tree;
-                tree.parse(content.data(), content.size());
+                tree.parse(content.str());
                 tree.normalize_tree();
                 tree.dump_compact(params.os->get());
                 break;

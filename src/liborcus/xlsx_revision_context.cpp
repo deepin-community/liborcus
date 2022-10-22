@@ -16,6 +16,7 @@
 #include "orcus/global.hpp"
 
 #include <iostream>
+#include <limits>
 
 using namespace std;
 
@@ -23,7 +24,7 @@ namespace orcus {
 
 namespace {
 
-class headers_attr_parser : public unary_function<xml_token_attr_t, void>
+class headers_attr_parser
 {
     pstring m_guid;
     long m_highest_revid;
@@ -66,7 +67,7 @@ public:
     }
 };
 
-class header_attr_parser : public unary_function<xml_token_attr_t, void>
+class header_attr_parser
 {
     string_pool* m_pool;
 
@@ -139,11 +140,6 @@ xlsx_revheaders_context::xlsx_revheaders_context(session_context& session_cxt, c
     xml_context_base(session_cxt, tokens) {}
 
 xlsx_revheaders_context::~xlsx_revheaders_context() {}
-
-bool xlsx_revheaders_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
 
 xml_context_base* xlsx_revheaders_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -236,13 +232,13 @@ bool xlsx_revheaders_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_revheaders_context::characters(const pstring& /*str*/, bool /*transient*/)
+void xlsx_revheaders_context::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 
 namespace {
 
-class rcc_attr_parser : public unary_function<xml_token_attr_t, void>
+class rcc_attr_parser
 {
     long m_revision_id;
     long m_sheet_id;
@@ -274,7 +270,7 @@ public:
     }
 };
 
-class rrc_attr_parser : public unary_function<xml_token_attr_t, void>
+class rrc_attr_parser
 {
     long m_revision_id;
     long m_sheet_id;
@@ -325,7 +321,7 @@ public:
     }
 };
 
-class cell_data_attr_parser : public unary_function<xml_token_attr_t, void>
+class cell_data_attr_parser
 {
     pstring m_ref;
     xlsx_cell_t m_type;
@@ -365,11 +361,6 @@ xlsx_revlog_context::xlsx_revlog_context(session_context& session_cxt, const tok
 }
 
 xlsx_revlog_context::~xlsx_revlog_context() {}
-
-bool xlsx_revlog_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
-{
-    return true;
-}
 
 xml_context_base* xlsx_revlog_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -559,9 +550,9 @@ bool xlsx_revlog_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_revlog_context::characters(const pstring& str, bool transient)
+void xlsx_revlog_context::characters(std::string_view str, bool transient)
 {
-    const xml_token_pair_t& elem = get_current_element();
+    xml_token_pair_t elem = get_current_element();
     if (elem.first == NS_ooxml_xlsx)
     {
         switch (elem.second)

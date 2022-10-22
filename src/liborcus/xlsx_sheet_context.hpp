@@ -21,6 +21,8 @@
 namespace orcus {
 
 struct session_context;
+struct formula_result;
+struct xlsx_session_data;
 class range_formula_results;
 
 namespace spreadsheet { namespace iface {
@@ -64,13 +66,12 @@ public:
         spreadsheet::iface::import_sheet& sheet);
     virtual ~xlsx_sheet_context();
 
-    virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const;
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(const pstring& str, bool transient);
+    virtual void characters(std::string_view str, bool transient);
 
     void pop_rel_extras(opc_rel_extras_t& other);
 
@@ -79,9 +80,11 @@ private:
     void start_element_sheet_view(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
     void start_element_selection(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
     void start_element_pane(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
+    void start_element_cell(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
     void end_element_cell();
     void push_raw_cell_value();
-    void push_raw_cell_result(range_formula_results& res, size_t row_offset, size_t col_offset);
+    void push_raw_cell_result(range_formula_results& res, size_t row_offset, size_t col_offset, xlsx_session_data& session_data) const;
+    void push_raw_cell_result(formula_result& res, xlsx_session_data& session_data) const;
 
     /**
      * See if the current cell is a part of an array formula, and if so, store
@@ -89,7 +92,7 @@ private:
      *
      * @return true if this is part of an array formula, false otherwise.
      */
-    bool handle_array_formula_result();
+    bool handle_array_formula_result(xlsx_session_data& session_data);
 
     /**
      * Potentially intern a transient attribute string value for the duration

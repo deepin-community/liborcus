@@ -9,9 +9,9 @@
 #define INCLUDED_ORCUS_STREAM_HPP
 
 #include "env.hpp"
-#include "orcus/pstring.hpp"
 
 #include <memory>
+#include <string>
 
 namespace orcus {
 
@@ -30,22 +30,45 @@ public:
 
     file_content();
     file_content(file_content&& other);
-    file_content(const char* filepath);
+    file_content(std::string_view filepath);
     ~file_content();
 
+    /**
+     * Obtain the memory address to the first character in the content buffer.
+     *
+     * @return pointer to the first character in the buffer.
+     */
     const char* data() const;
+
+    /**
+     * Return the size of the content i.e. the number of characters in the
+     * content buffer.
+     *
+     * @return size of the content.
+     */
     size_t size() const;
+
+    /**
+     * Query whether or not the content is empty.
+     *
+     * @return true if the content is empty, otherwise false.
+     */
     bool empty() const;
 
+    /**
+     * Swap content with another instance.
+     *
+     * @param other another instance to swap content with.
+     */
     void swap(file_content& other);
 
     /**
-     * Load from a new file.  This will invalidate the pointer returned from
-     * the {@link file_content#data()} method prior to the call.
+     * Load from a new file.  This will invalidate the pointer returned from the
+     * data() method prior to the call.
      *
      * @param filepath path of the file to load from.
      */
-    void load(const char* filepath);
+    void load(std::string_view filepath);
 
     /**
      * Convert a non-utf-8 stream to a utf-8 one if the source stream contains
@@ -54,15 +77,14 @@ public:
      */
     void convert_to_utf8();
 
-    pstring str() const;
+    std::string_view str() const;
 };
 
 /**
  * Represents the content of an in-memory buffer.  Note that this class will
  * NOT own the content of the source buffer but simply will reference it,
  * except when the original buffer is a non-utf-8 stream and the caller
- * chooses to convert it to utf-8 by calling its {@link
- * memory_content#convert_to_utf8()} method.
+ * chooses to convert it to utf-8 by calling its convert_to_utf8() method.
  */
 class ORCUS_PSR_DLLPUBLIC memory_content
 {
@@ -73,7 +95,7 @@ public:
     memory_content& operator= (const file_content&) = delete;
 
     memory_content();
-    memory_content(const char* p, size_t n);
+    memory_content(std::string_view s);
     memory_content(memory_content&& other);
     ~memory_content();
 
@@ -90,7 +112,7 @@ public:
      */
     void convert_to_utf8();
 
-    pstring str() const;
+    std::string_view str() const;
 };
 
 struct ORCUS_PSR_DLLPUBLIC line_with_offset
@@ -114,8 +136,7 @@ struct ORCUS_PSR_DLLPUBLIC line_with_offset
  *
  * @return string formatted to be usable as an error message for stdout.
  */
-ORCUS_PSR_DLLPUBLIC std::string create_parse_error_output(
-    const pstring& strm, std::ptrdiff_t offset);
+ORCUS_PSR_DLLPUBLIC std::string create_parse_error_output(std::string_view strm, std::ptrdiff_t offset);
 
 /**
  * Given a string consisting of multiple lines i.e. multiple line breaks,
@@ -127,7 +148,7 @@ ORCUS_PSR_DLLPUBLIC std::string create_parse_error_output(
  * @return structure containing information about the line containing the
  *         offset position.
  */
-ORCUS_PSR_DLLPUBLIC line_with_offset locate_line_with_offset(const pstring& strm, std::ptrdiff_t offset);
+ORCUS_PSR_DLLPUBLIC line_with_offset locate_line_with_offset(std::string_view strm, std::ptrdiff_t offset);
 
 /**
  * Given two strings, locate the position of the first character that is
@@ -140,8 +161,7 @@ ORCUS_PSR_DLLPUBLIC line_with_offset locate_line_with_offset(const pstring& strm
  * @return position of the first character that is different between the two
  *         compared strings.
  */
-ORCUS_PSR_DLLPUBLIC size_t locate_first_different_char(
-    const pstring& left, const pstring& right);
+ORCUS_PSR_DLLPUBLIC size_t locate_first_different_char(std::string_view left, std::string_view right);
 
 } // namespace orcus
 

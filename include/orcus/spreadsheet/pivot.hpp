@@ -8,16 +8,15 @@
 #ifndef INCLUDED_ORCUS_SPREADSHEET_PIVOT_HPP
 #define INCLUDED_ORCUS_SPREADSHEET_PIVOT_HPP
 
-#include "orcus/env.hpp"
-#include "orcus/pstring.hpp"
-#include "orcus/types.hpp"
-#include "orcus/spreadsheet/types.hpp"
+#include "../env.hpp"
+#include "../types.hpp"
+#include "types.hpp"
 
 #include <memory>
 #include <vector>
 #include <limits>
-
-#include <boost/optional.hpp>
+#include <variant>
+#include <optional>
 
 namespace ixion {
 
@@ -37,7 +36,9 @@ using pivot_cache_indices_t = std::vector<size_t>;
 
 struct ORCUS_SPM_DLLPUBLIC pivot_cache_record_value_t
 {
-    enum class value_type
+    using value_type = std::variant<bool, double, std::size_t, std::string_view, date_time_t>;
+
+    enum class record_type
     {
         unknown = 0,
         boolean,
@@ -49,43 +50,11 @@ struct ORCUS_SPM_DLLPUBLIC pivot_cache_record_value_t
         shared_item_index
     };
 
-    value_type type;
-
-    union
-    {
-        bool boolean;
-
-        struct
-        {
-            // This must point to an interned string instance. May not be
-            // null-terminated.
-            const char* p;
-
-            size_t n; // Length of the string value.
-
-        } character;
-
-        struct
-        {
-            int year;
-            int month;
-            int day;
-            int hour;
-            int minute;
-            double second;
-
-        } date_time;
-
-        double numeric;
-
-        size_t shared_item_index;
-
-        // TODO : add error value.
-
-    } value;
+    record_type type;
+    value_type value;
 
     pivot_cache_record_value_t();
-    pivot_cache_record_value_t(const char* cp, size_t cn);
+    pivot_cache_record_value_t(std::string_view s);
     pivot_cache_record_value_t(double v);
     pivot_cache_record_value_t(size_t index);
 
@@ -97,46 +66,18 @@ using pivot_cache_record_t = std::vector<pivot_cache_record_value_t>;
 
 struct ORCUS_SPM_DLLPUBLIC pivot_cache_item_t
 {
+    using value_type = std::variant<bool, double, std::string_view, date_time_t, error_value_t>;
+
     enum class item_type
     {
         unknown = 0, boolean, date_time, character, numeric, blank, error
     };
 
     item_type type;
-
-    union
-    {
-        struct
-        {
-            // This must point to an interned string instance. May not be
-            // null-terminated.
-            const char* p;
-
-            size_t n; // Length of the string value.
-
-        } character;
-
-        struct
-        {
-            int year;
-            int month;
-            int day;
-            int hour;
-            int minute;
-            double second;
-
-        } date_time;
-
-        double numeric;
-
-        error_value_t error;
-
-        bool boolean;
-
-    } value;
+    value_type value;
 
     pivot_cache_item_t();
-    pivot_cache_item_t(const char* cp, size_t cn);
+    pivot_cache_item_t(std::string_view s);
     pivot_cache_item_t(double numeric);
     pivot_cache_item_t(bool boolean);
     pivot_cache_item_t(const date_time_t& date_time);
@@ -183,7 +124,7 @@ struct ORCUS_SPM_DLLPUBLIC pivot_cache_group_data_t
      */
     pivot_cache_indices_t base_to_group_indices;
 
-    boost::optional<range_grouping_type> range_grouping;
+    std::optional<range_grouping_type> range_grouping;
 
     /**
      * Individual items comprising the group.
@@ -206,20 +147,20 @@ struct ORCUS_SPM_DLLPUBLIC pivot_cache_field_t
      * Field name. It must be interned with the string pool belonging to the
      * document.
      */
-    pstring name;
+    std::string_view name;
 
     pivot_cache_items_t items;
 
-    boost::optional<double> min_value;
-    boost::optional<double> max_value;
+    std::optional<double> min_value;
+    std::optional<double> max_value;
 
-    boost::optional<date_time_t> min_date;
-    boost::optional<date_time_t> max_date;
+    std::optional<date_time_t> min_date;
+    std::optional<date_time_t> max_date;
 
     std::unique_ptr<pivot_cache_group_data_t> group_data;
 
     pivot_cache_field_t();
-    pivot_cache_field_t(const pstring& _name);
+    pivot_cache_field_t(std::string_view _name);
     pivot_cache_field_t(const pivot_cache_field_t& other);
     pivot_cache_field_t(pivot_cache_field_t&& other);
 };
@@ -281,7 +222,7 @@ public:
      * @param cache pivot cache instance to store.
      */
     void insert_worksheet_cache(
-        const pstring& sheet_name, const ixion::abs_range_t& range, std::unique_ptr<pivot_cache>&& cache);
+        std::string_view sheet_name, const ixion::abs_range_t& range, std::unique_ptr<pivot_cache>&& cache);
 
     /**
      * Insert a new pivot cache associated with a table name.
@@ -289,7 +230,7 @@ public:
      * @param table_name source table name.
      * @param cache pivot cache instance to store.
      */
-    void insert_worksheet_cache(const pstring& table_name, std::unique_ptr<pivot_cache>&& cache);
+    void insert_worksheet_cache(std::string_view table_name, std::unique_ptr<pivot_cache>&& cache);
 
     /**
      * Count the number of pivot caches currently stored.
@@ -299,7 +240,7 @@ public:
     size_t get_cache_count() const;
 
     const pivot_cache* get_cache(
-        const pstring& sheet_name, const ixion::abs_range_t& range) const;
+        std::string_view sheet_name, const ixion::abs_range_t& range) const;
 
     pivot_cache* get_cache(pivot_cache_id_t cache_id);
 

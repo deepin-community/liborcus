@@ -150,7 +150,8 @@ public:
             }
 
             const char* p_parse_ended = nullptr;
-            long pos = to_long(p_head, mp_cur, &p_parse_ended);
+            std::size_t n = mp_cur - p_head;
+            long pos = to_long({p_head, n}, &p_parse_ended);
 
             if (p_parse_ended != mp_cur)
                 // Parsing failed.
@@ -363,7 +364,7 @@ void json_map_tree::walker::set_object_key(const char* p, size_t n)
     if (cur_scope.p->type != map_node_type::object)
         return;
 
-    pstring pooled = m_parent.m_str_pool.intern(p, n).first;
+    pstring pooled = m_parent.m_str_pool.intern({p, n}).first;
     cur_scope.array_position = reinterpret_cast<child_position_type>(pooled.data());
 }
 
@@ -375,7 +376,7 @@ json_map_tree::walker json_map_tree::get_tree_walker() const
     return walker(*this);
 }
 
-void json_map_tree::set_cell_link(const pstring& path, const cell_position_t& pos)
+void json_map_tree::set_cell_link(std::string_view path, const cell_position_t& pos)
 {
     path_stack_type stack = get_or_create_destination_node(path);
     if (stack.node_stack.empty())
@@ -396,7 +397,7 @@ void json_map_tree::set_cell_link(const pstring& path, const cell_position_t& po
     p->value.cell_ref->pos.sheet = m_str_pool.intern(p->value.cell_ref->pos.sheet).first;
 }
 
-const json_map_tree::node* json_map_tree::get_link(const pstring& path) const
+const json_map_tree::node* json_map_tree::get_link(std::string_view path) const
 {
     return get_destination_node(path);
 }
@@ -409,12 +410,12 @@ void json_map_tree::start_range(const cell_position_t& pos, bool row_header)
     m_current_range.row_header = row_header;
 }
 
-void json_map_tree::append_field_link(const pstring& path, const pstring& label)
+void json_map_tree::append_field_link(std::string_view path, std::string_view label)
 {
     m_current_range.fields.emplace_back(path, label);
 }
 
-void json_map_tree::set_range_row_group(const pstring& path)
+void json_map_tree::set_range_row_group(std::string_view path)
 {
     m_current_range.row_groups.push_back(path);
 }
@@ -593,7 +594,7 @@ json_map_tree::path_stack_type json_map_tree::get_or_create_destination_node(con
             }
             else
             {
-                m_root = orcus::make_unique<node>();
+                m_root = std::make_unique<node>();
                 m_root->type = map_node_type::array;
                 m_root->value.children = m_node_children_pool.construct();
             }
@@ -618,7 +619,7 @@ json_map_tree::path_stack_type json_map_tree::get_or_create_destination_node(con
             }
             else
             {
-                m_root = orcus::make_unique<node>();
+                m_root = std::make_unique<node>();
                 m_root->type = map_node_type::object;
                 m_root->value.children = m_node_children_pool.construct();
             }
@@ -633,7 +634,7 @@ json_map_tree::path_stack_type json_map_tree::get_or_create_destination_node(con
         {
             if (!m_root)
             {
-                m_root = orcus::make_unique<node>();
+                m_root = std::make_unique<node>();
                 m_root->type = map_node_type::unknown;
             }
 
@@ -716,7 +717,7 @@ json_map_tree::path_stack_type json_map_tree::get_or_create_destination_node(con
 
 json_map_tree::child_position_type json_map_tree::to_key_position(const char* p, size_t n) const
 {
-    pstring pooled_key = m_str_pool.intern(p, n).first;
+    pstring pooled_key = m_str_pool.intern({p, n}).first;
     child_position_type pos = reinterpret_cast<child_position_type>(pooled_key.data());
     return pos;
 }

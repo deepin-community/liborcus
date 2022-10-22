@@ -6,9 +6,9 @@
  */
 
 #include "test_global.hpp"
-#include "orcus/string_pool.hpp"
-#include "orcus/pstring.hpp"
-#include "orcus/global.hpp"
+#include <orcus/string_pool.hpp>
+#include "pstring.hpp"
+#include <orcus/global.hpp>
 
 using namespace std;
 using namespace orcus;
@@ -67,7 +67,7 @@ void test_basic()
 void test_merge()
 {
     string_pool pool1;
-    std::unique_ptr<string_pool> pool2(orcus::make_unique<string_pool>());
+    std::unique_ptr<string_pool> pool2(std::make_unique<string_pool>());
 
     pool1.intern("A");
     pool1.intern("B");
@@ -97,7 +97,7 @@ void test_merge()
     // the merged store in pool1 (thus valid).
     assert(v1 == v2);
 
-    std::vector<pstring> entries = pool1.get_interned_strings();
+    std::vector<std::string_view> entries = pool1.get_interned_strings();
     assert(entries.size() == pool1.size());
 }
 

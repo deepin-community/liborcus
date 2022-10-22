@@ -8,7 +8,7 @@
 #include "orcus/orcus_csv.hpp"
 
 #include "orcus/csv_parser.hpp"
-#include "orcus/pstring.hpp"
+#include "pstring.hpp"
 #include "orcus/global.hpp"
 #include "orcus/stream.hpp"
 #include "orcus/spreadsheet/import_interface.hpp"
@@ -52,7 +52,7 @@ public:
     void begin_parse()
     {
         std::string sheet_name = get_sheet_name();
-        mp_sheet = m_factory.append_sheet(m_sheet, sheet_name.data(), sheet_name.size());
+        mp_sheet = m_factory.append_sheet(m_sheet, sheet_name);
     }
 
     void end_parse() {}
@@ -63,22 +63,24 @@ public:
         // 0.
         if (m_row >= mp_sheet->get_sheet_size().rows)
         {
-            if (!m_app_config.csv.split_to_multiple_sheets)
+            auto csv = std::get<config::csv_config>(m_app_config.data);
+
+            if (!csv.split_to_multiple_sheets)
                 throw max_row_size_reached();
 
             // The next row will be outside the boundary of the current sheet.
             ++m_sheet;
             std::string sheet_name = get_sheet_name();
-            mp_sheet = m_factory.append_sheet(m_sheet, sheet_name.data(), sheet_name.size());
+            mp_sheet = m_factory.append_sheet(m_sheet, sheet_name);
             m_row = 0;
 
             if (!m_header_cells.empty())
             {
                 // Duplicate the header rows from the first sheet.
                 for (const header_cell& c : m_header_cells)
-                    mp_sheet->set_auto(c.row, c.col, c.value.data(), c.value.size());
+                    mp_sheet->set_auto(c.row, c.col, c.value);
 
-                m_row += m_app_config.csv.header_row_size;
+                m_row += csv.header_row_size;
             }
         }
     }
@@ -91,7 +93,9 @@ public:
 
     void cell(const char* p, size_t n, bool transient)
     {
-        if (m_sheet == 0 && size_t(m_row) < m_app_config.csv.header_row_size)
+        auto csv = std::get<config::csv_config>(m_app_config.data);
+
+        if (m_sheet == 0 && size_t(m_row) < csv.header_row_size)
         {
             pstring v(p, n);
             if (transient)
@@ -100,7 +104,7 @@ public:
             m_header_cells.emplace_back(m_row, m_col, v);
         }
 
-        mp_sheet->set_auto(m_row, m_col, p, n);
+        mp_sheet->set_auto(m_row, m_col, {p, n});
         ++m_col;
     }
 
@@ -131,56 +135,63 @@ private:
 
 }
 
+struct orcus_csv::impl
+{
+    spreadsheet::iface::import_factory* factory;
+
+    impl(spreadsheet::iface::import_factory* _factory) : factory(_factory) {}
+
+    void parse(std::string_view stream, const config& conf)
+    {
+        if (stream.empty())
+            return;
+
+        orcus_csv_handler handler(*factory, conf);
+        csv::parser_config config;
+        config.delimiters.push_back(',');
+        config.text_qualifier = '"';
+        csv_parser<orcus_csv_handler> parser(stream.data(), stream.size(), handler, config);
+        try
+        {
+            parser.parse();
+        }
+        catch (const max_row_size_reached&)
+        {
+            // The parser has decided to end the import due to the destination
+            // sheet being full.
+        }
+        catch (const csv::parse_error& e)
+        {
+            cout << "parse failed: " << e.what() << endl;
+        }
+    }
+};
+
 orcus_csv::orcus_csv(spreadsheet::iface::import_factory* factory) :
-    iface::import_filter(format_t::csv), mp_factory(factory) {}
+    iface::import_filter(format_t::csv),
+    mp_impl(std::make_unique<impl>(factory)) {}
+
+orcus_csv::~orcus_csv() {}
 
 void orcus_csv::read_file(const string& filepath)
 {
     file_content fc(filepath.data());
-    parse(fc.data(), fc.size());
-
-    mp_factory->finalize();
+    mp_impl->parse(fc.str(), get_config());
+    mp_impl->factory->finalize();
 }
 
-void orcus_csv::read_stream(const char* content, size_t len)
+void orcus_csv::read_stream(std::string_view stream)
 {
-    if (!content)
+    if (stream.empty())
         return;
 
-    parse(content, len);
-
-    mp_factory->finalize();
+    mp_impl->parse(stream, get_config());
+    mp_impl->factory->finalize();
 }
 
-const char* orcus_csv::get_name() const
+std::string_view orcus_csv::get_name() const
 {
-    static const char* name = "csv";
-    return name;
-}
-
-void orcus_csv::parse(const char* content, size_t len)
-{
-    if (!len)
-        return;
-
-    orcus_csv_handler handler(*mp_factory, get_config());
-    csv::parser_config config;
-    config.delimiters.push_back(',');
-    config.text_qualifier = '"';
-    csv_parser<orcus_csv_handler> parser(content, len, handler, config);
-    try
-    {
-        parser.parse();
-    }
-    catch (const max_row_size_reached&)
-    {
-        // The parser has decided to end the import due to the destination
-        // sheet being full.
-    }
-    catch (const csv::parse_error& e)
-    {
-        cout << "parse failed: " << e.what() << endl;
-    }
+    return "csv";
 }
 
 }
