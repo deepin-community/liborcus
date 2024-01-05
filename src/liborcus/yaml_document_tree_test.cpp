@@ -7,20 +7,16 @@
 
 #include "orcus/yaml_document_tree.hpp"
 #include "orcus/stream.hpp"
-#include "pstring.hpp"
-#include "orcus/global.hpp"
 #include "orcus/yaml_parser_base.hpp"
 
 #include <cassert>
 #include <iostream>
 #include <cmath>
 
-#include <boost/filesystem.hpp>
+#include "filesystem_env.hpp"
 
 using namespace orcus;
 using namespace std;
-
-namespace fs = boost::filesystem;
 
 bool string_expected(const yaml::const_node& node, const char* expected)
 {
@@ -84,7 +80,7 @@ void test_yaml_invalids()
         if (!fs::is_regular_file(path))
             continue;
 
-        if (fs::extension(path) != ".yaml")
+        if (path.extension().string() != ".yaml")
             continue;
 
         ++file_count;
@@ -97,7 +93,7 @@ void test_yaml_invalids()
             doc.load(strm.str());
             assert(!"yaml::parse_error was not thrown, but expected to be.");
         }
-        catch (const yaml::parse_error&)
+        catch (const parse_error&)
         {
             // This is expected.
         }
@@ -402,9 +398,9 @@ void test_yaml_parse_boolean()
 
     node = node.child(2);
     assert(node.type() == yaml::node_t::sequence);
-    assert(node.child_count() == ORCUS_N_ELEMENTS(values));
+    assert(node.child_count() == std::size(values));
 
-    for (size_t i = 0; i < ORCUS_N_ELEMENTS(values); ++i)
+    for (size_t i = 0; i < std::size(values); ++i)
     {
         node = node.child(i);
         assert(node.type() == yaml::node_t::string);
@@ -443,7 +439,7 @@ void test_yaml_parse_quoted_string()
             "Japan's finest beer"
         };
 
-        size_t n = ORCUS_N_ELEMENTS(values);
+        size_t n = std::size(values);
         assert(node.type() == yaml::node_t::sequence);
         assert(node.child_count() == n);
 
@@ -467,7 +463,7 @@ void test_yaml_parse_quoted_string()
             "#hashtag"
         };
 
-        size_t n = ORCUS_N_ELEMENTS(values);
+        size_t n = std::size(values);
         assert(node.type() == yaml::node_t::sequence);
         assert(node.child_count() == n);
 

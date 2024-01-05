@@ -18,20 +18,10 @@
 
 namespace orcus { namespace css {
 
-class ORCUS_PSR_DLLPUBLIC parse_error : public ::orcus::parse_error
-{
-public:
-    parse_error(const std::string& msg);
-
-    static void throw_with(const char* msg_before, char c, const char* msg_after);
-    static void throw_with(const char* msg_before, const char* p, size_t n, const char* msg_after);
-    static void throw_with(const char* msg_before, std::string_view s, const char* msg_after);
-};
-
 class ORCUS_PSR_DLLPUBLIC parser_base : public ::orcus::parser_base
 {
 public:
-    parser_base(const char* p, size_t n);
+    parser_base(std::string_view content);
 
 protected:
 
@@ -57,9 +47,8 @@ protected:
      * @param p pointer to the first character of the skipped character array.
      * @param len length of the skipped character array.
      * @param chars one or more characters that can end the skipping.
-     * @param n_chars number of characters that can end the skipping.
      */
-    void skip_to_or_blank(const char*& p, size_t& len, const char* chars, size_t n_chars);
+    void skip_to_or_blank(const char*& p, size_t& len, std::string_view chars);
     void skip_blanks();
     void skip_blanks_reverse();
     void shrink_stream();

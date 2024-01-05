@@ -11,11 +11,12 @@
 #include "xml_context_base.hpp"
 #include "ooxml_types.hpp"
 #include "xlsx_types.hpp"
+#include "xlsx_autofilter_context.hpp"
+#include "xlsx_conditional_format_context.hpp"
 
 #include "orcus/spreadsheet/types.hpp"
 #include "orcus/string_pool.hpp"
 
-#include <memory>
 #include <list>
 
 namespace orcus {
@@ -43,9 +44,9 @@ public:
     {
         spreadsheet::formula_t type;
         spreadsheet::range_t ref; /// formula reference range
-        pstring str; /// formula expression string
-        pstring data_table_ref1;
-        pstring data_table_ref2;
+        std::string_view str; /// formula expression string
+        std::string_view data_table_ref1;
+        std::string_view data_table_ref2;
         int shared_id;
         bool data_table_2d:1;
         bool data_table_row_based:1;
@@ -69,18 +70,21 @@ public:
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
-    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
+    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
     virtual void characters(std::string_view str, bool transient);
 
     void pop_rel_extras(opc_rel_extras_t& other);
 
 private:
-    void start_element_formula(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_sheet_view(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_selection(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_pane(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
-    void start_element_cell(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
+    void start_element_formula(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs);
+    void start_element_sheet_view(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs);
+    void start_element_selection(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs);
+    void start_element_pane(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs);
+    void start_element_cell(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs);
+    void start_element_col(const xml_token_attrs_t& attrs);
+    void start_element_row(const xml_token_attrs_t& attrs);
+
     void end_element_cell();
     void push_raw_cell_value();
     void push_raw_cell_result(range_formula_results& res, size_t row_offset, size_t col_offset, xlsx_session_data& session_data) const;
@@ -98,17 +102,15 @@ private:
      * Potentially intern a transient attribute string value for the duration
      * of the current sheet context.
      */
-    pstring intern_in_context(const xml_token_attr_t& attr);
+    std::string_view intern_in_context(const xml_token_attr_t& attr);
 
     /**
      * Potentially intern a transient string value for the duration of the
      * current sheet context.
      */
-    pstring intern_in_context(const pstring& str, bool transient);
+    std::string_view intern_in_context(const std::string_view& str, bool transient);
 
 private:
-    std::unique_ptr<xml_context_base> mp_child;
-
     spreadsheet::iface::import_reference_resolver& m_resolver;
     spreadsheet::iface::import_sheet& m_sheet; /// sheet model instance for the loaded document.
     string_pool m_pool;
@@ -117,8 +119,8 @@ private:
     spreadsheet::col_t m_cur_col;
     xlsx_cell_t m_cur_cell_type;
     size_t       m_cur_cell_xf;
-    pstring      m_cur_str;
-    pstring      m_cur_value;
+    std::string_view m_cur_str;
+    std::string_view m_cur_value;
     formula m_cur_formula;
 
     array_formula_results_type m_array_formula_results;
@@ -127,6 +129,9 @@ private:
      * Extra data to pass on to subsequent parts via relations.
      */
     opc_rel_extras_t m_rel_extras;
+
+    xlsx_autofilter_context m_cxt_autofilter;
+    xlsx_conditional_format_context m_cxt_cond_format;
 };
 
 }

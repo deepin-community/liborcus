@@ -16,7 +16,6 @@ liborcus_HEADERS = \
 	env.hpp \
 	exception.hpp \
 	format_detection.hpp \
-	global.hpp \
 	info.hpp \
 	interface.hpp \
 	json_document_tree.hpp \
@@ -80,3 +79,10 @@ liborcus_HEADERS += \
 	orcus_gnumeric.hpp
 
 endif # WITH_GNUMERIC_FILTER
+
+if WITH_PARQUET_FILTER
+
+liborcus_HEADERS += \
+	orcus_parquet.hpp
+
+endif # WITH_PARQUET_FILTER

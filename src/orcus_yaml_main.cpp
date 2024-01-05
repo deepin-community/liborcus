@@ -9,20 +9,19 @@
 #include "orcus/yaml_parser_base.hpp"
 #include "orcus/config.hpp"
 #include "orcus/stream.hpp"
-#include "orcus/global.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <string>
 
 #include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
+
+#include "filesystem_env.hpp"
 
 using namespace std;
 using namespace orcus;
 
 namespace po = boost::program_options;
-namespace fs = boost::filesystem;
 
 const char* help_program = "The FILE must specify a path to an existing file.";
 const char* err_no_input_file = "No input file.";
@@ -147,7 +146,7 @@ std::unique_ptr<yaml::document_tree> load_doc(const char* p, size_t n)
     {
         doc->load({p, n});
     }
-    catch (const yaml::parse_error& e)
+    catch (const parse_error& e)
     {
         cerr << create_parse_error_output(std::string_view(p, n), e.offset()) << endl;
         throw;

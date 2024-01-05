@@ -21,6 +21,8 @@ namespace orcus {
 
 cell_buffer::cell_buffer() : m_buf_size(0) {}
 
+cell_buffer::~cell_buffer() = default;
+
 void cell_buffer::append(const char* p, size_t len)
 {
     if (!len)
@@ -44,14 +46,9 @@ void cell_buffer::reset()
     m_buf_size = 0;
 }
 
-const char* cell_buffer::get() const
+std::string_view cell_buffer::str() const
 {
-    return &m_buffer[0];
-}
-
-size_t cell_buffer::size() const
-{
-    return m_buf_size;
+    return std::string_view{m_buffer.data(), m_buf_size};
 }
 
 bool cell_buffer::empty() const

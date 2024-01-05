@@ -66,8 +66,8 @@ public:
     import_sheet_properties(document& doc, sheet& sh);
     ~import_sheet_properties();
 
-    virtual void set_column_width(col_t col, double width, orcus::length_unit_t unit);
-    virtual void set_column_hidden(col_t col, bool hidden);
+    virtual void set_column_width(col_t col, col_t col_span, double width, orcus::length_unit_t unit);
+    virtual void set_column_hidden(col_t col, col_t col_span, bool hidden);
     virtual void set_row_height(row_t row, double height, orcus::length_unit_t unit);
     virtual void set_row_hidden(row_t row, bool hidden);
     virtual void set_merge_cell_range(const range_t& range);
@@ -223,6 +223,8 @@ public:
     virtual void set_date_time(row_t row, col_t col, int year, int month, int day, int hour, int minute, double second) override;
     virtual void set_format(row_t row, col_t col, size_t xf_index) override;
     virtual void set_format(row_t row_start, col_t col_start, row_t row_end, col_t col_end, size_t xf_index) override;
+    virtual void set_column_format(col_t col, col_t col_span, std::size_t xf_index) override;
+    virtual void set_row_format(row_t row, std::size_t xf_index) override;
     virtual void set_string(row_t row, col_t col, string_id_t sindex) override;
     virtual void set_value(row_t row, col_t col, double value) override;
     virtual void fill_down_cells(row_t src_row, col_t src_col, row_t range_size) override;

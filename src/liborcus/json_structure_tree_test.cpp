@@ -7,17 +7,15 @@
 
 #include <orcus/json_structure_tree.hpp>
 #include <orcus/stream.hpp>
-#include "pstring.hpp"
+#include <orcus/parser_global.hpp>
+#include "filesystem_env.hpp"
 
 #include <vector>
 #include <sstream>
 #include <cassert>
 #include <unordered_set>
 
-#include <boost/filesystem.hpp>
-
 using namespace orcus;
-namespace fs = boost::filesystem;
 
 std::vector<const char*> base_dirs = {
     SRCDIR"/test/json-structure/arrays-in-object/",
@@ -44,7 +42,7 @@ void test_no_value_nodes()
         if (!fs::is_regular_file(p))
             continue;
 
-        if (fs::extension(p) != ".json")
+        if (p.extension().string() != ".json")
             continue;
 
         file_content strm(p.string().data());
@@ -81,9 +79,9 @@ void test_basic()
         assert(!strm_check.empty());
 
         // They should be identical, plus or minus leading/trailing whitespaces.
-        pstring s1(data_content.data(), data_content.size());
-        pstring s2 = strm_check.str();
-        assert(s1.trim() == s2.trim());
+        std::string_view s1(data_content.data(), data_content.size());
+        std::string_view s2 = strm_check.str();
+        assert(trim(s1) == trim(s2));
     }
 }
 

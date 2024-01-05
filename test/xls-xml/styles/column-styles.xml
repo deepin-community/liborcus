@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Author>Kohei Yoshida</Author>
+  <LastAuthor>Kohei Yoshida</LastAuthor>
+  <Created>2022-09-20T00:22:37Z</Created>
+  <LastSaved>2022-09-20T01:16:51Z</LastSaved>
+  <Version>16.00</Version>
+ </DocumentProperties>
+ <OfficeDocumentSettings xmlns="urn:schemas-microsoft-com:office:office">
+  <AllowPNG/>
+ </OfficeDocumentSettings>
+ <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+  <WindowHeight>12315</WindowHeight>
+  <WindowWidth>28800</WindowWidth>
+  <WindowTopX>32767</WindowTopX>
+  <WindowTopY>32767</WindowTopY>
+  <ActiveSheet>1</ActiveSheet>
+  <ProtectStructure>False</ProtectStructure>
+  <ProtectWindows>False</ProtectWindows>
+ </ExcelWorkbook>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="s27" ss:Name="Bad">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#800000"/>
+   <Interior ss:Color="#FFC7CE" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s26" ss:Name="Good">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#008000"/>
+   <Interior ss:Color="#C6EFCE" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s28" ss:Name="Neutral">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#993300"/>
+   <Interior ss:Color="#FFEB9C" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s35" ss:Name="Note">
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#B2B2B2"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#B2B2B2"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#B2B2B2"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"
+     ss:Color="#B2B2B2"/>
+   </Borders>
+   <Interior ss:Color="#FFFFCC" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s69" ss:Parent="s35">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+  </Style>
+  <Style ss:ID="s70">
+   <Interior ss:Color="#92D050" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s71" ss:Parent="s27">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#800000"/>
+   <Interior ss:Color="#92D050" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s72" ss:Parent="s26">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#008000"/>
+   <Interior ss:Color="#92D050" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s73" ss:Parent="s28">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#993300"/>
+   <Interior ss:Color="#92D050" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s74" ss:Parent="s35">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior ss:Color="#92D050" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s75">
+   <Interior ss:Color="#FFC000" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s76" ss:Parent="s27">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#800000"/>
+   <Interior ss:Color="#FFC000" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s77" ss:Parent="s26">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#008000"/>
+   <Interior ss:Color="#FFC000" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s78" ss:Parent="s28">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#993300"/>
+   <Interior ss:Color="#FFC000" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="s79" ss:Parent="s35">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior ss:Color="#FFC000" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Sheet1">
+  <Table ss:ExpandedColumnCount="6" ss:ExpandedRowCount="11" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="15">
+   <Column ss:Index="2" ss:StyleID="s27"/>
+   <Column ss:StyleID="s26"/>
+   <Column ss:StyleID="s28"/>
+   <Column ss:Index="6" ss:StyleID="s69"/>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">Normal</Data></Cell>
+    <Cell><Data ss:Type="String">Bad</Data></Cell>
+    <Cell><Data ss:Type="String">Good</Data></Cell>
+    <Cell><Data ss:Type="String">Neutral</Data></Cell>
+    <Cell><Data ss:Type="String">Normal</Data></Cell>
+    <Cell><Data ss:Type="String">Note</Data></Cell>
+   </Row>
+   <Row ss:Index="10" ss:AutoFitHeight="0" ss:StyleID="s70">
+    <Cell><Data ss:Type="String">Green background on row 10</Data></Cell>
+    <Cell ss:StyleID="s71"/>
+    <Cell ss:StyleID="s72"/>
+    <Cell ss:StyleID="s73"/>
+    <Cell ss:Index="6" ss:StyleID="s74"/>
+   </Row>
+   <Row ss:AutoFitHeight="0" ss:StyleID="s75">
+    <Cell><Data ss:Type="String">Orange background on row 11</Data></Cell>
+    <Cell ss:StyleID="s76"/>
+    <Cell ss:StyleID="s77"/>
+    <Cell ss:StyleID="s78"/>
+    <Cell ss:Index="6" ss:StyleID="s79"/>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <PageSetup>
+    <Header x:Margin="0.3"/>
+    <Footer x:Margin="0.3"/>
+    <PageMargins x:Bottom="0.75" x:Left="0.7" x:Right="0.7" x:Top="0.75"/>
+   </PageSetup>
+   <Unsynced/>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+     <ActiveRow>10</ActiveRow>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="Sheet2">
+  <Table ss:ExpandedColumnCount="4" ss:ExpandedRowCount="1" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultRowHeight="15">
+   <Column ss:Index="2" ss:StyleID="s26" ss:Span="2"/>
+   <Row>
+    <Cell ss:Index="2"><Data ss:Type="String">Good style on columns B:D</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <PageSetup>
+    <Header x:Margin="0.3"/>
+    <Footer x:Margin="0.3"/>
+    <PageMargins x:Bottom="0.75" x:Left="0.7" x:Right="0.7" x:Top="0.75"/>
+   </PageSetup>
+   <Selected/>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+     <ActiveCol>1</ActiveCol>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>

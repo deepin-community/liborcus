@@ -21,68 +21,8 @@
 
 namespace orcus {
 
-namespace {
-
-std::string build_offset_msg(std::ptrdiff_t offset)
-{
-    std::ostringstream os;
-    os << " (offset=" << offset << ')';
-    return os.str();
-}
-
-}
-
-parse_error::parse_error(const std::string& msg, std::ptrdiff_t offset) :
-    general_error(msg), m_offset(offset)
-{
-    append_msg(build_offset_msg(offset));
-}
-
-parse_error::parse_error(const std::string& cls, const std::string& msg, std::ptrdiff_t offset) :
-    general_error(cls, msg), m_offset(offset)
-{
-    append_msg(build_offset_msg(offset));
-}
-
-std::ptrdiff_t parse_error::offset() const
-{
-    return m_offset;
-}
-
-std::string parse_error::build_message(const char* msg_before, char c, const char* msg_after)
-{
-    std::ostringstream os;
-
-    if (msg_before)
-        os << msg_before;
-
-    os << c;
-
-    if (msg_after)
-        os << msg_after;
-
-    return os.str();
-}
-
-std::string parse_error::build_message(
-    const char* msg_before, const char* p, size_t n, const char* msg_after)
-{
-    std::ostringstream os;
-
-    if (msg_before)
-        os << msg_before;
-
-    os << std::string_view(p, n);
-
-    if (msg_after)
-        os << msg_after;
-
-    return os.str();
-}
-
-parser_base::parser_base(const char* p, size_t n, bool transient_stream) :
+parser_base::parser_base(const char* p, size_t n) :
     mp_begin(p), mp_char(p), mp_end(p+n),
-    m_transient_stream(transient_stream),
     m_func_parse_numeric(parse_numeric)
 {
 }
@@ -92,15 +32,37 @@ void parser_base::prev(size_t dec)
     mp_char -= dec;
 }
 
-char parser_base::next_char() const
+char parser_base::peek_char(std::size_t offset) const
 {
-    return *(mp_char+1);
+    return *(mp_char + offset);
 }
 
-void parser_base::skip(const char* chars_to_skip, size_t n_chars_to_skip)
+std::string_view parser_base::peek_chars(std::size_t length) const
+{
+    return {mp_char, length};
+}
+
+void parser_base::skip_bom()
+{
+    // Skip one or more UTF-8 BOM's.
+    constexpr std::string_view BOM = "\xEF\xBB\xBF";
+
+    while (true)
+    {
+        if (available_size() < 3)
+            return;
+
+        if (peek_chars(3) != BOM)
+            return;
+
+        next(3);
+    }
+}
+
+void parser_base::skip(std::string_view chars_to_skip)
 {
 #if defined(__ORCUS_CPU_FEATURES) && defined(__SSE4_2__)
-    __m128i match = _mm_loadu_si128((const __m128i*)chars_to_skip);
+    __m128i match = _mm_loadu_si128((const __m128i*)chars_to_skip.data());
     const int mode = _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_EQUAL_ANY | _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY;
 
     int n_total = available_size();
@@ -112,7 +74,7 @@ void parser_base::skip(const char* chars_to_skip, size_t n_chars_to_skip)
         // Find position of the first character that is NOT any of the
         // characters to skip.
         int n = std::min<int>(16, n_total);
-        int r = _mm_cmpestri(match, n_chars_to_skip, char_block, n, mode);
+        int r = _mm_cmpestri(match, chars_to_skip.size(), char_block, n, mode);
 
         if (!r)
             // No characters to skip. Bail out.
@@ -130,7 +92,7 @@ void parser_base::skip(const char* chars_to_skip, size_t n_chars_to_skip)
 #else
     for (; has_char(); next())
     {
-        if (!is_in(*mp_char, {chars_to_skip, n_chars_to_skip}))
+        if (!is_in(*mp_char, chars_to_skip))
             break;
     }
 #endif
@@ -202,27 +164,28 @@ void parser_base::skip_space_and_control()
 #endif
 }
 
-bool parser_base::parse_expected(const char* expected, size_t n_expected)
+bool parser_base::parse_expected(std::string_view expected)
 {
-    if (n_expected > available_size())
+    if (expected.size() > available_size())
         return false;
 
 #if defined(__ORCUS_CPU_FEATURES) && defined(__SSE4_2__)
-    __m128i v_expected = _mm_loadu_si128((const __m128i*)expected);
+    __m128i v_expected = _mm_loadu_si128((const __m128i*)expected.data());
     __m128i v_char_block = _mm_loadu_si128((const __m128i*)mp_char);
 
     const int mode = _SIDD_CMP_EQUAL_ORDERED | _SIDD_UBYTE_OPS | _SIDD_BIT_MASK;
-    __m128i res = _mm_cmpestrm(v_expected, n_expected, v_char_block, n_expected, mode);
+    __m128i res = _mm_cmpestrm(v_expected, expected.size(), v_char_block, expected.size(), mode);
     int mask = _mm_cvtsi128_si32(res);
 
     if (mask)
-        mp_char += n_expected;
+        mp_char += expected.size();
 
     return mask;
 #else
-    for (size_t i = 0; i < n_expected; ++i, ++expected, next())
+    const char* p = expected.data();
+    for (size_t i = 0; i < expected.size(); ++i, ++p, next())
     {
-        if (cur_char() != *expected)
+        if (cur_char() != *p)
             return false;
     }
 
@@ -234,7 +197,8 @@ double parser_base::parse_double()
 {
     size_t max_length = available_size();
     const char* p = mp_char;
-    double val = m_func_parse_numeric(p, max_length);
+    double val;
+    p = m_func_parse_numeric(p, p + max_length, val);
     if (p == mp_char)
         return std::numeric_limits<double>::quiet_NaN();
 

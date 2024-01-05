@@ -1,3 +1,3659 @@
+2023-11-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [45df2cabf9ca13ccb899df8dc8fd2af029fc2cd5]
+
+	Revise the handling of temporary output XML file
+
+	Ensure that the temporary output file is not removed while someone is holding
+	an open mmap reference to it.  This may not be an issue on Linux, but on
+	Windows this causes an error. (#197)
+
+2023-11-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [86f90717f938480bdaa6a9c550ce029b97e17ead]
+
+	fix a typo
+
+
+2023-11-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dfd938e8abe2ac7015eab17503066df835785956]
+
+	Add items for 0.19.2
+
+
+2023-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [340e90700874fb5b46a3b5aee9464417db53a6c9]
+
+	Fix make distcheck
+
+
+2023-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dc8d66a76b2946af7ae27771859cc6f613e63b96]
+
+	Set the version number to 0.19.2
+
+
+2023-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f880e60241f392c4de4939b9e558b7146ff35e2e]
+
+	Add a test case for #195
+
+	The test input file originates from
+
+	  https://bug-attachments.documentfoundation.org/attachment.cgi?id=174536
+
+	which is an attachment for this report
+
+	  https://bugs.documentfoundation.org/show_bug.cgi?id=144088
+
+2023-11-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1f8f9d5a68755cdc4d1bd780b248d8a8860eb7cd]
+
+	Better warning message that includes the current style id
+
+
+2023-11-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d31defd81911112949686e187e36143bb4d6328b]
+
+	Make sure the iterator is valid before dereferencing it
+
+
+2023-11-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4d0a4d67e76c849adb975dab3b34a6b7d90e3a57]
+
+	Ensure the file contents stay alive while namespace context ...
+
+	... object is used during parsing.
+
+2023-10-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2e8f1edd2342c2a5f52d3d39426176ae49f46160]
+
+	Check for null resolver before dereferencing it
+
+
+2023-10-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f5dca3b4f7c6ffda4b71e0ba9f7081ab2eec3405]
+
+	Attempt to fix a build failure with GCC 14 as reported in #192
+
+	The compiler output is:
+
+	    CXX      liborcus_spreadsheet_model_0.18_la-document_impl.lo
+	  document_impl.cpp: In member function 'orcus::spreadsheet::col_t orcus::spreadsheet::detail::ixion_table_handler::find_column(const orcus::spreadsheet::table_t&, std::string_view, size_t) const':
+	  document_impl.cpp:133:14: error: 'find_if' is not a member of 'std'; did you mean 'find'?
+	    133 |         std::find_if(it_beg, it_end, find_column_by_name(name));
+	        |              ^~~~~~~
+	        |              find
+
+2023-10-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c9c9cf3e37fe97a17284f84dd2bef592cefb60f3]
+
+	Fix build with -Werror=unused-parameter and --disable-spreadsheet-model
+
+	It addresses
+
+	> orcus_json_cli_map.cpp: In function ‘void orcus::detail::map_to_sheets_and_dump(const orcus::file_content&, orcus::detail::cmd_params&)’:
+	> orcus_json_cli_map.cpp:47:49: error: unused parameter ‘content’ [-Werror=unused-parameter]
+	>    47 | void map_to_sheets_and_dump(const file_content& content, cmd_params& params)
+	>       |                             ~~~~~~~~~~~~~~~~~~~~^~~~~~~
+	> orcus_json_cli_map.cpp:47:70: error: unused parameter ‘params’ [-Werror=unused-parameter]
+	>    47 | void map_to_sheets_and_dump(const file_content& content, cmd_params& params)
+	>       |
+
+	and
+
+	> python.cpp:99:6: error: ‘bool orcus::python::{anonymous}::add_type_to_module(PyObject*, PyTypeObject*, const char*)’ defined but not used [-Werror=unused-function]
+	>    99 | bool add_type_to_module(PyObject* m, PyTypeObject* typeobj, const char* type_name)
+	>       |
+
+2023-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dcead079eea2509a32c8438238d38ee977c43e7a]
+
+	Add highlights for 0.19.1
+
+
+2023-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6d2482c2e44706935fc823df48010d05050a5bb4]
+
+	Increment the version to 0.19.1
+
+
+2023-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [db2d50593f413062ed728ce1341f79e36a83ad3b]
+
+	Use fs::path to handle file paths
+
+	This fixes a build issue with MSVC.
+
+2023-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b68e7c5f3f5f3aa4920a8496f3464fae03eaf4fc]
+
+	Finally, remove format-detection-test
+
+
+2023-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [320154f0f3673def6a4d2b3e5e0bada75dd24d7a]
+
+	Add test case for ods format detection
+
+
+2023-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [69719d29256e32385ff4bb76d772b89de30eba9c]
+
+	Add format detection test case for xlsx
+
+
+2023-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [52651a45c350a88c2f2e2a3e7872470a09838e04]
+
+	Add format detection tests for gnumeric and xls-xml
+
+	And make sure we convert to utf-8 first during xls-xml detection.
+
+2023-10-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9ba3b13b1192dbf60c2a3a0ddf329e766c5f6181]
+
+	Implement create_filter() and its test cases
+
+
+2023-09-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [353650ed58f1ff5e945c6b87875431f9537a95e9]
+
+	Make sure to set the grammar before loading the content
+
+
+2023-09-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4dd132c19a4d4a33ae8c692db5554845bf27bdef]
+
+	Correct the name of the dependency
+
+
+2023-09-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [126da01fa87a3e94f2df4ba139d16b5f95d81b45]
+
+	Fix build issue with MSVC
+
+	The error output is
+
+	  error C2398: Element '2': conversion from 'int' to 'const std::basic_string_view<char,std::char_traits<char>>::size_type'
+	  requires a narrowing conversion
+
+2023-09-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4ba0df989ce049e4634c09a5e0cf04d27cd46ef3]
+
+	Fix make distcheck
+
+
+2023-09-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [81bfca56dd842889d0381a8cc56e9fb296ad279d]
+
+	New script to build extra-dist lists in root Makefile.am
+
+	Better to write a script than hand-building the lists each and every
+	time...
+
+2023-09-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [78a9f1553a68e9f45b77954bdf33165f447ff88f]
+
+	Populate items for 0.19.0
+
+
+2023-09-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [20497c30b447492adbf8b56b81cd43739cca5424]
+
+	Set the version number string to 0.19.0
+
+
+2023-09-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [caa5bfdf1ed7409742862b6e46f468d8a726c7c8]
+
+	Requires ixion 0.19.0 (just released)
+
+
+2023-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b0c122978c48918efda692650c5978afdcdce23c]
+
+	Map number format IDs for xf entries
+
+	For number format IDs, Excel provides the IDs themselves, so we'll
+	use unordered_map instead of vector to achieve mapping.
+
+	The built-in IDs are not pushed right now. In the futre we should
+	manually push built-in number formats to the document and set up
+	mapping for them as well.
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0acd451059345d9525de87172b095cfea601fd8d]
+
+	Unused member
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9c4bbb573d9a8162adbc3f962e02fb58bc0497d8]
+
+	Use mapped ID for xf@xfId which also references xf under cellStyleXfs
+
+	Turns out, we need to build mapping only for the xf records under
+	cellStyleXfs.
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3e22f81cb3abf6ce41b8e4d81b93eb1ea7853c0a]
+
+	Use mapped ID as named cell style xf ID
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [accf45b71eadc3fc1a2a57b63564e2f04310ea5e]
+
+	Build cell-format (xf) ID mapping for cellStyleXfs, cellXfs and dxfs
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ba691b76570ca99d65ea5eccecfd9d29a282894b]
+
+	Do the same with border IDs
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4fb2ea4a927864bc7d463ea0e9199e7b9b2a586f]
+
+	Do the same with fill IDs
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [686b079865648ef10a3f937bce90f973d0aab83b]
+
+	Keep the font IDs returned by commit() and use them in set_font()
+
+	With this, we can re-enable font caching in the import factory code.
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f558ea4d1bc541a0055afa7cb22bec85d8bf8e83]
+
+	spreadsheet -> ss
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0d6c5806e7e5a28e09d10ad8fffc4da4e38c3eba]
+
+	Unused
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6221158cfb3caea47c106251b395aae1e9437edd]
+
+	Rename xlsx_context.* to xlsx_shared_strings_context.*
+
+
+2023-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [448a944270dd41f49f39559e8af74da8d954af9c]
+
+	Extract xlsx_styles_context into its own header/source pair
+
+
+2023-09-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [17ca782133e37d2c6da1c490c181cf0889984ac1]
+
+	Add a test case for formatted string import for xlsx
+
+	and fix several issues discovered.
+
+2023-09-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [654fface358c7ed27b9dff36016a56795962c1e2]
+
+	Remove 'using namespace std'
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7117da32371fdf035563dd6793afb4423adbfde2]
+
+	Add a test case for formatted text import
+
+	Also pick up the underline format attribute in cells.
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [602409e988a00fd414a7fb0f0799ce00fba8b847]
+
+	Reset the column row positions when the table ends
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [41e878db143076744dc46bf1740908ef8843cf85]
+
+	Use warn() for warning outputs
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9b4a60136ea3613b48d45f0c08503ff2d03141c8]
+
+	Add test cases for column widths and row heights in secondary sheets
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c8d9bcf68ec25b279cf0bfce621b2b908f184a45]
+
+	Properly reset the row and column positions when a new sheet starts
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ecb6a038e2a58b656c3ab25c2c0ee5adac17eb58]
+
+	Pick up font names and sizes
+
+	Also handle cases where a cell itself has bold font applied but
+	contains a non-bold part.  Because xls-xml doesn't have a construct
+	for expressing a non-bold segment, it sets the bold flag with the
+	base cell and the bolded text segments while the non-bold segment
+	doesn't have a bold tag.  What this means that we need to interpret
+	the absence of a bold tag to mean setting a non- bold format explicitly
+	for that segment.  I'm assuming it's the same situation with the italic
+	attribute.
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2ee17f5d8ce1f16dc9f0539c26c4fb20d57df01f]
+
+	Pick up underline, strikethrough, subscript and superscript format runs
+
+	These are not yet pushed to the document; it requires an API change.
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f990788cbbf063786dc5fda6c0f22b65e7d512fe]
+
+	Use std::optional to determine whether or not the text is formatted
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3075f884f5119fbf2ed6c6c7e63f4b6ddede0186]
+
+	Add more parent-child relations to cover rich-text format runs
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1d0f25588f14bb365f00fd0e41bd20bc49f05e18]
+
+	Regenerate tokens for Excel 2003 XML (xls-xml)
+
+	The following new tokens are added:
+
+	  - U
+	  - S
+	  - Sup
+	  - Sub
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [889180e1a197e0471c94dec801557f00195cd8ba]
+
+	Fix the test files to make them in sync with the original Gnumeric test file
+
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [eafbaae29813ec9e93d34e0948cba8dde5fd8a29]
+
+	Update the test file to add another sheet
+
+	This is to test the logic of resetting the internal column and row
+	positions for new sheets.
+
+2023-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c4fbb0d318a57423d6009e5bea175fa4df167cb9]
+
+	New Excel-sourced test files for format runs with font names and sizes
+
+
+2023-09-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [90118e49097d00e0d2bdfbcb567029cb65a6affa]
+
+	Add test case for mixed font names and sizes
+
+	And also make sure we handle overlapped format runs correctly.
+
+2023-09-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d6b1d9fdb2e5c365f4b49208ad9d508e32ca3064]
+
+	Correctly handle overlapping format runs
+
+
+2023-09-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ac25a3ddf16eacce8c3c4896686d4a5d3a0c1953]
+
+	Pick up font names and sizes in formatted strings
+
+	It is not tested yet as I've just discovered a bug where overlapped
+	format runs are not correctly imported.
+
+2023-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4cd526367176704df7503e9f95b5c3c60ee1b7de]
+
+	Gnumeric *does* support colored format segments
+
+
+2023-08-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8da21b3f5c52c34b8aac4807bcf2aa6f41bb17d8]
+
+	Alpha value should be maxed out for the segmen to be visible
+
+	Alpha value of 0 means it's transparent.
+
+2023-08-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ccde68226fbda14f6ec922bef5eece5eb82dcbe1]
+
+	Add test case for number format import
+
+
+2023-08-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [344f0e9368a10e243fd751c26ae31f244acd13cd]
+
+	Pick up number formats and import them
+
+
+2023-08-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0869ec20c1007b82394534064bbe1002e3cb293c]
+
+	Replace pstring with std::string_view & remove pstring class
+
+
+2023-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b657b72d41e0efd6fd139aad2f8fbd85a7cf3b7a]
+
+	Add a test case for #185
+
+
+2023-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b282a37a69a667c209e50e96ad7fe4bdb02cb18c]
+
+	Correctly handle column offset when the LeftCell value is > 1
+
+	Related to #185.
+
+2023-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2dd719baeade0cb323c35f04566c2d0a9f843202]
+
+	Use a common header to manage filesystem header includes
+
+
+2023-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [314182936770f5ba831c5b734d3ce7812b037b99]
+
+	Let's always use std::filesystem in example code used in the doc
+
+	And disable building of the doc example sources by default.
+
+2023-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [632250f4264229115c75fff0626a42ec911a4d66]
+
+	Fix the build with parquet filter enabled
+
+
+2023-08-22  Fridrich Štrba  <fridrich.strba@bluewin.ch>  [a2c8e1de381570221560501ee7b7c65d0f443a29]
+
+	Possibility to build against a host of filesystem implementations
+
+
+2023-08-22  Fridrich Štrba  <fridrich.strba@bluewin.ch>  [3fc9b876a2bd8c75d0b555e989a5d659e5f1b878]
+
+	Fix narrowing warning
+
+
+2023-08-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dc9f72d08f7dc93814e2f2cc4a8b8957da2a0935]
+
+	Use the 'ss' alias across the board
+
+
+2023-08-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b9045632449fd5826f203386ce84afcabfdc24c1]
+
+	Add three test cases for importing borders
+
+	These are mostly copy-n-paste from the xls-xml test cases with some
+	adjustments.  In Gnumeric, the colors of the black borders are
+	explicitly given, which get imported into the document accordingly.
+
+2023-08-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9f732b05d465642e7ddb4d81ceae652cdee7a679]
+
+	Pick up the diagonal borders as well
+
+
+2023-08-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0116ce27b570ddbde81b91878fe3334cf4bed0a9]
+
+	Import border styles to the document
+
+
+2023-08-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0891b092c673f4a563309bb0ba943f64762f706a]
+
+	Move the font and fill import blocks into separate functions
+
+
+2023-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e8b32e095b40414ab93edb1005c6df2197ea1153]
+
+	Use gnumeric_style::border_type as return type
+
+
+2023-08-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [63c0c862ea0f42320b35ea6e74014f17f7d9f97a]
+
+	Pick up cell border attributes
+
+	They are not commited to the document yet.
+
+2023-08-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b594df2940dfb0d5949c2558af05954ec87eb80b]
+
+	Avoid inserting duplicate font entries
+
+
+2023-08-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b5cbfcf189da87112e193d7a7f409997aee97410]
+
+	We can now remove gnumeric_helper
+
+
+2023-08-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1b376bcdb57a3f14350a14b9e555489c6661b195]
+
+	We can at least test cell-wide strikethrough and underline
+
+
+2023-08-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [58183e7125d679976900d6d67831c6c9ad405c9f]
+
+	Rename the functions to make them less awkward
+
+
+2023-08-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [125c189373587930ed2cd5a664ae71fa56bbea87]
+
+	Pick up the font names and sizes
+
+
+2023-08-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1a83b9285b612afc4a80c2d28cb5892ddb626db0]
+
+	Test the rest of the rows
+
+	Not all parts are tested due to a bug and unsupported format types.
+
+2023-08-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [80f9f6fc9345c1e1052bdeb04b5829a1c39af99a]
+
+	Implement a parser for ValueFormat and apply bold and italic formats
+
+	The rest will be supported later.
+
+2023-08-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7403ddfef7b1bedad1755590c404a743bfadfe66]
+
+	Add test case for basic cell format attributes
+
+	Format runs are not yet implemented.
+
+2023-07-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7549d7678e13354d4d9a135a4d63b392d1d0b3e8]
+
+	Pick up bold, italic, underline and strikethrough font properties
+
+
+2023-07-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8b4b8b7e365bb68e04d7619dee3eb1cbed796bcf]
+
+	Use structured binding for better readability
+
+
+2023-07-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [50d36a78c7ebbac43eb5cd7a20497a6165cebd6f]
+
+	Add a test case for shared formula and array import
+
+
+2023-07-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [79d4ff35ba54cc6a7da259124c11989e18d2fdf6]
+
+	Correctly import shared formula cells
+
+	Also clarify the expection of the use of the import_formula interface
+	with regard to shared formulas.
+
+2023-07-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f13d20e1e76fb0385b5dd8960fc884ae773bc83d]
+
+	Make sure mp_sheet is not null; it can be sometimes...
+
+	Especially when the interface providers are external code (such as
+	libreoffice)
+
+2023-07-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ebadfa883f5a28dbe146f1530ca7d2d0a66630df]
+
+	Correctly handle cell's ValueType attributes
+
+	I took the ValueType values directly from Gnumeric's source.
+
+2023-07-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d32ffc92ddc14fc7466f493f44db5c6533eb9f47]
+
+	Gnumeric doesn't support format runs
+
+	This means mixed-color texts are not possible.
+
+2023-07-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e60392f01e932782141171a990b5f9e30ea15cb4]
+
+	Add a test case for text color imports
+
+	Except for support for format runs, which has yet to be implemented.
+
+2023-07-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8897cf797f9826733d3c596065f84a727c12b4a2]
+
+	Add a test case for background fill colors
+
+
+2023-07-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2e0c70d1cf51969f7d6f7e57668500879e81830b]
+
+	Pick up cell background colors and font colors
+
+
+2023-07-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [082a5d397d77fc70c21763897abf7bdd60e80038]
+
+	Add a test case for text-wrap
+
+	Gnumeric has yet to support shrink-to-fit, so that part is not tested.
+
+2023-07-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0a9b943f99660b7d19800fb53bb9e914aec6b983]
+
+	Set horizontal and vertical alignment values only when they are set
+
+
+2023-07-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0f197bea9fc8bb2c4be95e26def47bee55200a42]
+
+	Pick up wrap-text properties
+
+	Make sure that we pass this along only when it's set.
+
+2023-07-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [85ad90186c1ca4dbb5ef2b8b5bd99a9a73ed5102]
+
+	Add a test case for importing text alignment attributes
+
+	This is also a mostly copy-n-paste from the one for xls-xml.
+
+2023-07-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3fa0ff090f0495793a98a4b80c2a1a6366bd4eac]
+
+	Actually push collected styles to document
+
+
+2023-07-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [95171382a9be1265a33cf5b226c99b1397d3ea74]
+
+	Collect all styles from all sheets and process them all at once
+
+	The processing part is still a TODO.
+
+2023-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [314789611e58be0c916796ae0c571e130c2b46d6]
+
+	Pick up style regions and horizontal and vertical text alignments
+
+
+2023-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8a48591dca8a453051e73788618c3c2eb189b31e]
+
+	Set up an empty brand-new context for handling <gnm:Styles> scope
+
+
+2023-07-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [29380093d4ca57b40d2119f891b245ccc7feec05]
+
+	Dump global and sheet-local named expressions as part of debug-state output
+
+
+2023-07-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [52f262ab0322908375f668560539b5ada0dee7b8]
+
+	Add a test case for sheet-local named expression import
+
+	It's also a copy-n-paste from the equivalent test for xls-xml.
+
+2023-07-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [73ec9aaae2500cf39cd325971090fb852a59bd3a]
+
+	Also catch exception on failed named expressions in global scope
+
+
+2023-07-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [43cf244800459ba2ce76bd54a9ec67537dd50ed4]
+
+	Import sheet local named expressions
+
+
+2023-07-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d2d2fd3f74df10b6bffa42acc05939e822921526]
+
+	Define element validation rules
+
+
+2023-07-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5b622076b2bede0a67bfb09e76152c6878a9ead7]
+
+	Add a test for importing global named expressions
+
+
+2023-07-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [63a11492c50a1aab9d8a8fe4b8283ec67c1b8bf6]
+
+	Gnumeric lists sheet names ahead of time; use them to append sheets
+
+	This way all of the sheets have been created before the named expressions
+	get parsed, and the parsing will not fail because the sheet name is not
+	found.
+
+2023-07-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9d7442d4b06b56a165d0e1b4b44484f716daa373]
+
+	Pick up global named expressions
+
+	It's not working yet as the expression is not being parsed
+	successfully.
+
+2023-07-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5bf82a4a88be9d17c74105e77a5dff1e53658c56]
+
+	Pick up and set merged cell areas
+
+	The test case is a near copy-n-paste from the xls-xml test case.
+
+2023-07-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8b6ca49d1696d142910e83e98d46adf5ec897d32]
+
+	Store the content of <gnm:Name> in a separate member
+
+
+2023-07-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ca95cd5c71a2bbeb3c3bc1d527d01cce9abc21ba]
+
+	This is now handled in a separate context class
+
+
+2023-07-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4e350e4f3b77725e7a0308a5f152df41906d78a4]
+
+	Define structure rules for sheet context
+
+	This is just an initial list; more will be added as needed.
+
+2023-07-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d20b7a54909b9768d36dd11114f622cac6f1bb66]
+
+	Add test case for hidden rows and columns
+
+	This one is almost near copy-n-paste from the equivalent xls-xml
+	test case.
+
+2023-07-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [423a8fa9fa4027ad7e0dc371bafae75862166ca4]
+
+	Add element structure validation rules
+
+
+2023-07-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f2fcafd49da5e1c3a9a031be000fae14287cd795]
+
+	Write a test case for auto filter import
+
+
+2023-07-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [92836be7bdb0dbcbb97b3c548e0936036ab8d7d9]
+
+	Dump the sheet-local auto-filter data & really set filtered range
+
+
+2023-07-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [580bf6856515b82c13bfc5249fef2e5ccccda500]
+
+	mp_sheet may be nullptr
+
+
+2023-07-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [06affd09679d276619c5d9c5110b44d9a15e1a78]
+
+	Move the auto filter import part into a separate context class
+
+
+2023-07-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1cafaa88209ae1393fe83c8d0d27c3a0eb984eb8]
+
+	Unused headers
+
+
+2023-07-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8ac123240a00beafd01e2b34afd21a4b057211d4]
+
+	Remove empty virtual methods that have default implementations
+
+
+2023-07-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2a2b1377862934adc76e9f6b46198b1a1056ac0e]
+
+	Add test file for testing import of column widths and row heights
+
+
+2023-07-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6da7fbfd76e45fda70df5778290cdcd661f0e359]
+
+	Dump column widths and row heights in debug-state output
+
+
+2023-07-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [426eddc384834e8f361a79fc85bb824564b2808f]
+
+	No need to add 1 to the end row here
+
+	The row size is used, which is already the max row index + 1.
+
+2023-07-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c027097e49deb785037593ae4df8e89d4a0303fd]
+
+	Use segment_range() from mdds 2.1.1 with ranged for loop
+
+
+2023-07-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ef273c84bd912e37f735d3166a3b81cf8e0e0704]
+
+	mp_child is not used & specify initial values in variable declaration
+
+
+2023-07-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d7db8547a3af0b94bf1a4b92b5ba68669295383a]
+
+	Use color_rgb_t to store color values
+
+
+2023-07-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [502e6d9ad9d658e8ef5a84556de874d90eb30a8e]
+
+	We should use std::optional<T> for this type of struct
+
+
+2023-07-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a13eaab39f90075d8b63b283a0b7ca10fc0784b6]
+
+	Use the string pool from the session context
+
+
+2023-07-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a48d744792ab2fad47b3581db682ef1a814764fe]
+
+	Use ranged for loop instead of for_each()
+
+
+2023-07-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [78f4cf6a045de88cf24685a5df14dac6a3170988]
+
+	Use the shared-level string pool here
+
+
+2023-07-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8bff98541d4a8103111bca68dd15cdda7603ae9e]
+
+	Use std::optional to store cell data & move the local types in ...
+
+	... to the context class scope.
+
+2023-07-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b583e7f1d6a13d26bef8881a12b3c6aaf7dc787a]
+
+	Use boost::filesystem & clean things up a bit
+
+
+2023-07-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [35d791117332be59c33f9046e005d9f982110749]
+
+	Add a test file with formula cells
+
+
+2023-07-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0c190514d74f23d127e6382b3fa804a213e4d3cf]
+
+	Avoid atoi etc.
+
+
+2023-07-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e769aa8db00d7daaf8453dd3f857310458b5d364]
+
+	gnumeric: Correctly import formula values
+
+	Gnumeric's formula expressions start with '=', but orcus expects a
+	formula expression to not start with '='.  We need to strip it before
+	passing it to set_formula().
+
+2023-07-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0cd43c15ecf5d9607c43e150ca581da81968984a]
+
+	Use namespace alias for orcus::spreadsheet
+
+
+2023-07-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0ff4e0cecbca8bf72fe814d40ee8aa4102c83aba]
+
+	Some cleanup
+
+
+2023-07-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [21d8edaebeaf6d7bffc1c451706020b5eae17eef]
+
+	Fix some linting issues
+
+
+2023-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [45af843d8cc1f1cd98e47647c41758f6794802f2]
+
+	Pre-emptively avoid crashing
+
+	Not quite sure if this is a bug in StreamReader or not. But let's not
+	crash at least, until we find out more.
+
+2023-06-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d921f115584c4e47f56164c663312f37998d7a95]
+
+	Add script to bulk-run a command on a number of files
+
+
+2023-06-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5779658b05cff738c2fc3d7e662e4d7f6029e327]
+
+	Add orcus-parquet to the command list and regen the CLI doc pages
+
+
+2023-06-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [074ce7826c948c99d373df7f9449174638cea46e]
+
+	parse_import_filter_args() returns true on success, false on failure
+
+
+2023-06-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6dc3701037657030758208fba86356a70b36d827]
+
+	Add test case involving float64 NaN
+
+	Also organize the test file generation script to make the test files
+	re-createable.
+
+2023-06-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [49e41b3665327f69399feafc181f61449e856dd4]
+
+	Include the exception message in the warning output
+
+	More info the better.
+
+2023-06-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8ffed453f70b22d0bfc85b20cb0ccc708963676b]
+
+	Reading a value may throw an exception, so let's handle that
+
+	Especially a field with double type may store a 'null' value which will
+	throw if you try to read it as a double type.
+
+2023-06-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0c4f76343813d3f0f20058c13322486ba80793fb]
+
+	New script to dump the structure of parquet file
+
+	It also dumps some data for the first number of rows.  --num to specify
+	how many rows to print.  For now, I'm only dumping data from the first
+	row group and from the first chunk.
+
+2023-06-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8c4f9baf5d899a226795b4307dbf8df9b3bacba9]
+
+	When getting unexpected exception, at least keep partial import
+
+	It's better than not importing anything at all.
+
+2023-06-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e48433f1a5088755a43a75438750fc48ff176e90]
+
+	Skip the column in stream reader when we can't import the value
+
+	Without this, reading of the next column value would fail.
+
+2023-06-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [99f444128127c4c82c23dc6f72d4d59f42fdf204]
+
+	Set the version to 0.18.99 (pre 0.19.0)
+
+
+2023-06-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [82d5a6c2b6ab38b11bfff87a17c880bd13053947]
+
+	Add test for orcus_parquet::read_stream()
+
+	Manually rename the sheet to the stem of the input file to ensure the
+	check string generated from the document matches the control.
+
+2023-06-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [521e726d62466912c00ce0af5feb8f040f902342]
+
+	Really support loading parquet files from in-memory stream
+
+	It was just a matter of using arrow::io::BufferReader to map
+	std::string_view, which can be directly passed onto ParquetFileReader
+	via its Open() method.  BufferReader is a a sub-class of
+	RandomAccessFile.
+
+2023-06-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5be2c29c08efc50ec55fb7bd2324b6bfe8000e27]
+
+	Add Apache Parquet to the list & drop consideration for non-spreadsheet filters
+
+
+2023-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [81b0b96f8e55af0a120e8751df52718b6fb3715e]
+
+	native() returns std::basic_string<wchar_t> on windows which will not compile
+
+
+2023-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0394ca2814d2868bcaf6efadd4020e07bf6faae6]
+
+	Add parquet build option to cmake and make sure it builds
+
+
+2023-05-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f7cfecd8d463ebb14332a287aa0fb21a781e27ed]
+
+	Write parquet stream to a temp file and load from it
+
+	Also don't forget to call the factory's finalize() method, per interface
+	contract.
+
+2023-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [29bf73c40486c561ea4106e032b15598ff957ed3]
+
+	Talk about the parquet support
+
+
+2023-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [987cd6106e94876f1d8d2451734f555390302b75]
+
+	Add ORCUS_WITH_PARQUET option to conditionalize parquet filter support
+
+	Also replace cmake's WITH_... options with ORCUS_WITH_... just to be in line
+	with what other projects do.
+
+	Note that currently ORCUS_WITH_PARQUET option is not tested, and will probably
+	not build.
+
+2023-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b5039c9b830cc77fa58cbf275a30c90222baa5cf]
+
+	Re-organize the header includes & use <> instead
+
+
+2023-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2fa656c0129fc0145e5048be48f3114ad89ddf79]
+
+	Print created-by property from the metadata
+
+
+2023-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e9ae4dc6f62acb3f75d8717d57822f080f96fe1c]
+
+	Slightly more probing during parquet format detection
+
+
+2023-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0952781006e1c0f3b5e0fe7750d37d628d998bb9]
+
+	Implement basic detection algorithm for parquet
+
+	For now, we only do bare minimum check.
+
+2023-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [72aa00601b98f58a874c8840e89ec8fe0ce5e0cd]
+
+	Add the ability to dump metadata from a parquet stream
+
+
+2023-05-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [941af5d4696de63c36fd180fb9cdd15cafdcb898]
+
+	Add a basic test case for the Parquet file format
+
+
+2023-05-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0097ca9f45c6ab9c522b0654aedc0a003699e123]
+
+	Better to skip unsupported value types than throwing exception
+
+	But issue warnings at least.
+
+2023-05-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b42d25e1ff994073537b97a255f2e4a6fddfc59f]
+
+	Add basic support for INT32 and FLOAT physical column types
+
+
+2023-05-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dc8646f31b671a1d9adfde62e81c8c3cd41c29df]
+
+	Let's not randomize the string values
+
+	It's better to make the test documents reproducible.
+
+2023-05-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [47319f9c292c38e1830213735a97b917727c47a7]
+
+	Generate a basic set of test files for parquet
+
+
+2023-05-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [62d2d17f547cff16f1017ad7a743d72be190117d]
+
+	Restructure the code to make it easier to add handled types
+
+
+2023-05-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8714100e01b933e98e4e72d7724dcba1e75d8dba]
+
+	Move the read_file() code into the impl class
+
+
+2023-05-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4bf80b62b428ba521d836d3273a037551c1e291c]
+
+	Import picked up values into sheet
+
+	Also clean up debug outout.
+
+2023-05-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e06ec4fe927d1bf8cb1091909509e227e23ff52b]
+
+	Turn off parquet filter by default
+
+
+2023-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dcb69fe42420015802dceba1e312ea806e21e1d0]
+
+	Start parsing from file and write values to stdout for now
+
+
+2023-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f6afbade76373e799e0f2b7b2508ce2f4294d71f]
+
+	Create an empty setup for orcus-parquet command
+
+
+2023-05-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b3c5700adf790cdabce40bd1a94d512b68049189]
+
+	Use column descriptor to determine column value types
+
+
+2023-05-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9cae5bd52544b696046082b0dc491b5c3a99dab1]
+
+	Explore the Parquet file format and the Arrow Parquet API
+
+
+2023-05-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [49fabacdb0cd8002a13a9e224944284566560c9d]
+
+	Update the CI script
+
+
+2023-02-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f3a40e69e890c262e6e8ea7649a6c96e854ba82b]
+
+	Fix grammar error
+
+
+2023-02-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [02721652da67cbe1307496c902aad5c7480be75e]
+
+	Add new items for 0.18.1
+
+
+2023-02-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [eb221592993f7db530d179ccb372185e0245da0d]
+
+	Mark potentially unused variables
+
+
+2023-02-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6c3389fe20a83bd5afec3cf249093017125178e5]
+
+	Remove unused variables
+
+
+2023-02-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [05caaaf3ebba67a949a5bb63eecb5504bde75c91]
+
+	Let's not redefine NDEBUG as it still makes assert no-op in release build
+
+
+2023-02-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1adfcc8e914b4c209f15bedf91fa40409c973beb]
+
+	Fix make distcheck
+
+
+2023-02-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9df4abfc6559fc465003e29bb5b0bb9dc6353f74]
+
+	Set version number to 0.18.1
+
+
+2023-02-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b5470c93471d9954f76624a60318466dff0f4f11]
+
+	We shouldn't need this visibility marker
+
+
+2023-02-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [45e11ea56126c7dac271706afaaa84b11725f173]
+
+	Add --with-doc-example configure switch (default on)
+
+
+2023-02-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3ed7e1fcc7b16f4158b2d3ecd59e3b2b497fc874]
+
+	Add --with-benchmark configure switch (default on)
+
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [30a8465b2ccc6190ac6d95208ef6eefa12eec533]
+
+	More build fixes with VS 2019
+
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bcf260a03a62b6d771c3a410352db43000a338d4]
+
+	Use correct visibility macro
+
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [250dbd2978d8381d3270f7fbc8a3f4f4f6581294]
+
+	Fix build with VS 2019
+
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c616b0a29e4d8d97e561ee54abc53afddcaf19c0]
+
+	Add peek_chars() to simplify the BOM sniffing
+
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0a439a42f57152f46b63afe069d5e17b8b0c056f]
+
+	Use the now global skip_bom()
+
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f7bf29ddc8adae3ad27e3ef646f381489dfc836a]
+
+	Check for BOM first then skip leading space
+
+	It's unlikely that BOM be placed at a non-head position.
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [540e23f311cd502be7fc8a450aaf9221fbe798bf]
+
+	Move skip_bom() to global parser_base class
+
+	BOM is used in other format types too.
+
+	Also rename next_char() to peek_char() with an optional offset.  The
+	term `peek` implies checking a character at an advanced position
+	without moving the current position.
+
+2023-02-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e377994de03c4e9a70146c9724c1e0e28fc40217]
+
+	Use available_size() over remains()
+
+	These two methods did the same thing. Let's just keep one.
+
+2023-02-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ba230ab983a9e42c17fd415fed12e682ffc6f344]
+
+	Add a test framework for valid XML documents
+
+
+2023-02-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [03526b4f3a62aaf06b4ea563f2dc09e95cb41b88]
+
+	Add two more invalid XML files that only contain BOM's
+
+
+2023-02-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8269277e445d23646e14a03b3b25152e5438ba73]
+
+	Add an invalid XML file with double BOM's and a wrong byte
+
+	This file starts with double BOM's followed by an invalid byte.  One
+	or more BOM's must be followed by a '<'.
+
+2023-02-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9116c32093fc1d6dc9779f82cecf1da3b0901e03]
+
+	Simplify BOM skipping logic
+
+
+2023-02-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [24ef26927b2f297579d879f4efdde06c9dc18e27]
+
+	Skip leading space first them handle BOM
+
+
+2023-02-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b36fd7fde0d2692ad422aa3fe9d510fef612b3e4]
+
+	Add a test case for XML doc starting with double BOM's
+
+
+2023-02-06  Andreas Heinisch  <andreas.heinisch@yahoo.de>  [a8f9afe098bb08e5c9b1580649ead918a37a7b31]
+
+	Changed skip_bom in order to address tdf#150023
+
+	Double BOM (invalid XML) prevents importing some Excel 2003 XML
+	(Excel reads them)
+
+	c.f. https://bugs.documentfoundation.org/show_bug.cgi?id=150023
+
+	Patch modified from !151.
+
+	Signed-off-by: Kohei Yoshida <kohei.yoshida@gmail.com>
+
+2023-02-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e1d8dd99da39a9663ca0cfa8f6dcbb633e0df59b]
+
+	Add a test case
+
+
+2023-02-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5dd614219ce562d3397cf94f12c55f362b6ffc71]
+
+	No 'using namespace std'
+
+
+2023-02-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f338c3a4139787e377266ebd93b579e0253b8605]
+
+	Some cleanup
+
+
+2023-02-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [928a5ba1f9e7e1f1f6fc652bee0f244a049e5f81]
+
+	Revise the logic of determining the range parent from first linked field
+
+	This new logic should work with the use case in #172.
+
+2023-02-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2b7f4c629eee682c2f5bf4ef02a55c70d38e8bba]
+
+	enum to enum class
+
+	On the following enum types:
+
+	* linkable_node_type
+	* reference_type
+	* element_type
+
+2023-02-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [29dbe18fc32ba2ad69da7a2f4271472adf494888]
+
+	pstring -> std::string_view
+
+
+2023-02-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a1a4aaddb07081968e393f48e4614b41e10c66dd]
+
+	No 'using namespace std' & use ranged-for loop
+
+
+2023-01-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f0653d1d72b8888be4fdb40b8b8541fc64b23c7d]
+
+	Only pass the border color when it's actually set
+
+
+2023-01-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f1d7888a1857e5aacdebb728face3f543b015d82]
+
+	Fix orcus-check target in cmake build
+
+
+2023-01-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6ab3b89d71ceb88eaae6fefa76077a7599632ea0]
+
+	Add yaml-parser-test to the test list and fix build breakage
+
+
+2023-01-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8949c3530b1940e5395e46b1c73965b89e149d40]
+
+	Fix make distcheck
+
+
+2023-01-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [077567f2053a19e096caedf3a394d3ef396a70d1]
+
+	Take std::ostream& as an output parameter
+
+
+2023-01-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d4c513b8a13f2a393e8342bebb9e7707acf2e93c]
+
+	Edit docs on shared_strings
+
+
+2023-01-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5fb945c5053f4b0ba6d06db697e16ebaf7460809]
+
+	Edit docs on styles symbols
+
+
+2023-01-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [71e73f22a3b721642e4ec0659683f564bc291b57]
+
+	Declare class default methods & simplify commit_column()
+
+
+2023-01-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b287a72181a79d562bca08c4f8645bb3a047291a]
+
+	Forgot to add these files...
+
+
+2023-01-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [441b659396b5481290b8dd6785c13dcf797a1a9c]
+
+	This is worth mentioning.
+
+
+2023-01-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a0594933baefb970c9e6a8d966ff6df642b90fbb]
+
+	Adjust titles a bit
+
+
+2023-01-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d677b1c80d5e835d2df8dd54369d5bb2ec3d03b0]
+
+	Rename the filter section as core, and move the tree doc into it
+
+	This structure makes more sense.
+
+2023-01-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [567d66c44b8b46742222fe31330b6677721bf9e5]
+
+	More editing of the spreadsheet document section
+
+
+2023-01-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [25f3a09c0076c7c642fa2317d7a2d18469008e03]
+
+	Re-org the import and export factory section
+
+
+2023-01-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [95d48828d47a4eddb62c46ec6c47f4a19aba2af4]
+
+	These classes don't need to be public
+
+
+2023-01-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8ae9d0a2128dd9abbea6b28d1949d9620e50b64b]
+
+	Split the section into multiple subpages
+
+
+2023-01-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [712300d2d171db86ce701b0cc5df29531ac58157]
+
+	Add 'index' role to reference the landing page from another project
+
+
+2023-01-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [62ff33abcce0f47e03dbaa0cb2ba72a0054821b5]
+
+	Add inter-sphinx mapping to ixion doc
+
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [02f3d921ce22d35ed88e921cb53b59895ba005d3]
+
+	These methods no longer need to be public
+
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0174e8bf89e4b21bcf3955b394f4804bfca9b423]
+
+	Move up the interface methods
+
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8abe382dcb80a9e0b9510e8ee7fd6e6f99d7fd70]
+
+	Include yaml::document_tree for real
+
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5c5f8f47abdeaffc5a71a1175c28d4e44775e6f6]
+
+	Hide finalize() and ensure it gets called only from import_factory
+
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4d109272c9110ad9cf91c46bb3b511ecae1dfb86]
+
+	Document and clean up the API of spreadsheet::document
+
+	Still on-going.
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [24db55b87c2ca24b76767ffdc9bc260e622889f8]
+
+	Seprate sections for tree-structured docs from spreadsheet doc
+
+	The tree docs are provided by liborcus, whereas the spreadsheet doc
+	is provided by liborcus-spreadsheet.
+
+	Also standardize on using hyphens for the doc.
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [635b583be1f1e353dfa5f8f2f2ec09810fd404ab]
+
+	Be specific about the value range
+
+
+2023-01-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7a0d23c485a745f01e0bdeca5a7dc5627dcfa53d]
+
+	Call the section just "Utilities"
+
+
+2022-12-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [49ae1ab7b1ff7ec335bef7b891f54df76c680311]
+
+	Re-organize the filter section a bit more
+
+	Let's not repeat the word 'spreadsheet' needlessly; that's mostly implied.
+
+2022-12-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1a6ca15759a3f9a9a7d39081271f714249fe5d6b]
+
+	Adjust section titles
+
+
+2022-12-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d766afe8fc2baed26e5118cce4c34e5d5e3ec5f7]
+
+	Reorganize the import filter section a bit
+
+	Also add some intros in the parser and filter index pages.
+
+2022-12-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c9a41c95a01c2cbf0e8b6e07c7a163564c07e2e7]
+
+	Move the utility functions page up one level
+
+
+2022-12-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [58c8b14943435f18390ee2a5269170ac0eac9b6b]
+
+	Document sheet view specific types
+
+
+2022-12-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8611df752815f5e39563117a2f9cfb85c3b88afe]
+
+	underline_attrs_t is unused
+
+
+2022-12-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6bd7224a2741febd75aa8f3067c8450897455edd]
+
+	Document the view and export interfaces
+
+
+2022-12-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e1204631a43981c5655bda695364740e2a9b8d0f]
+
+	Use code markers to pick up code blocks from source file
+
+
+2022-12-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [014ee4b29c8d7fb74ba2e9901defde9fe2fc58b8]
+
+	Go through the styles import interfaces and add or edit docs
+
+
+2022-12-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [450b69e7c5f5e9a5984acf1f3c8535dd239eb10b]
+
+	Reword the description of the base_index parameter
+
+	The old wording sounded weird and probably was not factual.
+
+2022-12-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d9b740e1e5c0fa0aa0dd10dacf7748acb74dcd95]
+
+	Document pivot table related interfaces
+
+	Also rename create_field_group() to start_field_group(), and check for
+	the field group interface pointer before dereferencing it.
+
+2022-12-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8b47b0c44c24426d12b5a2ba2b838349dc135d3f]
+
+	Remove 'using namespace std'
+
+
+2022-12-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3ed31f183e8412b097cd51c090a72de129dbdb88]
+
+	import_table::set_range() to take a range_t value
+
+
+2022-12-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [61327a44622474ff1f9e92861fc3f4f433350f88]
+
+	Document import_array_formula
+
+
+2022-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1661fcfd0064f7d70052107104ac1ff8f0580d3e]
+
+	Add description to import_formula interface
+
+
+2022-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [63c56e1a1a00f4fa8a8d6cc422b1042cea314eb3]
+
+	Document import_table interface
+
+
+2022-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [146300b1ba58382d1966cfc09b29e5c34d1bf2d2]
+
+	Update the test files for conditional formatting in xlsx
+
+
+2022-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [014ffb66079ddca7b7e6fa8e07a0483dc4963523]
+
+	Edit the doc for import_conditional_format
+
+	We should revise this interface for 0.19.0.  For 0.18.0 it will be
+	unchanged.
+
+2022-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [80676ec15b65ea6564d4a2466dfcaa456ce36d85]
+
+	Test file for conditional formatting import
+
+	This one contains only the basic rule set.  Other features such as databar will
+	be coming later.
+
+2022-12-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e0dc2777e10a281bc560c44c359c7c084ecc3c29]
+
+	Go through and edit the doc on import_auto_filter
+
+
+2022-12-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3732a9287ffba8ba3814e08b54f6b6aa74dec0da]
+
+	Document import_data_table interface
+
+
+2022-12-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bd3dd50edf12f7083729f9fc6b01138cd5830273]
+
+	Edit the doc on import_sheet_properties
+
+
+2022-12-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6b8b218a81d1eed6ca47cdbe6a1f757af2732fde]
+
+	Go through and edit the doc on import_sheet
+
+
+2022-12-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0e922fe148e8a027c03827a75f8c113a583e0cb9]
+
+	Give a brief introduction for the document import section
+
+
+2022-12-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7abedd3166f0a0dbdad98b874885957091b1e90a]
+
+	Provide a class description for import_reference_resolver interface
+
+
+2022-12-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c0c1089a744ad31667b215b45c31f12d9acbd7bb]
+
+	Edit the doc for import_named_expression interface
+
+
+2022-12-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6b713551d8de28c83d107e35fa3de457e020ca8f]
+
+	Go through and edit the doc for import_shared_strings
+
+
+2022-12-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ebcab14008399e785f4b79d8021f8a5549e86660]
+
+	Go through and add or edit docs for global settings interface
+
+
+2022-12-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2fa3581fef1845337eba4c4e2fc86f6d9b2f8bd9]
+
+	Edit documentation for import_factory
+
+
+2022-12-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c8ce41c8321fb1d907357be37e1d9d995494df31]
+
+	Separate the sheet import interfaces into own section
+
+
+2022-12-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5d047a0df31cb4e5baafb7e6d4bd13335e219a5c]
+
+	Split the spreadsheet interface section into multiple sub-pages
+
+
+2022-12-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7fdc89c2a0fbbd4f4b482d1567f54caa831fcd09]
+
+	More on documenting the base spreadsheet types
+
+	Move color_t, format_run and format_runs_t to document_types.hpp,
+	since technically these types are only used in the backend document
+	model.
+
+2022-11-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0d9926657e07b0700dc28054432b88beb0da542b]
+
+	Add more docs to spreadsheet types
+
+	This is still on-going.
+
+2022-11-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3bd57018eaa7337808bf6cfc39a584d7e10a285a]
+
+	Tweak the global interface page & use std::string_view for read_file()
+
+
+2022-11-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [747342a40fbd7f6f2373c9b53a15d7dab876415c]
+
+	Split the interface section into multiple pages
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0c7661c4a5f25b63335aa6ad43e1edac751a27ba]
+
+	Document the global filter interfaces & re-org the doc structure a bit
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [337592a0f77700c6b3d181f6ef854d90534aff83]
+
+	Remove get() and size() from cell_buffer in favor of str()
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9bb243e944543a10522d0f20e36c2b87a1579869]
+
+	yaml_parser to adopt std::string_view
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1d1978d3d3ea10120e4ad5f5b7bd72d5a6bc7061]
+
+	csv_parser to adopt std::string_view where appropriate
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [badf216eb3909d9809de3c5c6c9e79a262d6daab]
+
+	Document combinators
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1df0147193431ff99534a86411011fbe6d4ed4ec]
+
+	Use std::string_view as the key type for sorted_string_map
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ff7970aad468b31241b8aaff67bd98d14f95648f]
+
+	Add more content to our CSS doc
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a2d774549211b49254f1af447648e32b0ab4bb75]
+
+	Use std::string_view in public functions
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0ede4c01a6d5fd7ae6b8378db4436a4ded07decf]
+
+	json_parser and its handler to use std::string_view over char*-size pair
+
+
+2022-11-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [76cdac58f46b3c1647ec658c1abac9fda647d1ed]
+
+	All sax parsers to take contents as std::string_view
+
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [79407cf53f80fce872d0829e13f950ba017c3fbf]
+
+	Remove unnecessary @p tags
+
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a06ed2d664a12ffcdb85f74b7c2a8209d715863b]
+
+	Document base64 utility functions
+
+	These are currently not actively used, but may be used in the future.
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c1adf7bf4ea777e4fc6612b264cae531471204e3]
+
+	Document the rest of basic enum types
+
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f43f16a399e9c5dc13f4ec1d7ec2b94873b40f5d]
+
+	Make xmlns_repository movable
+
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7b9eeb082ce8ef31c7be8e71a312adc4838ae01c]
+
+	Add more details to the docs of XML namespace classes
+
+	Also rename 'key' with 'alias', as the latter sounds more apt.
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a0d9574612084f2ef576066723c86a496d376800]
+
+	xmlns_repository::get_short_name(size_t) is not used at all
+
+	Only the other variant is used.
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d2931aa472065b8c12abdc16ddc84e50e62585d9]
+
+	More on documenting the basic types and adding default member functions
+
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7e82df8d3d80a959fe54ce12fc059bd24bf61397]
+
+	Use type alias here
+
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3118ce31a7f5d4818ad73d876d28d8924980e916]
+
+	Document these type aliases
+
+
+2022-11-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0c522e8de8d86b3000ea2c2ac48b3e95a6093768]
+
+	Move previously public types into liborcus only location
+
+	These types are only used within liborcus
+
+2022-11-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b3a9486c0b05162fc97477994a445006291660ea]
+
+	Organize docs on date_time_t & use default keywords where appropriate
+
+
+2022-11-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [131eece503963b4687b2a0664883ab0d3fcd831c]
+
+	Rename xml_attrs_t to xml_token_attrs_t
+
+
+2022-11-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5979effb63e6663b387f591919d7eef66f00e7a1]
+
+	Upcase index_not_found for consistency as a global constant
+
+
+2022-11-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5813ef70363a0eadb073b2afb60a1cfadda4c5fc]
+
+	Organic doc items in types.hpp & reorder sections under parser
+
+
+2022-11-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9f1d7074002b6adbee6dfc98f5200bd9f97c0ae2]
+
+	Add orcus_json to the doc
+
+
+2022-11-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [25b25d646a3919e78b70bf53a10a8937e9ef0a46]
+
+	Use sentence casing for section headers
+
+
+2022-11-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [254c5f34a6333796bb076e34161e1c98ba207517]
+
+	Remove dump_file_entry() which wasn't generally very useful
+
+	Instead, add a method that returns the header info and add a function
+	to print it to std::ostream.
+
+2022-11-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fb598144d8ba4d49a25848537f2daaadf50b6e4d]
+
+	Remove using namespace std
+
+
+2022-11-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [559a1f116c3dce9c9c489d63af8ec4821de0e7a2]
+
+	read_file_entry() to return the retrieved data stream directly
+
+
+2022-11-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5a38a5af5016898480e3b34fb5b9a70216479016]
+
+	Use std::unique_ptr for the pimpl idiom
+
+
+2022-11-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [24bd9006ddc22b27a75a4111ee47af9672c23c4f]
+
+	Move zip_error into exception.hpp
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [befe0dcc6be5a27677d88041241bd18cbc4b7e66]
+
+	Create a section for zip archive related classes
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2cf2a04d9faed476c62153ce75a3464c497b0af2]
+
+	I have no use for this
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [556d35bdb9b9008090b6810a38eac99c5f23a128]
+
+	Kill the idea of "transient stream"
+
+	That was mis-guided.
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [22e07945c0d826a80887af0f7b208e4c4ca11604]
+
+	Move malformed_xml_error to exception.hpp
+
+	And take it out of the sax namespace.
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cfb0ad6454422bc5db08acf7b911ce632dea14fd]
+
+	This variant of ctor is used in derived classes only
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8300189c8beaa2e7490feed0e204ff3f252bcc15]
+
+	Pass std::string as r-value when appropriate
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0929753d505222e4ecd4f19bc2167ee4e22292ab]
+
+	build_message() can be private
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bf114ce3903efeaed3f478ba6d08d2e192cf93fd]
+
+	Remove yaml::parse_error in favor of generic parse_error
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [406a6e0630c96915ec7ccdd7c2bb6597443658e5]
+
+	Remove css::parse_error in favor of generic parse_error
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [300d583cf5c0d51ee76740ae83bbbb2890a9e4af]
+
+	Remove csv::parse_error in favor of generic parse_error
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cd48c621213b3d2b56e95a5c8123c696ce31e9ac]
+
+	Remove json::parse_error; just use orcus::parse_error
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a1bfd021e0800cbcef7b9e284acc16b3b517a403]
+
+	Move generic parse_error into exception.hpp
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b89c98ed8917783fda0152a15197302ea67a582a]
+
+	Destructor with throw() is not a thing anymore
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bb6ee140fc87cc53b86620a09211b326a5489d14]
+
+	Document sax_token_parser and related types
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b3e3dcbfa6cc0b79224916a812b902cbbdc21aac]
+
+	Apply the same renaming of template parameters to the definitions
+
+
+2022-11-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [316eee7c98b0cfa8c0727e3a04a6539cd981a515]
+
+	Add docs to ns-handler members
+
+
+2022-11-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ef2d0f6d0784ecb9eedd6ea314d21ee869d20d02]
+
+	No need to use std::unique_ptr for element scope structure
+
+
+2022-11-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a030e4614cdc601cd4f21bf3bcffb592a5e75719]
+
+	Rename __sax namespace to sax::detail
+
+
+2022-11-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2c306c9b21cbb10d4f77b27dcc7616f5e14ddc9e]
+
+	Use range-based for loop
+
+
+2022-11-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b6a7dcd652532aacb0ecbcc99815d35c2d11c8ce]
+
+	Document XML parsers and related types & make trivial code cleanups
+
+
+2022-11-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f6d2ec51135efccf570104b59afc4e15591f00e1]
+
+	Document & add tests for locate_line_with_offset()
+
+	Also ensure that the offset doesn't exceed the length of the stream
+	being searched.
+
+2022-11-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cd46ad28fdf6048631da605a85fff619f7bc1aff]
+
+	Use more compiler-default functions where applicable
+
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6d8086cc6b77c374f73a8ca9c660f9e56a66e114]
+
+	Add a separate section for stream classes and functions
+
+	And add stream functions to that section.
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [814eb27812c1c01cd8d94f807f251160951c946b]
+
+	Add file_content and memory_content to doc
+
+	Also reword the description of file_content to make it flow a bit
+	better.
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6522af789c041ef2cddb9459498098d7353f575f]
+
+	detect() to take std::string_view to simplify its use
+
+	Also add it to the doc along with a whole bunch other types which
+	were previously not included in the doc.
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [434be9437a08c6b95e381ad8cb6bc5192b8cfe43]
+
+	Revise the doc for cell_buffer just a tiny bit
+
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [639453a76a80c91f2ee6e7c10c02e1f67093e65e]
+
+	Document tokens class & make it officially non-copyable
+
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c592f47fa4a7310ba423aff3becf89a6a911d76a]
+
+	Make string_pool move-constructible
+
+	This will make string_pool a lot more usable.
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6fc6fc45f576277d60cbbbf01c09dd2fca560bd6]
+
+	Document string_pool a bit more
+
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fdc57fc043f4384d873f8e68a79898cf32e1a064]
+
+	Emphasize that the yaml_parser is still experimental
+
+	Also add some docs while I'm at it.
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [917043d66e8df345131a1f4d2397a05188358051]
+
+	Summarize the change in 0.18.0
+
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b9b499adf40d6cdc6a862eb313051eb46bab50b2]
+
+	Fix make distcheck
+
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [beefecd7b325db444be91f7f4ef0cc156a0cabe2]
+
+	Ignore this file too
+
+
+2022-11-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4f7a433b201a6b396a7ab60a4bf936dc15b67abb]
+
+	Set the version number to 0.18.0
+
+
+2022-11-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9e4e9b6fcc88779443e8d2315106d416de1b0761]
+
+	Fix MSVC build
+
+	gcc apparently has no issues with std::optional<auto> but MSVC does. Not
+	sure about clang.
+
+2022-11-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7cb909e6fbf19030cfc0912d2460b9b950814b4e]
+
+	Fix build due to recent ixion API change relted to formula_token
+
+
+2022-10-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4859af1287a6f9ad96f88e5923a69333f48ec95d]
+
+	Fix make check-valgrind-memcheck
+
+	Those optional values were actually not set.
+
+2022-10-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2961d1abeb2f3cb58bf9a32eba6cef8b8ae4ca88]
+
+	Rework importing of style:text-underline-width (#150)
+
+	Note that percent, positive integer and positive length are not enum
+	values but they just mean the actual width value is given separately.
+
+	Also, when the font uses the same color for both font and underline,
+	let's not explicitly set the underline color.
+
+2022-10-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d6bddaeb417e37156b0de3556bc9ea81e1996be7]
+
+	More on removal of pstring in favor of std::string_view
+
+	Still a long way to go, but every bit helps.
+
+2022-10-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2deef59f1564035ecf81b62d41782a8c1c938a7b]
+
+	Merge font_t and font_active_t
+
+	This is the last item to merge.
+
+2022-10-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8110353322f4a01dc5fb337e973bfce46edb0160]
+
+	Merge fill_t and fill_active_t
+
+
+2022-10-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [efccb6dc324d7d30435c004a6f9bc7d2e5a3f3fa]
+
+	border_t and border_attrs_t to use std::optional
+
+	And remove their corresponding *_active_t
+
+2022-10-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c242242e1ca845a05ca3a66fba4dcd9303d96453]
+
+	Merge protection_t and protection_active_t
+
+
+2022-10-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7c4ce2e80f2cde70bb87f0407625145c578df6d4]
+
+	Merge number_format_t and number_format_active_t
+
+
+2022-10-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f41745b3f21137aa60184d48402866820ce2b62d]
+
+	Import several font attributes for asian and complex scripts
+
+	For now this is only for ods, and only for font names, font sizes,
+	font bold/non-bold and italic/non-italic.
+
+2022-10-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [acc6b29e1713b010fd954c875c434e980f0679e1]
+
+	Fix windows build via cmake
+
+
+2022-10-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c8bde749c6630b5a77bdf63c85982585f9c4b4f5]
+
+	Add test on Sheet2, and fix the incorrect column style import
+
+
+2022-10-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f52ff30f94c65e4bb5c4f97b55f24e086d19e1ae]
+
+	Check the cell formats on row 10 & fix cell style repetition
+
+	ODF doesn't have the concept of row formats. So when a row-wise format
+	is applied, it gets applied as a series of individual cell formats.
+
+2022-10-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d2020559f73aff04bcb0eb503fd6db2d3424ccb9]
+
+	Check on column F
+
+
+2022-10-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d64e3628395f55ebcc6b3782c3f0883ee5c31339]
+
+	Finish up on column C and check on column D
+
+
+2022-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bef45743eae100252a4d6fbb276da00b2f495190]
+
+	Make sure the "Gray With Lime" style has "Default" as its parent
+
+	We check this through style_xf attribute, not through parent_name.
+	The parent_name attribute should be deprecated in the near future.
+
+2022-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0931d548d74520d46e78452f36a9bb47a1291c0b]
+
+	Check the cell style of C1 which has "Gray With Lime" style applied
+
+	Because this style uses the display-name attribute, we also need to pick
+	that up in order to test it properly.
+
+2022-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bf941b08616667226ae52b4f966878737c8d80e9]
+
+	Check the cell styles in columns B, E, G etc and fix an issue found
+
+
+2022-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9cdeecb7757dfc23486ff740652e629ef472bd12]
+
+	set_column_format() to take the column span value
+
+
+2022-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [03cf11fdc2b174de5c30004878ee57468a7b238f]
+
+	set_column_width() and set_column_hidden() to take the column span param
+
+	All the supported file formats to do make use of the concept of column span,
+	and our backend storage too, so why not.
+
+2022-10-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e3977081aa5d30899f67b3b85e304cf63b9b6319]
+
+	Properly handle table:number-columns-repeated attribute
+
+
+2022-10-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e99979a4c4cc0e1831befdee7cba47cf09d98003]
+
+	Pick up the default cell styles for columns & test case for it
+
+	As a starter, check the applied cell style on Sheet1.A1. A lot more
+	checks to follow soon.
+
+2022-10-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b32b91d388fc7a5afb2663eec6d2fa23d34b5c21]
+
+	Modernize the code a bit
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [98d45670732ef81f8c8ee73acb1b801d5576afbe]
+
+	Modify the test file to add a case for style spanning over multiple columns
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [76a3dbd6fb9bae331b77a139d31e352a97d4a73b]
+
+	Now transfer_common() is finally unused
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [055c287183319ac253126d131f6b0770c458547a]
+
+	Have gnumeric_cell_context as a concrete member and child context
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2ce281fc413ff995259c2a6a0a37c6d8abb42b7f]
+
+	Add a test case for calling clear() and using the same pool afterward
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [59ffe63deb53e61db6a73c15af563569d10cecbd]
+
+	Remove pstring and 'using namespace std'
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e4edda33338d9b983d5fc44dad876cec4fd2235e]
+
+	Make gnumeric_sheet_context a concrete data member and a child context
+
+	Also fix a bug in string_pool::clear(). The empty state needs to have
+	the impl::m_stores containing one element. So, simply clearing the
+	m_stores and m_set would not work.
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [aae8a3d8e5cfbb3a5eca2f9747d3387b74ca7a57]
+
+	Make xlsx_autofilter_context as a concrete child of xlsx_table_context
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1ca76b7f1856e383178d46fb48178d177a91ea58]
+
+	Make xlsx_conditional_format_context a concrete child context
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bfe471f15adbdfffcbcbbd0df8bab076cb4e084d]
+
+	Let's use the 'ss' alias in lieu of 'spreadsheet' namespace
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3ef6476bbe0440c9a2063d0db4d8540fc4735271]
+
+	These break statements have no effects
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e4e45795378603ebcd8d10b7b53f49aa6a197364]
+
+	Replace pstring with std::string_view
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [af240ae892c5f74bb567ac89c5029ca4dc78fcda]
+
+	Allow import_conditional_format interface pointer to be null
+
+
+2022-10-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c75e75858e401c73e1cb6c9842a4009623ccc89f]
+
+	xlsx_autofilter_context as a member child context
+
+
+2022-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5f0f8c757d989cf84067c540b36e2abb575628cd]
+
+	Remove 'using namespace std'
+
+
+2022-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b913db4dc66d8090f10fbfd8a31770cf0d8770fa]
+
+	Use the alias 'ss' in lieu of 'spreadsheet'
+
+
+2022-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8617bb0b48816fa9852298d6bfb722c2e7057403]
+
+	Let's use std::optional here
+
+
+2022-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4c3a526dc77e745ad4d5f035f640e4c4aab579e3]
+
+	Pick up column and row styles in xlsx
+
+
+2022-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [218816d355524ad69b3ec41f12061bba78b1a6e9]
+
+	Update the test file to match that of the xls-xml
+
+
+2022-10-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [10bc5827e4ffa75f0e796545a86ab38634838b48]
+
+	Substitute 'spreadsheet::' with 'ss::' for consistency
+
+
+2022-10-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f8d3a19855aecb0e50e5cb5451f656ad45508a8d]
+
+	No more 'using namespace std'
+
+
+2022-10-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3f82bda9afe85372d48ac5d33d8de0dcc1af3abe]
+
+	Pick up row format indices and make sure they are stored correctly
+
+
+2022-10-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b6f2805fa44ab9852a9d1ee8d5bb5db3b6d1d791]
+
+	Import column styles and make sure they are stored correctly
+
+
+2022-10-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [01878f858821c5240182128b29b516f82387bee1]
+
+	Add another sheet that contains a column style spanning over three columns
+
+
+2022-10-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1dead2bbabef4d0d1a451b29984964d615c4dfcd]
+
+	Remove 'using namespace std'
+
+
+2022-10-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9856b2f7df9c256049b3381423cc299590f98e17]
+
+	Add skeleton set_column_format() and set_row_format() interface methods
+
+	They will be implemented next.
+
+2022-10-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [49f525d11908772fb49ff8fb608a84c8935aed5e]
+
+	Update test files to include row-wise properties
+
+
+2022-09-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [38fef5511c6f46b5828c28e20709783c1cb58d9d]
+
+	Check the format on D6, and conclude this test case
+
+
+2022-09-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cac4a005db1839f827d63aaa6356f17ef90ed585]
+
+	Properly handle cells referencing named styles directly
+
+	This fixes the previously failing test case.
+
+2022-09-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fb870234e9867c735abf20812e2dd2d720e3394f]
+
+	Check the format on B4 and D4, but D4 fails
+
+
+2022-09-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4a1074bf6635942d8cdfd1adb52b16cb7289bbd6]
+
+	Check the format on cell B2
+
+
+2022-09-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a8aa90cde1d0b53618e77a91fb9487858b52d3b4]
+
+	Set up a test case for direct-format.ods and simplify doc loading
+
+	The test file has been updated to include a cell that directly references
+	a named style.
+
+2022-09-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fbbcf8a55184d183777279e8578119cacaeb08df]
+
+	It's possible that cell style entries have non-contiguous style xf ID's
+
+
+2022-09-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [305605733f3e59e1f895c96451dccadb572b5e70]
+
+	Update to include named style with direct format applied on top
+
+
+2022-09-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f273240349a22e2b25d73804c5ce93cf1295be78]
+
+	Let's not return the position of the inserted cell style record to be safe
+
+	Since that doesn't represent an xfid, there is little point returning it.
+
+2022-09-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2d32c766e679efe22e3d87e7283a6c49e11acbe0]
+
+	Re-enable the test cases and fix one aspect of styles import
+
+	The cell style records may not appear in the same order as their cell style
+	format records counterpart.  Each cell style record does store the xfid of its
+	corresponding cell style format record, so we can sort them by the xfid's at
+	the end of the import, to make sure the two record sets are ordered the same
+	way.
+
+2022-09-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f6adf0b4e954dad7068ba085f3e133666bc32d77]
+
+	Copy the test case from xls-xml to xlsx and disable the untested part
+
+
+2022-09-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e652a47067e9b5a811db843392dc726ab620f019]
+
+	Test the format applied to cell D8
+
+
+2022-09-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1e210d748ebd2f4b1a43fbbe93e369c452d10f51]
+
+	Check the format on D6, and correctly import cell referencing named style
+
+
+2022-09-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7a17a0a3a1a3503df7fb124e421d4055b3dfafe3]
+
+	Check the cell format of cell B4
+
+
+2022-09-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [051ca778fd848792a85fe3b6e8dcbfcb98d863f6]
+
+	Start writing a test for direct-format.xml, still WIP
+
+
+2022-09-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [07d70b981abf71559b3a077981ebd9a1a5b9b21b]
+
+	Properly import named cell styles and link them to direct cell styles
+
+
+2022-09-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d9ea206ae970aaacab6919cb1ae26de381881c17]
+
+	Rename those get_* interface methods to start_*
+
+	Since calling a start_foo method signals the start of a transaction-
+	like import step, the name should be more reflective of that.
+
+2022-09-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [180417340b28b1606698bc56a3cc687f30a972fe]
+
+	Add test files for direct format styles
+
+
+2022-09-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [31c9512f529043b821dbb066e0ebff1e57d838b2]
+
+	Test files (xlsx and xls-xml) for importing styles applied to columns
+
+
+2022-09-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [98b9ab6cf81ee442e9c354e0e3d6d361571575ea]
+
+	Test file for ods on importing styles applied to columns
+
+
+2022-09-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [475f2fbf6cc116e25af9b4af167bf1c202ca23a8]
+
+	Move test files for orcus-import-ods
+
+
+2022-09-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1b6996f931a7fab30b49c74bfc74c092e5e8c55d]
+
+	Add a simple test case for flat dump containing utf-8 strings
+
+
+2022-09-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [50f13d2befa937543a616750e746d785ac18889a]
+
+	Use logical string lengths to determine optimal column widths
+
+	This doesn't work well with East Asian languages, unfortunately...
+
+2022-09-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e3762f4a3c73da6b037bf98551a568e256fd9af3]
+
+	More examples from Russian and German
+
+
+2022-09-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [792d3c601aefb6b1a32d3918f673380a893ccfaf]
+
+	Add calc_logical_string_length() public function.
+
+
+2022-09-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [902b27227df7154655bb1d6733c6b1b97ef8b804]
+
+	Properly pick up cell protection properties
+
+
+2022-09-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ee154da63372d9ce25c9247b82fc353dacbd67c2]
+
+	Add a test file for cell locked and hidden properties
+
+
+2022-09-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [abe24a79915fe458fdaceaab9777213fca78e5b7]
+
+	Activate MDDS_SORTED_STRING_MAP_DEBUG when debug-utils is enabled
+
+
+2022-09-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [37e482a41c279c416059a20d24b8b66be2bc5e02]
+
+	Pick up the hide-formula attribute
+
+	Also check for the rest of the cells' formats.
+
+2022-09-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4c15945de7c591c74792a801845b4a41912214d9]
+
+	Pick up more default styles, minus cell protection attributes
+
+
+2022-09-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [aadfd1a3c1bd26fccc3177b8ed5354afbc65e645]
+
+	Add more cell values
+
+
+2022-09-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d6368450e9d673eebcad0675f4b6c773b20bd801]
+
+	Replace pstring with std::string_view
+
+
+2022-09-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b754265cdd093783206eb46e7db23a6d5a23b4a8]
+
+	Add a test file for importing a default style
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [67db4feffd8a170ad66cc22a0ae25104afc796f8]
+
+	Correctly import default alignment properties
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c1c7e01bf4effbc3c231b9c34a64ad893720305a]
+
+	font_style must be non-null
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [81f3cd6cdb98ecbf340423c8a6a3ece3d81c7ce8]
+
+	Make wrap-text and shrink-to-fit optional
+
+	ODF styles need this behavior for style hierarchy to work correctly.
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fd92263b35df127ec4d6b8a4fde255dab491d512]
+
+	Pick up wrap-text and shrink-to-fit in ods too
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [88ebe61a7e658021386453cb3f5f095dc0517ae2]
+
+	pstring related cleanup
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3aeb6f570b1ab07f5582f67df0985107660e0db6]
+
+	Pick up the wrap-text and shrink-to-fit properties in xls-xml
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [186449cb8a143f0760f85202b85c3a08b33239e4]
+
+	Add an xlsx test case for wrap-text and shrink-to-fit
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f05c9e8eb06a962810912b83be63301117db974f]
+
+	Replace pstring with std::string_view
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7f999772359570d07feb83960b0c3942de2a9a6c]
+
+	Remove 'using namespace std;'
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1f5f35872f7bcc95aa4df4a11b353756cb5ff6ac]
+
+	Remove using namespace orcus::spreadsheet in favor of using 'ss' alias
+
+
+2022-09-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4b187121ffc890fbe41d799bc0b0ed183d9a0362]
+
+	Pick up the wrap-text and shrink-to-fix cell properties
+
+
+2022-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [74f368606b83f327bf2789658589d9a5e95b9e60]
+
+	Let's just remove empty case blocks
+
+
+2022-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c755e8d0da494d2746ea465441dca34a1f85e268]
+
+	Switch to using element validator to validate element structure
+
+
+2022-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [69799f9def94a0aedc3e6846278d5c0d7f17c4b3]
+
+	Add interface for wrap-text and shrink-to-fix cell properties
+
+
+2022-09-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [03d7cf538221ff79dda5be9a8712957b4aaca51c]
+
+	Replace use of tempfile with mktemp
+
+	Apparently tempfile is deprecated.
+
+2022-09-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [23d149037fae48d9705995c74fec3a7195ba562b]
+
+	Add a test case for EUC-JP encoded XML file
+
+
+2022-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [63cd8ed934a01799bfd2ddbe0c83a6337ee577dd]
+
+	Add some rudimentary test for parsing character set names to enum
+
+
+2022-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [992b4fa11db3883315162e533a3a381c474269ba]
+
+	Add preprocessing rules for slickedit symbol tagging
+
+
+2022-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [965b407a9a66dd3a4d289b5e966c29d81b2287d0]
+
+	Regenerate the character_set_t member entries
+
+	The entries are generated from data.csv, which was created from the
+	character set table in
+
+	  https://www.iana.org/assignments/character-sets/character-sets.xhtml
+
+	The new set contains mapping rules for the aliases as well.
+
+2022-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cd78cec7d477fb8c9a59154aabdc78aa366984cc]
+
+	Pick up the 'encoding' attribute in XML declaration during XML mapping
+
+	This is related to #154.
+
+2022-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1215a16eb7d21858ab0a7964855c961be8ca4ea8]
+
+	Fix build issue on Gentoo
+
+	This is related to #165. Thanks to jospezial for bringing up this issue.
+
+2022-09-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bb2a2ed037499f5375f4aaf1d508338d571e63bf]
+
+	Mark these operators noexcept, now that we are changing the API version
+
+
+2022-08-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [83bf9095349446bd0dc81f8ee811397ff5eea11e]
+
+	Remove the old test cases
+
+	This also contained some non-reproducible test cases. It is superceded by
+	the odf file based test cases located in test/ods/number-format/basic-set.ods.
+
+2022-08-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [abcb414b7e0cd7f0085985a2d722a06c2660b87c]
+
+	Remove use of pstring
+
+
+2022-08-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7e10fc9525c553b2bcbbc2e6bd813147105f5192]
+
+	Add a test document of basic cases on number format import
+
+	To be expanded on later.  Also fixed a bug on std::string construction.
+	You can't pass a char value followed by count; you need to pass a
+	const char* as the first argument.
+
+2022-08-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ceb27d4fb8ba9ab9eea0600286664951a74673bc]
+
+	Remove 'using namespace std'
+
+
+2022-08-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ec9ed72c183c2ffc60e1675610cb0d1f11bec0e3]
+
+	Pick up the style:data-style-name and record the corresponding ...
+
+	... number format id.
+
+2022-08-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6ad5cd2e434abc238571dfd28211a790f2c66b5b]
+
+	<number:text> may occur under <number:text-style>
+
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d8eeb3ef5c4321b660e67811ea9122682ae8abee]
+
+	Remove meaningless return statement
+
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [baae59a8b721175cc6a120ec35fe83aa4f76ea79]
+
+	Let's not forget to handle <number:text-style> too
+
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b9bd8309609353099aaa53573ddf66f3eacf7a34]
+
+	Use stack printer for test cases and fix the test program linkage
+
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c27a094a8421864abfc4e3ee449b1936dc68111a]
+
+	Handle <number:time-style> element scope, and remove number_format_context
+
+	and all its associated function objects that are no longer used.
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fb2b4f6f7657a01d304d3019b55507bb28421d76]
+
+	Don't forget to define the validation rules
+
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7a7fbc67a55dda6ff428d93cd94c5f0f89c25d10]
+
+	Handle <number:date-style> element scope
+
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [80ad771c2baa6d36cdcbd18d2e0534654646545e]
+
+	Handle <number:percentage-style> element scope
+
+	Also make xml_context_base::characters() non-pure virtual function.
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [780199dce4fd95ff113ba76e3215a7a74c06b52b]
+
+	Handle <number:boolean-style> element scope
+
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2f70234a5a97a90a2b34ccec0867579885fdd51b]
+
+	create_child_context() and end_child_context() should have default versions
+
+	These two methods are not very common; let's have the base class provide
+	their default implementations.
+
+2022-08-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8371a52e3fa4d36199895cda1e3cd7e5b36bf321]
+
+	Add validation rules to currency_style_context
+
+
+2022-08-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [34405c24b8a6f1bcedf599bd1ed78b4227b85ae4]
+
+	Handle <number:currency-style> element scope
+
+
+2022-08-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d3d708ad0836b3a451c0ace07d01167ccf17ff42]
+
+	Add validation rule set to number_style_context
+
+
+2022-08-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dafb22810ae2a34dc7d4720243f99237a6f93f18]
+
+	Set up an empty context for <number:currency-style> which will be next
+
+
+2022-08-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7d4343a1cd170572e540200fd8c296ecbead1bec]
+
+	Handle <number:scientific-number>
+
+
+2022-08-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ad80c6bb6a406f4390bfa33c657e4b53530e5614]
+
+	Handle <number:fraction>
+
+	This needs more testing.
+
+2022-08-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9e6b23ed5692bcc7e699f8081a314a4084b4cc40]
+
+	We don't really need to handle style:volatile attribute
+
+	How it should be used is unclear per 1.3 specs.
+
+2022-08-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cf614401330ad17840e57c5748ca788b3bc5dea7]
+
+	Handle <style:map> below <number:number-style>
+
+	This combines multiple number formatting rules into one.
+
+2022-08-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f81d5e69e64717c752887e6d715bf83814bef064]
+
+	import style interface no longer used
+
+
+2022-08-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [979491b5ad643f36b1403e53d7f128a049d50538]
+
+	Store number-format names to ids and ids to codes in session data store
+
+	This will be used later when combining multiple number styles into one code.
+
+2022-08-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [17e5cdb356aea4fbe8402dc594caf5b5e5314697]
+
+	Handle <style:text-properties> element scope
+
+
+2022-08-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6f2c56271b9697f9eba2d3df1b7d17158ba1fbe0]
+
+	Handle <number:text> scope
+
+	Also remove character_stream from odf_number_format. It doesn't belong
+	there.
+
+2022-08-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5d59b674cfdf6e11a0e2bd10f201f9bf68faae35]
+
+	more files to ignore
+
+
+2022-08-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8000f4425c83b43b68db4454bddf05f1ced593f9]
+
+	Add a context dedicated for <number:number-style> element scope
+
+	Still WIP
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [59801364d83b4c33a3b73e6fe89cfb89de4b3e63]
+
+	These are now used
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [af6a68b7bb74fc86db0b092b104680021450d50d]
+
+	Internalize styles_map with styles_context with some access functions
+
+	This feels a bit better than passing a reference to it at construction.
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [28667a6e936d7175e0dea590f1473fa7bf27eb37]
+
+	Register child contexts with parent so that the parent can push out ...
+
+	... some common settings to all its child contexts at appropriate time.
+
+	This feels more proper way of handling setting distribution than calling
+	transfer_common() at much later time. It does also avoid unnecessary
+	copying of the settings objects.
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d28c913950fbce36fbb4180339b61b4faa99a780]
+
+	Call transfer_common() at the right time
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9f9a3072bd81d9f87280c617f156c33655bb754e]
+
+	Move the odf-styles state dumping code into a separate function
+
+	and call it also from the end of the styles.xml parsing.
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0c4b7fcf564559979bd6f51dbdcccf203e875b53]
+
+	Reduce the amount of static_cast to get the custom data
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8ca119bd585793d6dc3e0c0e60a91650fe5a94ae]
+
+	Remove m_ prefixes from struct members
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c870c3fd6353e2c25fd8726fecf1cc3d77d73d60]
+
+	Use std::make_unique<> over raw new operator
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [eb44661e42344d31f3b1f3bc5e84c034b398e1b9]
+
+	Remove m_ prefixes from struct's
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8b6a2321bac1acb116eeb47456a4844799ce1f1f]
+
+	There is really no need for ods_content_xml_handler class
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6cb386785451eb44148928cf80a69bc93800f404]
+
+	Parse styles.xml stream in ods and pick up styles defined therein
+
+
+2022-08-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0f3b2ebd66bd43ba1a8922ea2648d545dde6a6cb]
+
+	Extract the context for the <style:style> element scope
+
+
+2022-08-24  matoro  <11910244-matoro3@users.noreply.gitlab.com>  [14d15bf331b5cc3ca2c1cdb8097dfe918173cba1]
+
+	Only recurse into src/python when BUILD_PYTHON is set
+
+
+2022-08-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a912a79ffc10e3f5f2f3d052de54cc5acbdd81d1]
+
+	fo:text-align may occur for families other than table-cell
+
+	At least for paragraph and graphic.
+
+2022-08-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0383b7297df97145b3145fe1dcd83552d27f3b23]
+
+	Always build orcus-env-dump even when --without-tools is specified
+
+	This is related to #144.
+
+	See also https://bugs.gentoo.org/713586
+
+	Thanks to James Beddek <telans@posteo.de> for the report as well as
+	the fix.
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6ae2b11f86a6c3471d4061ab4ac4c69fa0d84199]
+
+	Remove ORCUS_ASCII and with it the global.hpp header file too
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e11df5525aed8ecfa9cc28caaba7e4d07ed3b078]
+
+	More on replacing ORCUS_ASCII with std::string_view
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e9e29db6cd720fb375ea2536b9adeb527e78f86f]
+
+	More on using string_view_map_entry
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [722a76fe5f9872a7c28faaa51939177a76119b94]
+
+	More on using string_view_map_entry
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [668a36f2e22e1dcf3088713490dc948378e84a3c]
+
+	Replace ORCUS_ASCII with std::string_view
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [af9c329e453e1fb6bbd3218cb97991c585b9d3fc]
+
+	More on using string_view_map_entry
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [76573ac5e1ad716b61a424302c2153393025817d]
+
+	parse_expected() to take std::string_view
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5221947cbf01e7cf97fbfe16dd004e4ed7572c3e]
+
+	Use string_view_map_entry to store the keys as std::string_view
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [568512808727753c1d3a50dddf03c607faf3a8f2]
+
+	Use std::string_view to replace ORCUS_ASCII
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a3cfbee8e58c0cbf5f9839f62e0fa66b45bb430b]
+
+	skip(...) to take std::string_view thus avoiding ORCUS_ASCII macro
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [38f9d676823a66fe27f9e7c28495ec65380cfddf]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7777f4f60e88c459b1b7c5a4e6c802518aadeaa7]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5715f1ea6b1c3d4faecdbfebbef203baba931359]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c788b79551994b6434c9128506304da49f39c662]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ccc7fcce656cc052040b70188fd4745a15978da1]
+
+	Use std::string_view for entries
+
+	Also put all relevant definition code into a namespace.
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [45be9d84192b8d3725379e945e0d5ecb8610db42]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2ec419c9e56b6ff29cee00ca276fc089eb70019b]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [815aa0915f2d7b129d6e8c1c75fcb00bc2627a3c]
+
+	Use std::string_view for entries
+
+	Also split the three map instances into separate namespaces.
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [944fa76d46aef7a05d18329e8a79ac9149b15d19]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e12c67aee97d1fd4b9b96ea5ce70510d66f8b3d0]
+
+	Use std::string_view for entries
+
+	Also turn color_rgb_t into POD so that it can be declared constexpr.
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0535ca2dbe96aa464683e0af0c0da8f790a8dc28]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [459bedc60f6210feedb309423510499ddb3a48c3]
+
+	Use std::string_view for entries
+
+
+2022-08-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1db17be961175aaf9d18a1c339ec159a7548a746]
+
+	Use std::string_view for entries
+
+
+2022-08-23  WANG Xuerui  <xen0n@gentoo.org>  [ce66c0fb64c667e78476f8611eb5f097ec572f0a]
+
+	Include <cstdint> in base64.hpp too
+
+	This is also necessary for building with gcc-13.
+
+	Signed-off-by: WANG Xuerui <xen0n@gentoo.org>
+
+2022-08-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7e82ade9f967cb5590a2046da1328d948a3c9656]
+
+	Use mdds::string_view_map_entry to simplify uses of sorted_string_map
+
+
+2022-08-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [18788ae7fbb49cffff34b5e145b6dfc7969ad6c0]
+
+	Adjust for the latest API change in mdds::sorted_string_map
+
+	keylen -> key_length
+
+2022-08-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ec1b6a388f2c7c32ddcbe7c99275aa6430e591de]
+
+	Use std::unique_ptr instead of raw pointer
+
+	With this change, nobody uses map_object_deleter.
+
+2022-08-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9146aca9779f2db3f8a4967d0831677ccb8f19ce]
+
+	Tuck these types inside elem_prop
+
+
+2022-08-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [49a5ebfd9abdcbfbb8e7489ff614bab026793bbd]
+
+	Move to_date_time() to date_time_t::from_chars()
+
+	With this change, global.cpp no longer contains any code.
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f4605a5bdfad1f8a30a2678914f7f744c0ec0210]
+
+	Remove all uses of ORCUS_N_ELEMENTS in favor of std::size()
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2e0c68335f14575716889ab5ee2ed757f0fd89d9]
+
+	Define sorted_string_map in more standard way
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [70424815e8d2fde5361800a6279525f1f099706e]
+
+	Turn it into an immutable singleton
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5ead3e707dc9f299f1c10c4782bb5707840502d9]
+
+	Replace ORCUS_N_ELEMENTS with std::size() and other cleanup
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5549d3f908c4d4ca7337813cf3f71ad8a38b5445]
+
+	Internalize print_attrs() which is only used in liborcus
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2c9a217017a251f08ab72b37e6af66c55e1a3a44]
+
+	Unused function
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bdf40b4f48517999dfdf4af5175c6e7bfe2710a0]
+
+	Replace use of std::strtol() to parse_integer() where appropriate
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f0c5e6b7a083b90bf876485e815a32a3265ae2da]
+
+	Make the sig of parse_numeric() similar to that of parse_integer()
+
+
+2022-08-18  Kohei Yoshida  <kohei.yoshida@gmail.com>  [83d5cf39b8a979289aa7c3c735a6459a30e3c117]
+
+	Safeguard against some invalid input values
+
+
+2022-08-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a751d28b44b3afad5d1625dd0836c243cf41c35c]
+
+	Replace pstring with std::string_view in common_test.cpp
+
+	Move the test for pstring::trim() to parse-global-test and use it to
+	test orcus::trim() instead.
+
+2022-08-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ca75ec7e241557b96bbd07b23aec8daf766fef5b]
+
+	Change the signature of parse_integer to make it similar to that ...
+
+	... of std::from_chars(...), and set up a test case for parse_integer().
+
+2022-08-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [791921abe18fe5a01986a1a39d2965775a681ce9]
+
+	Set the new mdds baseline to 2.1 & try to fix gitlab-ci build failure
+
+
+2022-08-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0a32f053a67c0a3adfc3e259e79142d95b7d9a66]
+
+	Use autoreconf over autoconf
+
+
+2022-07-20  Rosen Penev  <rosenp@gmail.com>  [5553ca5a4ae4f6bea0961ee5a666aa2b5f6ed6fc]
+
+	fix for MinGW
+
+	Avoids redefinition errors and a compilation fix for clang on MinGW.
+
+2022-07-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fa68d6a76778df26e41108e3400f4a907e351203]
+
+	Explicitly include <cstdint> header with GCC 13 (#162)
+
+	c.f. https://gcc.gnu.org/gcc-13/porting_to.html#header-dep-changes
+
+2022-07-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [907c6b42d7b8203b8a731adccb2cea1eee15729e]
+
+	Fix build issue with MSVC
+
+
+2022-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1dfbda6ba2992e65f9f3c77033f708acc5821168]
+
+	Rename number_formatting_context to just number_format_context
+
+
+2022-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [58bc1b9cf16373edaa9c756b0a1bb3c7cdf03628]
+
+	Let's use switch statement here in lieu of chained if statements
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [74ccca3047c17f87998433ec77428e7979b154e5]
+
+	Rename number_formatting_code to odf_number_format
+
+	Also clean up its members.
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f8c3c264da1fcbb520d0f7a4d51a67a4cb226c80]
+
+	Remove m_styles as unused
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [75c232ea1f2fbbb8f6771561af30698b05594c00]
+
+	Add view types
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9fb0768c20791bd7bcf8aaef21272bf0f728053c]
+
+	Add some content to the API doc
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1a356e0fd52a9347fdfa85399d67a5d06ac0ee3e]
+
+	Remove the old interface
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [98601fdd57d9513ce23254cff9bfd49ffcf936d6]
+
+	Use import_cell_style in odf styles import
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5d323b0035b32450466acb38c9c80c4b13fd367c]
+
+	Don't forget to ensure the xf interface exists
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c7cec298f498e286220d74eb2364ce2a95cc6e35]
+
+	Use import_cell_style in xlsx
+
+
+2022-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [80dafcf91af103adb8e7c3ce0eee987399e389ca]
+
+	Add import_cell_style sub-interface and use it in xls-xml
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [56d2c266f1b7fe6fc9d8ebd00c001acb181dc9d1]
+
+	Clarify (for the n-th time) what this style-xf is used for
+
+	This is Excel specific, and is only used with the <xf> record that
+	occurs below the <cellXfs> element. It refers to the <xf> record
+	below the <cellStyleXfs> element which stores the format records for
+	named cell styles.
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dc29c2d295b1b87f4b94e1c1c0c7ecc8e6cfc8ab]
+
+	Remove the old interface and fix a few more places I overlooked
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [397dfd57390de6a28d0b792d36341a840d6ea668]
+
+	No 'using namespace std'
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e7f41cd257d66853318e21f781abedd4310b9354]
+
+	One more place that uses the old xf interface
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7ba88cc6476158f8da5759413d5ba2e8c3191e99]
+
+	Use std::variant to replace union
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a2549f26b9eb1ad854e699ebd21a9619731c2da7]
+
+	Add debug symbol when debug-utils is enabled
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [90d0d3afa3c6babdf0fd3ded302d17ebf5fa3e67]
+
+	Let's have start_paragraph_properties() method just to be consistent
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [068dc7d7661ab9d829671447b988a42991431598]
+
+	Simplify the hor and ver alignment extraction function implementations
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7d54608dc334406349d10de9d1c919c6fd69131b]
+
+	More opportunity to use range-based for loops over for_each
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6854616b4cb1243c3dc900e79aa7849c4f3bf531]
+
+	Let's use insert_or_assign from C++17
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cb265604d86b8e1d4fb18a9fde3961b4cd443be2]
+
+	Use import_xf in odf styles import
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ac7106f0581d9ff8852cce8c067152c9ef193bc4]
+
+	Use range-based for loop over for_each with function object
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [579a756977f5461e9dc11502aa2c77f9dd927b38]
+
+	Prefer std::make_unique over reset & reduce indentation by early bailout
+
+
+2022-06-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a714e1732a52fc1c5d9e6c85961cd5039b7c8bc6]
+
+	Use import_xf in gnumeric
+
+
+2022-06-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [77a26f36b3b5d5302d1ce4161f3bf29a3afc8750]
+
+	Use import_xf in xls-xml
+
+
+2022-06-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8ec42c299640fc7793f04f2e8b013233a32cbe03]
+
+	Add import_xf sub-interface and use it in xlsx
+
+
+2022-06-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2a6263ff4bcb195d7e9c398f5644511b43801730]
+
+	Introduce xf_category_t and combine some of the interfaces
+
+	The xf, style-xf, and dxf all share common attributes, so let's
+	combine their interfaces. This is just the beginning of that work.
+
+2022-06-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9f7bc5b568e03b4094ea6b8ffe3be4edf3273a70]
+
+	These are no longer used
+
+
+2022-06-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1081395adb8792908a8f2b853133a88a0999fa10]
+
+	Remove the old interface for number format import
+
+
+2022-06-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [36a2d91eae2b2e1583be79e837144de9d53b3e64]
+
+	Use import_number_format on ods styles import
+
+	I need to come back to this and fix the issue with number_formatting_context.
+	It doesn't properly track the element stack within its context.
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8b2e357176a538898bae7fba7b00bada9dcfb50d]
+
+	Use import_number_format in gnumeric
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d58185d1e54f9b1d749ab9ee9380f2e870993c7c]
+
+	Use import_number_format in xlsx
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b8bbfdc622841a3a0b8963ff500dde5bb87d9ae9]
+
+	Add import_number_format interface and use it in xls-xml
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b24cbd1516c4a88667720ae1916fee914fbb1bdb]
+
+	Remove the old interface methods
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d648800e83da57c7f8d554e2ed5d6802d03719da]
+
+	Add ENSURE_INTERFACE macro to remove repetitive interface checks
+
+	Also add a class doc to the exception being thrown when the check
+	fails.
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [81cbe7cdad8f2c1e0d9bff4ab28b9c8f6661f8fa]
+
+	Use import_cell_protection in odf styles import
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cf68531c016440668fb830ff99b5e79e850c4535]
+
+	Use import_cell_protection in gnumeric
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [39e9628bc6516614808a870292be75393c851ae8]
+
+	Use range-based for loop in start_style()
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2fce813115731e0a6e53bc2bbac7f0cfd63f23c7]
+
+	Use import_cell_protection in xlsx
+
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [63385c4a40af709217a75af73dfbcc900aba03d3]
+
+	Add import_cell_protection interface & impl and use it in xls-xml
+
+	Although xls-xml currently doesn't import cell protection attributes.
+	We'll tackle that with #159.
+
+2022-06-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [eb1950424d583b9d6711c11316a4d6ffd7daea08]
+
+	A bit of cleanup to switch to ranged-for loop etc.
+
+
+2022-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ebaf75286c7d7da80d0582ccf995bee8f1ddd9a9]
+
+	Remove the old interface
+
+
+2022-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0ced9ee3d043b8e8a60a0faab5513adc737111ab]
+
+	Use import_border_style in odf styles import
+
+
+2022-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f22e27e2965eb67857d3005e16f19dfe8c17d0f6]
+
+	Use import_border_style in xlsx
+
+
+2022-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [df6b55f53f57aca588e6216a95489d7847976374]
+
+	Implement import_border_style and use it in xls-xml
+
+
+2022-05-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [816c9d20cb322dade1af9e94cb4b5e0251c47966]
+
+	Remove the old interface for fill style
+
+
+2022-05-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0fbfcc740f91d1c6e3f3fa062e009a69437b3f24]
+
+	Use import_fill_style in gnumeric
+
+
+2022-05-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [64eab6cf448b2a7d5fb040023890c23a0117b79f]
+
+	Use import_fill_style in odf styles import
+
+
+2022-05-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [757da3a28d57464983113fc397d99a0fd05a4d7c]
+
+	Use import_fill_style in xlsx
+
+
+2022-05-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2f9bea87a8890748a9d551abe6b24a897f9c982e]
+
+	Add implementation for import_fill_style and use it in xls-xml
+
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dfd261b9313b55a4c1d87831a47dfe6d3e117dfe]
+
+	Add method docs for the set_*_count method interfaces
+
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [403e6698cb85df865f5f285f55144abedf8872af]
+
+	Completely remove the old interface ...
+
+	... and fix some left-over code that was still using the old interface.
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a4568198e216982e755b01bc17ba02f526479cc3]
+
+	Use import_font_style in the odf styles importer
+
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [28a9d1768104400da485132e0196d16eaa396364]
+
+	Use import_font_style in the gnumeric importer
+
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [861ef2db0087e554c5da501d7295f795cbf2fbe3]
+
+	Use import_font_style in the xls-xml import code
+
+	Also make it official that get_font_style() must return a non-null
+	pointer to the interface instance. I don't think allowing it to
+	return null here would work correctly if the import_style interface
+	is provided.
+
+	Let's also replace throw() with noexcept in the exception classes.
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5a7f17072da85aeab96cc8b28e58304a5a001afb]
+
+	pstring -> std::string_view
+
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8f89a07cd1fc0ebcf194e31933ee3a7ef2a2af60]
+
+	Consistent indentation on 'break'
+
+
+2022-05-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [08f3dc349d2004f7dc5d49ea89a840ff8d3d1ade]
+
+	Create import_font_style interface, and use it for xlsx
+
+	The old font style interfaces will be removed once it is all finished.
+
+2022-05-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8c85c8c87d9986bc50c1a6c040b8f999a97768e8]
+
+	Move import_styles interface into its own header.
+
+
+2022-05-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bb14f5d41c8438080cd3bbbae55d546b4138dac6]
+
+	Use relative header paths consistently
+
+
+2022-05-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ac2c2a7670c841ffdbe1e9d5dc74c31a0b8db759]
+
+	Remove '= 0' from destructors with definitions
+
+
+2022-05-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a646acb0408807ab62e8677cb6262ea077339818]
+
+	Add or modify the comments to clarify some cell style structure
+
+	This can be quite confusing.
+
+2022-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a48c2d143076d760e89b1c72ff39c8a1a816b48f]
+
+	No need for m_ prefix with struct members
+
+
+2022-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e7954837f6b57f7340106c98b4fe5fc9fab77e9a]
+
+	A bit more cleanup
+
+
+2022-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d85b7b3505110020648a2d0028184d2ca3194a01]
+
+	Move some common types into the spreadsheet types header
+
+
+2022-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [16a5c224047d0d20bf67b2d204a95bb5500b80c1]
+
+	Remove unused code from shared_strings (#156)
+
+
+2022-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2ceada380d911b3495669f1786eaa184189bcb34]
+
+	Rename original import_shared_strings to just shared_strings
+
+	... and make it a non-heap member of document_impl.
+
+2022-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9601eff42f4265da0ccce5601c07271f8ddbaddd]
+
+	Create a truly import only import_shared_strings class, and ...
+
+	... use it to import shared strings. (#156)
+
+2022-05-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c77deae627da7acb651fc699ace30a29fa4e7305]
+
+	Use forward declarations
+
+
+2022-05-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [931ecf49915dfa64705279378ab2c1ff1afc6061]
+
+	Actually we don't need these guards...
+
+	These methods use distinct stream instances, so no points setting
+	guards for them.
+
+2022-05-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9161baed625c59e5fccc5c2db49aa52a02a63608]
+
+	Dump misc document properties
+
+	Also fix date_time_t::to_string() to ensure correct width for each
+	date component value.
+
+2022-05-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d55b84e81c0a8c3d67ce91facb3c724dbb67be54]
+
+	Slightly better approach to universally handling enum to size_t
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6391a2751470c26aef3df35e52e74b0dc90d76bd]
+
+	String with '-' also needs to be quoted
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6d99b43c6199c801b43668fa3769f010e66473c4]
+
+	Dump number format values
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f23fc33c30978fc6c3fa793ba001a47794639da4]
+
+	Dump protection values
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [161a3c145d16fae726f1be4d49aecd18d79a547c]
+
+	Remove duplicates
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [99143d48921c6863c7c1efb5425378d78411ca15]
+
+	Dynamically determine whether the value should be quoted
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0c8f09671e65bc9bafed5b845eb22e47a9fc695b]
+
+	Dump strikethrough-style, -type, -width and -text
+
+	Also rename strikethrough_type_t::single to single_type, for the same
+	reason as underline_type_t.
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [aadd71c7217b8cbb227748991e0243c32ae633ac]
+
+	Dump underline-width, -mode and -type
+
+	Also rename underline_type_t::single to single_type as noted in my
+	comment.
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [be018396ed5f85d3b52c629ff59dc78b3cc41f0b]
+
+	Correctly spell 'continuous'
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [15a2a983313d886138718f58a08a6623cacc1773]
+
+	Rename dot_dot_dot_dash to dot_dot_dash.
+
+	This officially breaks the API compat.
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [78a8b85cdf346c16bc22434bff8a16c6e9545b27]
+
+	Dump the underline style of font attributes.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8026421d974368b742d747ef9bf33aed33b6dc7c]
+
+	Dump border attributes.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [eabd2568eaac3f545011b1dd62ab1acb1fb2c8e6]
+
+	Explain what this template does.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4f66a161d0754eb82be0e305989208b970cf6514]
+
+	Dump the rest of the cell format values.
+
+	Also dump boolean values as true or false.
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2f44883b994a7b50c898e42e439c0ac9e76aeafc]
+
+	Maintain consistency.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8f85308273a9d5c898d167c361d2985284fff3f5]
+
+	Dump horizontal and vertical alignment values.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [17449ff020cbf3972e62be182b83c8935c416c59]
+
+	Remove duplicated code for dumping cell format contents.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [de5486bc4c8d4aee492a459ef9a8e98571c175d8]
+
+	Dump unset value with '(unset)'.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [93cb2a134edc2790e4354e2be45525ba2ff3f5f5]
+
+	Share ostream_format_guard because this is universally useful.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [423537108a21fc4e90dbae445eaeb21c802132d0]
+
+	Tweaking the style dump output a bit.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e8fc630cb128fd0e722b38707fea528fdec84d91]
+
+	Dump cell format state.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d63bf6ac1bb2ae8279f1b87b022f318e063b3472]
+
+	Put the color values in quotes to make it a valid yaml.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f98f28c5019276b40f746d8b01f3a53c040db5c3]
+
+	Partially dump some styles stored in the document.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [459518a4007ba39b66494ae426d6ec8f05bfef3e]
+
+	Use unique_ptr here
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [76445a18b6881a3b678d24e77376af23e01b96ab]
+
+	Put sheet_impl in detail namespace too
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a35084202b16c08d89dfc50a708d40ee4daf73e0]
+
+	Rename debug_state_dumper to sheet_debug_state_dumper
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e4580f2b7e8d7bf915afee654980510ed31e7fc4]
+
+	Put document_impl and its associated types inside detail namespace.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4b7d67bc45bcc2edd779047afb66cdb7666319ad]
+
+	Move document_impl out into its own header and source.
+
+	This will be referenced later in a doc state dumper.
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2325e1fd9b9fbc554a8fd46576b27d2cc4925d56]
+
+	No m_ prefixes on struct members.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f729451f15ecbf13362b1370a625dc368e523b64]
+
+	Use std::unique_ptr here.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [065b091b6ee8706e855f056603dd809a784c8d82]
+
+	Move this into a separate method.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d01cf79cdff54fbabd088a38ff67f61ba58051ad]
+
+	Let's not use the m_ prefix on struct members.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1c253e5700d25186d1f30bfa6d5797f378a165cd]
+
+	Convert tabs to spaces in all cmake files.
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5218bac9de960682db7200deab722e207e41b57c]
+
+	Set up a debug state dumper and dumper cell values first.
+
+	This is the same dump as the 'check' output dump.
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [27e784590b80b7d4fa1be4647e54f5286ff493c2]
+
+	Avoid using namespace boost
+
+
+2022-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d57b7d14e0a0d6685838ea96514e4eaf4bdaede9]
+
+	Make room for the debug-state output type.
+
+
+2022-05-16  Tom Stellard  <tstellar@redhat.com>  [469aca3c76965b9031947506a15d940cbcd11cdb]
+
+	Fix error when compiling with clang
+
+	csv.cpp:83:29: error: non-constant-expression cannot be narrowed from type 'Py_ssize_t' (aka 'long') to 'std::basic_string_view::size_type' (aka 'unsigned long') in initializer list [-Wc++11-narrowing]
+	        app.read_stream({p, n});
+	                            ^
+	csv.cpp:83:29: note: insert an explicit cast to silence this issue
+	        app.read_stream({p, n});
+	                            ^
+	                            static_cast<size_type>( )
+	1 error generated.
+
+2022-05-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [08fa2255d24a232ac75027e8f114fe6824061113]
+
+	Replace pstring with std::string_view.
+
+
+2022-04-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9a437392f126fd58b84d70a0a7fc34cccf84b9c2]
+
+	Do not reference a temporary object.
+
+	> orcus_filter_global.cpp: In function ‘std::string orcus::gen_help_output_format()’:
+	> orcus_filter_global.cpp:76:51: error: loop variable ‘entry’ of type ‘const std::pair<orcus::pstring, orcus::dump_format_t>&’ binds to a temporary constructed from type ‘std::pair<std::basic_string_view<char>, orcus::dump_format_t>’ [-Werror=range-loop-construct]
+	>    76 |     for (const std::pair<pstring, dump_format_t>& entry : get_dump_format_entries())
+	>       |
+
+2022-04-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4fcc8d69fa5cf1be73a0e100cba61f63e4eee02c]
+
+	Fix typo.
+
+
+2022-03-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3ef2457d0f0f53445573568762c16b766c059e2f]
+
+	Set up a test for format detection on invalid input blobs.
+
+
+2022-03-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cc85fd039b447749dc226933f2b3797cdf36f3ec]
+
+	Use boost::filesystem to handle file paths.
+
+
+2022-03-30  Caolán McNamara  <caolanm@redhat.com>  [f5a8247b5ff59a73e6fcb11138212de5ca523243]
+
+	forcepoint#95 read past end of string on malformed input
+
+
+2022-03-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0eab7d2407a1e157e3b2274f941a2649cb84885a]
+
+	Update the method doc wrt valid stream check.
+
+	Also make sure no callers check for valid stream before calling the
+	method. Turns out there is only one call site that did the check.
+
+2022-03-25  Caolán McNamara  <caolanm@redhat.com>  [0a99ca6d50af51f1b0a151fdcac5e12ec9b01bf8]
+
+	forcepoint#88 assigned temp std::string return to string_view
+
+	it's out of scope when used
+
+	=ERROR: AddressSanitizer: stack-use-after-scope on address 0x7ffcaf91b111 at pc 0x000000486ec4 bp 0x7ffcaf91aed0 sp 0x7ffcaf91a680
+	READ of size 2 at 0x7ffcaf91b111 thread T0
+	    #0 0x486ec3 in __interceptor_memcpy.part.0 (instdir/program/soffice.bin+0x486ec3)
+	    #1 0x7fa6c4471b77 in std::basic_streambuf<char, std::char_traits<char> >::xsputn(char const*, long) (/lib64/libstdc++.so.6+0x143b77)
+	    #2 0x7fa6c4463ae3 in std::basic_ostream<char, std::char_traits<char> >& std::__ostream_insert<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*, long) (/lib64/libstdc++.so.6+0x135ae3)
+	    #3 0x7fa6b4027a26 in std::basic_ostream<char, std::char_traits<char> >& std::operator<<<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, std::basic_string_view<char, std::char_traits<char> >) /usr/bin/../lib/gcc/x86_64-redhat-linux/11/../../../../include/c++/11/string_view:669:14
+	    #4 0x7fa6b426792b in orcus::xml_element_printer::print_namespace(std::ostream&, char const*) const workdir/UnpackedTarball/liborcus/src/liborcus/xml_util.cpp:35:12
+	    #5 0x7fa6b4267c68 in orcus::xml_element_printer::print_element(std::ostream&, char const*, unsigned long) const workdir/UnpackedTarball/liborcus/src/liborcus/xml_util.cpp:46:5
+	    #6 0x7fa6b41c1956 in orcus::xml_context_base::print_element(std::ostream&, std::pair<char const*, unsigned long> const&) const workdir/UnpackedTarball/liborcus/src/liborcus/xml_context_base.cpp:280:20
+
+2022-03-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [99e8e9019c1c64fb96c87cc29604ac0072d2a1d8]
+
+	Add valgrind-memcheck to the mix.
+
+
+2022-03-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [55c5caa73d577a00eb1e1acd8801423b73726bed]
+
+	New invalid test file.
+
+	This is for the fix in a718524ca424fb8a7e7931345a118342d1d4a507.
+
+2022-03-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ddcfde18054580dc9027e266728bf61e25b5d0be]
+
+	Set up a test framework for parsing invalid XML docs.
+
+
+2022-03-24  Caolán McNamara  <caolanm@redhat.com>  [a718524ca424fb8a7e7931345a118342d1d4a507]
+
+	forcepoint#87 Assertion `mp_char <= mp_end' failed
+
+	soffice.bin: ../../include/orcus/parser_base.hpp:65: bool orcus::parser_base::has_char() const: Assertion `mp_char <= mp_end' failed.
+
+2022-03-24  Caolán McNamara  <caolanm@redhat.com>  [223defe95d6f20f1bc5fd22fecc80a79a9519028]
+
+	forcepoint#84 Invalid read of size 1
+
+	==356879== Invalid read of size 1
+	==356879==    at 0x11EC50B0: orcus::parser_base::cur_char() const (parser_base.hpp:79)
+	==356879==    by 0x11EDD736: orcus::sax::parser_base::value(std::basic_string_view<char, std::char_traits<char> >&, bool) (sax_parser_base.cpp:303)
+	==356879==    by 0x11B7C3D5: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::attribute() (sax_parser.hpp:563)
+	==356879==    by 0x11B7B35E: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::element_open(long) (sax_parser.hpp:292)
+	==356879==    by 0x11B7A2F7: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::element() (sax_parser.hpp:246)
+	==356879==    by 0x11B7A1C7: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::body() (sax_parser.hpp:214)
+	==356879==    by 0x11B7A009: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::parse() (sax_parser.hpp:182)
+	==356879==    by 0x11B79FBB: orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::parse() (sax_ns_parser.hpp:277)
+	==356879==    by 0x11B79798: orcus::sax_token_parser<orcus::xml_stream_handler>::parse() (sax_token_parser.hpp:215)
+	==356879==    by 0x11B79436: orcus::xml_stream_parser::parse() (xml_stream_parser.cpp:68)
+	==356879==    by 0x11BE3855: orcus::orcus_xlsx::detect(unsigned char const*, unsigned long) (orcus_xlsx.cpp:188)
+	==356879==    by 0x11AB2492: orcus::detect(unsigned char const*, unsigned long) (format_detection.cpp:60)
+
+2022-03-24  Caolán McNamara  <caolanm@redhat.com>  [9f6400b8192e39fefd475a96222713e9e9c60038]
+
+	forcepoint#83 Invalid read of size 1
+
+	==343916== Invalid read of size 1
+	==343916==    at 0x11A7B2F0: orcus::parser_base::cur_char() const (parser_base.hpp:79)
+	==343916==    by 0x11B7B112: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::element_open(long) (sax_parser.hpp:258)
+	==343916==    by 0x11B7A2C7: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::element() (sax_parser.hpp:246)
+	==343916==    by 0x11B7A197: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::body() (sax_parser.hpp:214)
+	==343916==    by 0x11B79FD9: orcus::sax_parser<orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::handler_wrapper, orcus::sax_parser_default_config>::parse() (sax_parser.hpp:182)
+	==343916==    by 0x11B79F8B: orcus::sax_ns_parser<orcus::sax_token_parser<orcus::xml_stream_handler>::handler_wrapper>::parse() (sax_ns_parser.hpp:277)
+	==343916==    by 0x11B79768: orcus::sax_token_parser<orcus::xml_stream_handler>::parse() (sax_token_parser.hpp:215)
+	==343916==    by 0x11B79406: orcus::xml_stream_parser::parse() (xml_stream_parser.cpp:68)
+	==343916==    by 0x11BE3805: orcus::orcus_xlsx::detect(unsigned char const*, unsigned long) (orcus_xlsx.cpp:188)
+	==343916==    by 0x11AB2482: orcus::detect(unsigned char const*, unsigned long) (format_detection.cpp:60)
+	==343916==    by 0x30E60945: (anonymous namespace)::OrcusFormatDetect::detect(com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue>&) (filterdetect.cxx:83)
+	==343916==    by 0x30E60ABE: non-virtual thunk to (anonymous namespace)::OrcusFormatDetect::detect(com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue>&) (filterdetect.cxx:0)
+
+2022-03-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1bb9375dcfb43b7b06e371310f01688bd3efb02e]
+
+	Use ax_valgrind_check to enable running tests under valgrind.
+
+
+2022-03-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a63b9f598dac150e6af7a6126ccff8793a4ba035]
+
+	Update the required ixion API version.
+
+
 2021-12-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8865b88c8627953c1c4f371c3a582f58f233295d]
 
 	Set the next version to 0.17.2.

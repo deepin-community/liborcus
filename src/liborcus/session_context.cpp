@@ -11,25 +11,18 @@ namespace orcus {
 
 session_context::custom_data::~custom_data() {}
 
-session_context::session_context() : mp_data(nullptr) {}
-session_context::session_context(custom_data* data) : mp_data(data) {}
-
-session_context::~session_context()
-{
-    mp_data.reset();
-}
+session_context::session_context(std::unique_ptr<custom_data> data) : cdata(std::move(data)) {}
 
 std::string_view session_context::intern(const xml_token_attr_t& attr)
 {
-    if (!attr.transient)
-        return attr.value;
-
-    return m_string_pool.intern(attr.value).first;
+    // NB: always intern regardless of the transient flag since the string may
+    // be used in another stream.
+    return spool.intern(attr.value).first;
 }
 
 std::string_view session_context::intern(std::string_view s)
 {
-    return m_string_pool.intern(s).first;
+    return spool.intern(s).first;
 }
 
 }

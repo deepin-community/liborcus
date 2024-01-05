@@ -6,7 +6,6 @@
  */
 
 #include "orcus/sax_token_parser_thread.hpp"
-#include "orcus/global.hpp"
 #include "orcus/sax_token_parser.hpp"
 #include "orcus/string_pool.hpp"
 #include "orcus/detail/parser_token_buffer.hpp"
@@ -54,7 +53,7 @@ bool parse_token::operator!= (const parse_token& other) const
 
 struct parser_thread::impl
 {
-    detail::thread::parser_token_buffer<parse_tokens_t> m_token_buffer;
+    orcus::detail::thread::parser_token_buffer<parse_tokens_t> m_token_buffer;
     string_pool m_pool;
     std::vector<std::unique_ptr<xml_token_element_t>> m_element_store;
 
@@ -136,7 +135,7 @@ struct parser_thread::impl
         {
             try
             {
-                orcus::sax_token_parser<impl> parser(mp_char, m_size, m_tokens, m_ns_cxt, *this);
+                orcus::sax_token_parser<impl> parser({mp_char, m_size}, m_tokens, m_ns_cxt, *this);
                 parser.parse();
             }
             catch (const malformed_xml_error& e)

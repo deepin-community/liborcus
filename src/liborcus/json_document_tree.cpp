@@ -7,7 +7,6 @@
 
 #include <orcus/json_document_tree.hpp>
 #include <orcus/json_parser.hpp>
-#include <orcus/global.hpp>
 #include <orcus/config.hpp>
 #include <orcus/stream.hpp>
 #include <orcus/string_pool.hpp>
@@ -24,10 +23,9 @@
 #include <deque>
 
 #include <boost/current_function.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/pool/object_pool.hpp>
 
-namespace fs = boost::filesystem;
+#include "filesystem_env.hpp"
 
 namespace orcus { namespace json {
 
@@ -107,12 +105,12 @@ std::ostream& operator<< (std::ostream& os, node_t nt)
 document_error::document_error(const std::string& msg) :
     general_error("json::document_error", msg) {}
 
-document_error::~document_error() throw() {}
+document_error::~document_error() = default;
 
 key_value_error::key_value_error(const std::string& msg) :
     document_error(msg) {}
 
-key_value_error::~key_value_error() throw() {}
+key_value_error::~key_value_error() = default;
 
 struct json_value final
 {
@@ -751,10 +749,10 @@ public:
         }
     }
 
-    void object_key(const char* p, size_t len, bool transient)
+    void object_key(std::string_view key, bool transient)
     {
         parser_stack& cur = m_stack.back();
-        cur.key = std::string_view(p, len);
+        cur.key = key;
         if (m_config.persistent_string_values || transient)
             // The tree manages the life cycle of this string value.
             cur.key = m_res.str_pool.intern(cur.key).first;
@@ -781,9 +779,8 @@ public:
         push_value(m_res.obj_pool.construct(detail::node_t::null));
     }
 
-    void string(const char* p, size_t len, bool transient)
+    void string(std::string_view s, bool transient)
     {
-        std::string_view s(p, len);
         if (m_config.persistent_string_values || transient)
             // The tree manages the life cycle of this string value.
             s = m_res.str_pool.intern(s).first;
@@ -1675,7 +1672,7 @@ document_tree& document_tree::operator= (object obj)
 void document_tree::load(std::string_view stream, const json_config& config)
 {
     json::parser_handler hdl(config, mp_impl->m_res);
-    json_parser<json::parser_handler> parser(stream.data(), stream.size(), hdl);
+    json_parser<json::parser_handler> parser(stream, hdl);
     parser.parse();
     mp_impl->m_root = hdl.get_root();
 
@@ -1702,7 +1699,7 @@ void document_tree::load(std::string_view stream, const json_config& config)
         {
             doc.load(ext_content.str(), ext_config);
         }
-        catch (const json::parse_error& e)
+        catch (const parse_error& e)
         {
             std::ostringstream os;
             os << "Error while parsing " << extpath.string() << std::endl;

@@ -8,8 +8,6 @@
 #include "orcus/orcus_csv.hpp"
 
 #include "orcus/csv_parser.hpp"
-#include "pstring.hpp"
-#include "orcus/global.hpp"
 #include "orcus/stream.hpp"
 #include "orcus/spreadsheet/import_interface.hpp"
 #include "orcus/config.hpp"
@@ -30,9 +28,9 @@ struct header_cell
 {
     spreadsheet::row_t row;
     spreadsheet::col_t col;
-    pstring value;
+    std::string_view value;
 
-    header_cell(spreadsheet::row_t _row, spreadsheet::col_t _col, const pstring& _value) :
+    header_cell(spreadsheet::row_t _row, spreadsheet::col_t _col, std::string_view _value) :
         row(_row), col(_col), value(_value) {}
 };
 
@@ -91,20 +89,19 @@ public:
         m_col = 0;
     }
 
-    void cell(const char* p, size_t n, bool transient)
+    void cell(std::string_view v, bool transient)
     {
         auto csv = std::get<config::csv_config>(m_app_config.data);
 
         if (m_sheet == 0 && size_t(m_row) < csv.header_row_size)
         {
-            pstring v(p, n);
             if (transient)
                 v = m_pool.intern(v).first;
 
             m_header_cells.emplace_back(m_row, m_col, v);
         }
 
-        mp_sheet->set_auto(m_row, m_col, {p, n});
+        mp_sheet->set_auto(m_row, m_col, v);
         ++m_col;
     }
 
@@ -150,7 +147,7 @@ struct orcus_csv::impl
         csv::parser_config config;
         config.delimiters.push_back(',');
         config.text_qualifier = '"';
-        csv_parser<orcus_csv_handler> parser(stream.data(), stream.size(), handler, config);
+        csv_parser<orcus_csv_handler> parser(stream, handler, config);
         try
         {
             parser.parse();
@@ -160,9 +157,9 @@ struct orcus_csv::impl
             // The parser has decided to end the import due to the destination
             // sheet being full.
         }
-        catch (const csv::parse_error& e)
+        catch (const parse_error& e)
         {
-            cout << "parse failed: " << e.what() << endl;
+            cout << "parse failed at offset " << e.offset() << ": " << e.what() << endl;
         }
     }
 };
@@ -173,9 +170,9 @@ orcus_csv::orcus_csv(spreadsheet::iface::import_factory* factory) :
 
 orcus_csv::~orcus_csv() {}
 
-void orcus_csv::read_file(const string& filepath)
+void orcus_csv::read_file(std::string_view filepath)
 {
-    file_content fc(filepath.data());
+    file_content fc(filepath);
     mp_impl->parse(fc.str(), get_config());
     mp_impl->factory->finalize();
 }

@@ -15,20 +15,24 @@
 namespace orcus {
 
 /**
- * Temporary cell buffer used to convert cell values when needed.  This is
- * used in the sax and csv parsers.
+ * Temporary cell buffer used to decode encoded cell values.  This is used in
+ * the sax, json and csv parsers.
  */
 class ORCUS_PSR_DLLPUBLIC cell_buffer
 {
     std::string m_buffer;
-    size_t m_buf_size; /// Logical buffer size. May differ from the actual buffer size.
+    size_t m_buf_size;
 public:
+    cell_buffer(const cell_buffer&) = delete;
+
     cell_buffer();
+    ~cell_buffer();
 
     void append(const char* p, size_t len);
     void reset();
-    const char* get() const;
-    size_t size() const;
+
+    std::string_view str() const;
+
     bool empty() const;
 };
 

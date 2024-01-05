@@ -6,7 +6,6 @@
  */
 
 #include <orcus/orcus_xml.hpp>
-#include <orcus/global.hpp>
 #include <orcus/sax_ns_parser.hpp>
 #include <orcus/xml_namespace.hpp>
 #include <orcus/stream.hpp>
@@ -25,11 +24,9 @@
 #include <fstream>
 #include <vector>
 
-#include <boost/filesystem.hpp>
+#include "filesystem_env.hpp"
 
-using namespace std;
 using namespace orcus;
-namespace fs = boost::filesystem;
 
 const fs::path test_base_dir(SRCDIR"/test/xml-mapped");
 
@@ -37,7 +34,7 @@ namespace {
 
 void test_mapped_xml_import()
 {
-    test::stack_printer __stack_printer__("::test_mapped_xml_import");
+    ORCUS_TEST_FUNC_SCOPE;
 
     struct test_case
     {
@@ -66,17 +63,16 @@ void test_mapped_xml_import()
         { SRCDIR"/test/xml-mapped/nested-repeats-4", false },
     };
 
-    auto dump_xml_structure = [](std::string& dump_content, std::string& /*strm*/, const char* filepath, xmlns_context& cxt)
+    auto dump_xml_structure = [](const file_content& content, xmlns_context& cxt)
     {
-        file_content content(filepath);
         dom::document_tree tree(cxt);
         tree.load(content.str());
-        ostringstream os;
+        std::ostringstream os;
         tree.dump_compact(os);
-        dump_content = os.str();
+        return os.str();
     };
 
-    const char* temp_output_xml = "out.xml";
+    const fs::path temp_output_xml = fs::temp_directory_path() / "orcus-output.xml";
 
     std::string strm;
 
@@ -88,7 +84,7 @@ void test_mapped_xml_import()
         fs::path check_file = base_dir / "check.txt";
 
         // Load the data file content.
-        cout << "reading " << data_file.string() << endl;
+        std::cout << "reading " << data_file.string() << std::endl;
         file_content content(data_file.string().data());
         std::string data_strm{content.str()};
 
@@ -113,9 +109,9 @@ void test_mapped_xml_import()
         assert(data_strm[data_strm.size()-1] == '\0');
 
         // Check the content of the document against static check file.
-        ostringstream os;
+        std::ostringstream os;
         doc.dump_check(os);
-        string loaded = os.str();
+        std::string loaded = os.str();
         content.load(check_file.string().data());
         strm = content.str();
 
@@ -131,13 +127,12 @@ void test_mapped_xml_import()
         if (tc.output_equals_input)
         {
             // Output to xml file with the linked values coming from the document.
-            string out_file = temp_output_xml;
-            cout << "writing to " << out_file << endl;
+            std::cout << "writing to " << temp_output_xml << std::endl;
             {
                 // Create a duplicate source XML stream.
-                content.load(data_file.string().data());
+                content.load(data_file.string());
                 std::string data_strm_dup{content.str()};
-                std::ofstream file(out_file);
+                std::ofstream file(temp_output_xml.string(), std::ios::out | std::ios::trunc);
                 assert(file);
                 app.write(data_strm_dup, file);
             }
@@ -145,26 +140,27 @@ void test_mapped_xml_import()
             // Compare the logical xml content of the output xml with the
             // input one. They should be identical.
 
-            string dump_input, dump_output;
-            string strm_data_file, strm_out_file; // Hold the stream content in memory while the namespace context is being used.
-            dump_xml_structure(dump_input, strm_data_file, data_file.string().data(), cxt);
-            dump_xml_structure(dump_output, strm_out_file, out_file.data(), cxt);
+            // Hold the stream content in memory while the namespace context is being used.
+            file_content strm_data_file(data_file.string());
+            file_content strm_out_file(temp_output_xml.string());
+            std::string dump_input = dump_xml_structure(strm_data_file, cxt);
+            std::string dump_output = dump_xml_structure(strm_out_file, cxt);
             assert(!dump_input.empty() && !dump_output.empty());
 
-            cout << dump_input << endl;
-            cout << "--" << endl;
-            cout << dump_output << endl;
+            std::cout << dump_input << std::endl;
+            std::cout << "--" << std::endl;
+            std::cout << dump_output << std::endl;
             assert(dump_input == dump_output);
-
-            // Delete the temporary xml output.
-            fs::remove(out_file.c_str());
         }
     }
+
+    // Delete the temporary xml output.
+    fs::remove(temp_output_xml);
 }
 
 void test_mapped_xml_import_no_map_definition()
 {
-    test::stack_printer __stack_printer__("::test_mapped_xml_import_no_map_definition");
+    ORCUS_TEST_FUNC_SCOPE;
 
     const std::vector<fs::path> tests = {
         test_base_dir / "attribute-basic",
@@ -172,6 +168,7 @@ void test_mapped_xml_import_no_map_definition()
         test_base_dir / "attribute-namespace-2",
         test_base_dir / "attribute-range-self-close",
         test_base_dir / "content-basic",
+        test_base_dir / "content-one-column",
         test_base_dir / "content-namespace",
         test_base_dir / "content-namespace-2",
         test_base_dir / "content-namespace-3",
@@ -187,7 +184,7 @@ void test_mapped_xml_import_no_map_definition()
         fs::path input_file = base_dir / "input.xml";
         fs::path check_file = base_dir / "check-nomap.txt";
 
-        cout << "reading " << input_file.string() << endl;
+        std::cout << "reading " << input_file.string() << std::endl;
 
         file_content content(input_file.string().data());
         file_content expected(check_file.string().data());
@@ -229,7 +226,7 @@ void test_mapped_xml_import_no_map_definition()
 
 void test_invalid_map_definition()
 {
-    test::stack_printer __stack_printer__("::test_invalid_map_definition");
+    ORCUS_TEST_FUNC_SCOPE;
 
     fs::path invalids_dir = test_base_dir / "invalids" / "map-defs";
 
@@ -247,7 +244,7 @@ void test_invalid_map_definition()
 
     for (const fs::path& test : tests)
     {
-        cout << test.string() << endl;
+        std::cout << test.string() << std::endl;
         file_content content(test.string().data());
         doc.clear();
 
@@ -259,17 +256,54 @@ void test_invalid_map_definition()
         catch (const invalid_map_error& e)
         {
             // Success!
-            cout << endl
-                << "Exception received as expected, with the following message:" << endl
-                << endl
-                << test::prefix_multiline_string(e.what(), "  ") << endl
-                << endl;
+            std::cout << std::endl
+                << "Exception received as expected, with the following message:" << std::endl
+                << std::endl
+                << test::prefix_multiline_string(e.what(), "  ") << std::endl
+                << std::endl;
         }
         catch (const std::exception& e)
         {
-            cerr << e.what() << endl;
+            std::cerr << e.what() << std::endl;
             assert(!"Wrong exception thrown.");
         }
+    }
+}
+
+void test_encoding()
+{
+    ORCUS_TEST_FUNC_SCOPE;
+
+    const fs::path test_dir = test_base_dir / "encoding";
+
+    struct test_case
+    {
+        const fs::path path;
+        character_set_t charset;
+    };
+
+    const test_case tests[] = {
+        { test_dir / "utf-8.xml", character_set_t::utf_8 },
+        { test_dir / "gbk.xml", character_set_t::gbk },
+        { test_dir / "euc-jp.xml", character_set_t::euc_jp },
+    };
+
+    for (const auto& test : tests)
+    {
+        std::cout << "reading " << test.path.string() << std::endl;
+
+        file_content content(test.path.string());
+
+        xmlns_repository repo;
+
+        spreadsheet::range_size_t ss{1048576, 16384};
+        spreadsheet::document doc{ss};
+        spreadsheet::import_factory import_fact(doc);
+        orcus_xml app(repo, &import_fact, nullptr);
+
+        app.read_stream(content.str());
+
+        assert(import_fact.get_character_set() == test.charset);
     }
 }
 
@@ -280,6 +314,7 @@ int main()
     test_mapped_xml_import();
     test_mapped_xml_import_no_map_definition();
     test_invalid_map_definition();
+    test_encoding();
 
     return EXIT_SUCCESS;
 }

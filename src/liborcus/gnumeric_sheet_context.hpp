@@ -9,9 +9,16 @@
 #define INCLUDED_ORCUS_GNUMERIC_SHEET_CONTEXT_HPP
 
 #include "xml_context_base.hpp"
-#include "orcus/spreadsheet/types.hpp"
+#include "gnumeric_cell_context.hpp"
+#include "gnumeric_filter_context.hpp"
+#include "gnumeric_names_context.hpp"
+#include "gnumeric_styles_context.hpp"
+#include "gnumeric_types.hpp"
 
-#include "orcus/string_pool.hpp"
+#include <orcus/spreadsheet/types.hpp>
+
+#include <memory>
+#include <optional>
 
 namespace orcus {
 
@@ -20,86 +27,83 @@ namespace spreadsheet { namespace iface {
 class import_factory;
 class import_sheet;
 class import_auto_filter;
+class import_xf;
 
 }}
 
-struct gnumeric_color
-{
-    spreadsheet::color_elem_t red;
-    spreadsheet::color_elem_t green;
-    spreadsheet::color_elem_t blue;
-
-    gnumeric_color():
-        red(0),
-        green(0),
-        blue(0) {}
-};
-
-struct gnumeric_style_region
-{
-    spreadsheet::row_t start_row;
-    spreadsheet::row_t end_row;
-    spreadsheet::col_t start_col;
-    spreadsheet::col_t end_col;
-
-    size_t xf_id;
-    bool contains_conditional_format;
-
-    gnumeric_style_region():
-        start_row(0),
-        end_row(0),
-        start_col(0),
-        end_col(0),
-        xf_id(0),
-        contains_conditional_format(false) {}
-};
-
 class gnumeric_sheet_context : public xml_context_base
 {
+    struct style_region
+    {
+        spreadsheet::row_t start_row = 0;
+        spreadsheet::row_t end_row = 0;
+        spreadsheet::col_t start_col = 0;
+        spreadsheet::col_t end_col = 0;
+
+        std::size_t xf_id = 0;
+        bool contains_conditional_format = false;
+    };
+
 public:
-    gnumeric_sheet_context(session_context& session_cxt, const tokens& tokens, spreadsheet::iface::import_factory* factory, spreadsheet::sheet_t sheet_index);
-    virtual ~gnumeric_sheet_context();
+    gnumeric_sheet_context(
+        session_context& session_cxt, const tokens& tokens,
+        spreadsheet::iface::import_factory* factory);
 
-    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
-    virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
+    virtual ~gnumeric_sheet_context() override;
 
-    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
-    virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(std::string_view str, bool transient);
+    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) override;
+    virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child) override;
+
+    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs) override;
+    virtual bool end_element(xmlns_id_t ns, xml_token_t name) override;
+    virtual void characters(std::string_view str, bool transient) override;
+
+    void reset(spreadsheet::sheet_t sheet);
+
+    std::vector<gnumeric_style> pop_styles();
 
 private:
-    void start_style_region(const xml_attrs_t& attrs);
-    void start_style(const xml_attrs_t& attrs);
-    void start_font(const xml_attrs_t& attrs);
-    void start_col(const xml_attrs_t& attrs);
-    void start_row(const xml_attrs_t& attrs);
-    void start_condition(const xml_attrs_t& attrs);
+    void start_style_region(const xml_token_attrs_t& attrs);
+    void start_style(const xml_token_attrs_t& attrs);
+    void start_font(const xml_token_attrs_t& attrs);
+    void start_col(const xml_token_attrs_t& attrs);
+    void start_row(const xml_token_attrs_t& attrs);
+    void start_condition(const xml_token_attrs_t& attrs);
+    void start_name(const xml_token_attrs_t& attrs);
 
-    void end_table();
     void end_style(bool conditional_format);
     void end_font();
     void end_style_region();
     void end_condition();
     void end_expression();
+    void end_merge();
+    void end_name();
+    void end_names();
+    void end_styles();
 
 private:
-    spreadsheet::iface::import_factory* mp_factory;
-    spreadsheet::sheet_t m_sheet_index;
+    spreadsheet::iface::import_factory* mp_factory = nullptr;
+    spreadsheet::iface::import_sheet* mp_sheet = nullptr;
+    spreadsheet::iface::import_xf* mp_xf = nullptr;
+    spreadsheet::sheet_t m_sheet = -1;
 
-    spreadsheet::iface::import_sheet* mp_sheet;
-    spreadsheet::iface::import_auto_filter* mp_auto_filter;
+    std::optional<style_region> m_region_data;
 
-    std::unique_ptr<xml_context_base> mp_child;
-    std::unique_ptr<gnumeric_style_region> mp_region_data;
-
-    gnumeric_color front_color;
-
-    string_pool m_pool;
+    spreadsheet::color_rgb_t m_front_color;
 
     /**
      * Used for temporary storage of characters
      */
-    std::string_view chars;
+    std::string_view m_chars;
+    std::string_view m_name;
+    std::string_view m_merge_area;
+
+    gnumeric_cell_context m_cxt_cell;
+    gnumeric_filter_context m_cxt_filter;
+    gnumeric_names_context m_cxt_names;
+    gnumeric_styles_context m_cxt_styles;
+
+    std::vector<gnumeric_style> m_styles;
 };
 
 } // namespace orcus

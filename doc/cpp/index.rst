@@ -1,11 +1,10 @@
 
-C++ API
-=======
+C++ API reference
+=================
 
 .. toctree::
    :maxdepth: 2
 
    parser/index.rst
-   filter/interface.rst
-   filter/index.rst
-   model/index.rst
+   core/index.rst
+   spreadsheet-doc/index.rst

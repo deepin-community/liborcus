@@ -9,6 +9,7 @@
 #include "xlsx_autofilter_context.hpp"
 #include "ooxml_namespace_types.hpp"
 #include "ooxml_token_constants.hpp"
+#include "ooxml_global.hpp"
 #include "session_context.hpp"
 #include "xml_context_global.hpp"
 
@@ -16,74 +17,21 @@
 #include "orcus/spreadsheet/import_interface.hpp"
 
 #include <iostream>
+#include <optional>
 
-using namespace std;
+namespace ss = orcus::spreadsheet;
 
 namespace orcus {
 
 namespace {
-
-class table_attr_parser
-{
-    string_pool* m_pool;
-
-    long m_id;
-    long m_totals_row_count;
-
-    pstring m_name;
-    pstring m_display_name;
-    pstring m_ref;
-
-public:
-    table_attr_parser(string_pool* pool) : m_pool(pool), m_id(-1), m_totals_row_count(-1) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        if (attr.ns && attr.ns != NS_ooxml_xlsx)
-            return;
-
-        switch (attr.name)
-        {
-            case XML_id:
-                m_id = to_long(attr.value);
-            break;
-            case XML_totalsRowCount:
-                m_totals_row_count = to_long(attr.value);
-            break;
-            case XML_name:
-                m_name = attr.value;
-                if (attr.transient)
-                    m_name = m_pool->intern(m_name).first;
-            break;
-            case XML_displayName:
-                m_display_name = attr.value;
-                if (attr.transient)
-                    m_display_name = m_pool->intern(m_display_name).first;
-            break;
-            case XML_ref:
-                m_ref = attr.value;
-                if (attr.transient)
-                    m_ref = m_pool->intern(m_ref).first;
-            break;
-            default:
-                ;
-        }
-    }
-
-    long get_id() const { return m_id; }
-    long get_totals_row_count() const { return m_totals_row_count; }
-    pstring get_name() const { return m_name; }
-    pstring get_display_name() const { return m_display_name; }
-    pstring get_ref() const { return m_ref; }
-};
 
 class table_column_attr_parser
 {
     string_pool* m_pool;
 
     long m_id;
-    pstring m_name;
-    pstring m_totals_row_label;
+    std::string_view m_name;
+    std::string_view m_totals_row_label;
     spreadsheet::totals_row_function_t m_totals_row_func;
 
 public:
@@ -119,8 +67,8 @@ public:
     }
 
     long get_id() const { return m_id; }
-    pstring get_name() const { return m_name; }
-    pstring get_totals_row_label() const { return m_totals_row_label; }
+    std::string_view get_name() const { return m_name; }
+    std::string_view get_totals_row_label() const { return m_totals_row_label; }
     spreadsheet::totals_row_function_t get_totals_row_function() const { return m_totals_row_func; }
 };
 
@@ -145,31 +93,31 @@ public:
             case XML_name:
                 mp_table->set_style_name(attr.value);
                 if (m_debug)
-                    cout << "  * table style info (name=" << attr.value << ")" << endl;
+                    std::cout << "  * table style info (name=" << attr.value << ")" << std::endl;
             break;
             case XML_showFirstColumn:
                 b = to_bool(attr.value);
                 mp_table->set_style_show_first_column(b);
                 if (m_debug)
-                    cout << "    * show first column: " << b << endl;
+                    std::cout << "    * show first column: " << b << std::endl;
             break;
             case XML_showLastColumn:
                 b = to_bool(attr.value);
                 mp_table->set_style_show_last_column(b);
                 if (m_debug)
-                    cout << "    * show last column: " << b << endl;
+                    std::cout << "    * show last column: " << b << std::endl;
             break;
             case XML_showRowStripes:
                 b = to_bool(attr.value);
                 mp_table->set_style_show_row_stripes(b);
                 if (m_debug)
-                    cout << "    * show row stripes: " << b << endl;
+                    std::cout << "    * show row stripes: " << b << std::endl;
             break;
             case XML_showColumnStripes:
                 b = to_bool(attr.value);
                 mp_table->set_style_show_column_stripes(b);
                 if (m_debug)
-                    cout << "    * show column stripes: " << b << endl;
+                    std::cout << "    * show column stripes: " << b << std::endl;
             break;
             default:
                 ;
@@ -183,7 +131,13 @@ xlsx_table_context::xlsx_table_context(
     session_context& session_cxt, const tokens& tokens,
     spreadsheet::iface::import_table& table,
     spreadsheet::iface::import_reference_resolver& resolver) :
-    xml_context_base(session_cxt, tokens), m_table(table), m_resolver(resolver) {}
+    xml_context_base(session_cxt, tokens), m_table(table), m_resolver(resolver),
+    m_cxt_autofilter(session_cxt, tokens, resolver)
+{
+    register_child(&m_cxt_autofilter);
+
+    init_ooxml_context(*this);
+}
 
 xlsx_table_context::~xlsx_table_context() {}
 
@@ -191,9 +145,8 @@ xml_context_base* xlsx_table_context::create_child_context(xmlns_id_t ns, xml_to
 {
     if (ns == NS_ooxml_xlsx && name == XML_autoFilter)
     {
-        mp_child.reset(new xlsx_autofilter_context(get_session_context(), get_tokens(), m_resolver));
-        mp_child->transfer_common(*this);
-        return mp_child.get();
+        m_cxt_autofilter.reset();
+        return &m_cxt_autofilter;
     }
     return nullptr;
 }
@@ -202,6 +155,8 @@ void xlsx_table_context::end_child_context(xmlns_id_t ns, xml_token_t name, xml_
 {
     if (ns == NS_ooxml_xlsx && name == XML_autoFilter)
     {
+        assert(child == &m_cxt_autofilter);
+
         spreadsheet::iface::import_auto_filter* af = m_table.get_auto_filter();
         if (!af)
             return;
@@ -211,47 +166,29 @@ void xlsx_table_context::end_child_context(xmlns_id_t ns, xml_token_t name, xml_
     }
 }
 
-void xlsx_table_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs)
+void xlsx_table_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs)
 {
     xml_token_pair_t parent = push_stack(ns, name);
     if (ns != NS_ooxml_xlsx)
         return;
 
-    pstring str;
+    std::string_view str;
 
     switch (name)
     {
         case XML_table:
         {
             xml_element_expected(parent, XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN);
-            table_attr_parser func(&get_session_context().m_string_pool);
-            func = for_each(attrs.begin(), attrs.end(), func);
-
-            if (get_config().debug)
-            {
-                cout << "* table (range=" << func.get_ref() << "; id=" << func.get_id()
-                     << "; name=" << func.get_name() << "; display name="
-                     << func.get_display_name() << ")" << endl;
-                cout << "  * totals row count: " << func.get_totals_row_count() << endl;
-            }
-
-            m_table.set_identifier(func.get_id());
-            str = func.get_ref();
-            m_table.set_range(str);
-            str = func.get_name();
-            m_table.set_name(str);
-            str = func.get_display_name();
-            m_table.set_display_name(str);
-            m_table.set_totals_row_count(func.get_totals_row_count());
+            start_element_table(attrs);
+            break;
         }
-        break;
         case XML_tableColumns:
         {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_table);
             single_long_attr_getter func(NS_ooxml_xlsx, XML_count);
             long column_count = for_each(attrs.begin(), attrs.end(), func).get_value();
             if (get_config().debug)
-                cout << "  * column count: " << column_count << endl;
+                std::cout << "  * column count: " << column_count << std::endl;
 
             m_table.set_column_count(column_count);
         }
@@ -259,13 +196,13 @@ void xlsx_table_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
         case XML_tableColumn:
         {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_tableColumns);
-            table_column_attr_parser func(&get_session_context().m_string_pool);
+            table_column_attr_parser func(&get_session_context().spool);
             func = for_each(attrs.begin(), attrs.end(), func);
             if (get_config().debug)
             {
-                cout << "  * table column (id=" << func.get_id() << "; name=" << func.get_name() << ")" << endl;
-                cout << "    * totals row label: " << func.get_totals_row_label() << endl;
-                cout << "    * totals func: " << static_cast<int>(func.get_totals_row_function()) << endl;
+                std::cout << "  * table column (id=" << func.get_id() << "; name=" << func.get_name() << ")" << std::endl;
+                std::cout << "    * totals row label: " << func.get_totals_row_label() << std::endl;
+                std::cout << "    * totals func: " << static_cast<int>(func.get_totals_row_function()) << std::endl;
             }
 
             m_table.set_column_identifier(func.get_id());
@@ -309,8 +246,72 @@ bool xlsx_table_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_table_context::characters(std::string_view /*str*/, bool /*transient*/)
+void xlsx_table_context::start_element_table(const xml_token_attrs_t& attrs)
 {
+    long id = -1;
+    long totals_row_count = -1;
+
+    std::optional<std::string_view> name;
+    std::optional<std::string_view> display_name;
+    std::optional<std::string_view> ref;
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        if (attr.ns)
+            continue;
+
+        switch (attr.name)
+        {
+            case XML_id:
+                id = to_long(attr.value);
+                break;
+            case XML_totalsRowCount:
+                totals_row_count = to_long(attr.value);
+                break;
+            case XML_name:
+                name = attr.value;
+                break;
+            case XML_displayName:
+                display_name = attr.value;
+                break;
+            case XML_ref:
+                ref = attr.value;
+                break;
+        }
+    }
+
+    if (get_config().debug)
+    {
+        auto str_or_not = [](const auto& v) -> std::string_view
+        {
+            return v ? *v : "-";
+        };
+
+        std::cout << "* table (range=" << str_or_not(ref)
+             << "; id=" << id
+             << "; name=" << str_or_not(name)
+             << "; display name=" << str_or_not(display_name) << ")" << std::endl;
+
+        std::cout << "  * totals row count: " << totals_row_count << std::endl;
+    }
+
+    if (id >= 0)
+        m_table.set_identifier(id);
+
+    if (ref)
+    {
+        ss::range_t range = to_rc_range(m_resolver.resolve_range(*ref));
+        m_table.set_range(range);
+    }
+
+    if (name)
+        m_table.set_name(*name);
+
+    if (display_name)
+        m_table.set_display_name(*display_name);
+
+    if (totals_row_count >= 0)
+        m_table.set_totals_row_count(totals_row_count);
 }
 
 }

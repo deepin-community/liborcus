@@ -8,7 +8,6 @@
 #include "orcus/orcus_xlsx.hpp"
 
 #include "orcus/xml_namespace.hpp"
-#include "orcus/global.hpp"
 #include "orcus/spreadsheet/import_interface.hpp"
 #include "orcus/exception.hpp"
 #include "orcus/config.hpp"
@@ -16,7 +15,8 @@
 
 #include "xlsx_types.hpp"
 #include "xlsx_handler.hpp"
-#include "xlsx_context.hpp"
+#include "xlsx_shared_strings_context.hpp"
+#include "xlsx_styles_context.hpp"
 #include "xlsx_workbook_context.hpp"
 #include "xlsx_revision_context.hpp"
 #include "ooxml_tokens.hpp"
@@ -124,7 +124,7 @@ struct orcus_xlsx::impl
     opc_reader m_opc_reader;
 
     impl(spreadsheet::iface::import_factory* factory, orcus_xlsx& parent) :
-        m_cxt(new xlsx_session_data),
+        m_cxt(std::make_unique<xlsx_session_data>()),
         mp_factory(factory),
         m_opc_handler(parent),
         m_opc_reader(parent.get_config(), m_ns_repo, m_cxt, m_opc_handler) {}
@@ -155,55 +155,53 @@ bool orcus_xlsx::detect(const unsigned char* blob, size_t size)
 {
     zip_archive_stream_blob stream(blob, size);
     zip_archive archive(&stream);
+
     try
     {
         archive.load();
+
+        // Find and parse [Content_Types].xml which is required for OPC package.
+        std::vector<unsigned char> buf = archive.read_file_entry("[Content_Types].xml");
+
+        if (buf.empty())
+            return false;
+
+        config opt(format_t::xlsx);
+        xmlns_repository ns_repo;
+        ns_repo.add_predefined_values(NS_opc_all);
+        session_context session_cxt;
+        xml_stream_parser parser(
+            opt, ns_repo, opc_tokens, reinterpret_cast<const char*>(&buf[0]), buf.size());
+
+        xml_simple_stream_handler handler(
+            session_cxt, opc_tokens,
+            std::make_unique<opc_content_types_context>(session_cxt, opc_tokens));
+        parser.set_handler(&handler);
+        parser.parse();
+
+        opc_content_types_context& context =
+            static_cast<opc_content_types_context&>(handler.get_context());
+
+        std::vector<xml_part_t> parts;
+        context.pop_parts(parts);
+
+        if (parts.empty())
+            return false;
+
+        // See if we can find the workbook stream.
+        xml_part_t workbook_part("/xl/workbook.xml", CT_ooxml_xlsx_sheet_main);
+        return std::find(parts.begin(), parts.end(), workbook_part) != parts.end();
     }
-    catch (const zip_error&)
+    catch (const std::exception&)
     {
-        // Not a valid zip archive.
         return false;
     }
-
-    // Find and parse [Content_Types].xml which is required for OPC package.
-    vector<unsigned char> buf;
-    if (!archive.read_file_entry("[Content_Types].xml", buf))
-        // Failed to read the contnet types entry.
-        return false;
-
-    if (buf.empty())
-        return false;
-
-    config opt(format_t::xlsx);
-    xmlns_repository ns_repo;
-    ns_repo.add_predefined_values(NS_opc_all);
-    session_context session_cxt;
-    xml_stream_parser parser(
-        opt, ns_repo, opc_tokens, reinterpret_cast<const char*>(&buf[0]), buf.size());
-
-    xml_simple_stream_handler handler(
-        session_cxt, opc_tokens,
-        std::make_unique<opc_content_types_context>(session_cxt, opc_tokens));
-    parser.set_handler(&handler);
-    parser.parse();
-
-    opc_content_types_context& context =
-        static_cast<opc_content_types_context&>(handler.get_context());
-
-    std::vector<xml_part_t> parts;
-    context.pop_parts(parts);
-
-    if (parts.empty())
-        return false;
-
-    // See if we can find the workbook stream.
-    xml_part_t workbook_part("/xl/workbook.xml", CT_ooxml_xlsx_sheet_main);
-    return std::find(parts.begin(), parts.end(), workbook_part) != parts.end();
 }
 
-void orcus_xlsx::read_file(const string& filepath)
+void orcus_xlsx::read_file(std::string_view filepath)
 {
-    std::unique_ptr<zip_archive_stream> stream(new zip_archive_stream_fd(filepath.c_str()));
+    std::unique_ptr<zip_archive_stream> stream(
+        new zip_archive_stream_fd(std::string{filepath}.c_str()));
     mp_impl->m_opc_reader.read_file(std::move(stream));
 
     // Formulas need to be inserted to the document after the shared string
@@ -256,7 +254,7 @@ void orcus_xlsx::set_formulas_to_doc()
         }
     };
 
-    xlsx_session_data& sdata = static_cast<xlsx_session_data&>(*mp_impl->m_cxt.mp_data);
+    auto& sdata = mp_impl->m_cxt.get_data<xlsx_session_data>();
 
     // Insert shared formulas first.
     for (auto& p : sdata.m_shared_formulas)
@@ -345,7 +343,7 @@ size_t get_schema_rank(const schema_t sch)
 
 void orcus_xlsx::read_workbook(const string& dir_path, const string& file_name)
 {
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
         cout << "read_workbook: file path = " << filepath << endl;
 
@@ -407,13 +405,13 @@ void orcus_xlsx::read_workbook(const string& dir_path, const string& file_name)
             if (rank_left != rank_right)
                 return rank_left < rank_right;
 
-            pstring rid1 = left.rid, rid2 = right.rid;
+            std::string_view rid1 = left.rid, rid2 = right.rid;
 
             if (rid1.size() > 1 && rid2.size() > 1)
             {
                 // numerical comparison of relation ID's.
-                rid1 = pstring(&rid1[1], rid1.size()-1); // remove the 'r' prefix.
-                rid2 = pstring(&rid2[1], rid2.size()-1); // remove the 'r' prefix.
+                rid1 = std::string_view(rid1.data()+1, rid1.size()-1); // remove the 'r' prefix.
+                rid2 = std::string_view(rid2.data()+1, rid2.size()-1); // remove the 'r' prefix.
                 return to_long(rid1) < to_long(rid2);
             }
 
@@ -424,13 +422,14 @@ void orcus_xlsx::read_workbook(const string& dir_path, const string& file_name)
     mp_impl->m_opc_reader.check_relation_part(file_name, &workbook_data, &sort_func);
 }
 
-void orcus_xlsx::read_sheet(const string& dir_path, const string& file_name, xlsx_rel_sheet_info* data)
+void orcus_xlsx::read_sheet(
+    const std::string& dir_path, const std::string& file_name, xlsx_rel_sheet_info* data)
 {
     if (!data || !data->id)
         // Sheet ID must not be 0.
         return;
 
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -480,9 +479,9 @@ void orcus_xlsx::read_sheet(const string& dir_path, const string& file_name, xls
     mp_impl->m_opc_reader.check_relation_part(file_name, &table_info);
 }
 
-void orcus_xlsx::read_shared_strings(const string& dir_path, const string& file_name)
+void orcus_xlsx::read_shared_strings(const std::string& dir_path, const std::string& file_name)
 {
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -509,9 +508,9 @@ void orcus_xlsx::read_shared_strings(const string& dir_path, const string& file_
     parser.parse();
 }
 
-void orcus_xlsx::read_styles(const string& dir_path, const string& file_name)
+void orcus_xlsx::read_styles(const std::string& dir_path, const std::string& file_name)
 {
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -560,7 +559,7 @@ void orcus_xlsx::read_table(const std::string& dir_path, const std::string& file
         // This client doesn't support reference resolver, but is required.
         return;
 
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -603,7 +602,7 @@ void orcus_xlsx::read_pivot_cache_def(
         return;
     }
 
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -657,7 +656,7 @@ void orcus_xlsx::read_pivot_cache_rec(
         return;
     }
 
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -694,7 +693,7 @@ void orcus_xlsx::read_pivot_cache_rec(
 
 void orcus_xlsx::read_pivot_table(const std::string& dir_path, const std::string& file_name)
 {
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -725,7 +724,7 @@ void orcus_xlsx::read_pivot_table(const std::string& dir_path, const std::string
 
 void orcus_xlsx::read_rev_headers(const std::string& dir_path, const std::string& file_name)
 {
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -759,7 +758,7 @@ void orcus_xlsx::read_rev_headers(const std::string& dir_path, const std::string
 
 void orcus_xlsx::read_rev_log(const std::string& dir_path, const std::string& file_name)
 {
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;
@@ -792,7 +791,7 @@ void orcus_xlsx::read_rev_log(const std::string& dir_path, const std::string& fi
 
 void orcus_xlsx::read_drawing(const std::string& dir_path, const std::string& file_name)
 {
-    string filepath = resolve_file_path(dir_path, file_name);
+    std::string filepath = resolve_file_path(dir_path, file_name);
     if (get_config().debug)
     {
         cout << "---" << endl;

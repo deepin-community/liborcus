@@ -6,7 +6,6 @@
  */
 
 #include <orcus/string_pool.hpp>
-#include <orcus/global.hpp>
 #include <orcus/exception.hpp>
 
 #include <iostream>
@@ -42,10 +41,9 @@ struct string_pool::impl
 
 string_pool::string_pool() : mp_impl(std::make_unique<impl>()) {}
 
-string_pool::~string_pool()
-{
-    clear();
-}
+string_pool::string_pool(string_pool&& other) : mp_impl(std::move(other.mp_impl)) {}
+
+string_pool::~string_pool() = default;
 
 std::pair<std::string_view, bool> string_pool::intern(std::string_view str)
 {
@@ -106,8 +104,7 @@ void string_pool::dump() const
 
 void string_pool::clear()
 {
-    mp_impl->m_set.clear();
-    mp_impl->m_stores.clear();
+    mp_impl = std::make_unique<impl>();
 }
 
 size_t string_pool::size() const

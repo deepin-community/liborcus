@@ -15,6 +15,7 @@
 #include "flat_dumper.hpp"
 #include "html_dumper.hpp"
 #include "sheet_impl.hpp"
+#include "debug_state_dumper.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -22,16 +23,20 @@
 #include <cassert>
 #include <cstdlib>
 
+#include <ixion/exceptions.hpp>
 #include <ixion/formula.hpp>
 #include <ixion/model_context.hpp>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/greg_date.hpp>
 
+#include "filesystem_env.hpp"
+
 #define ORCUS_DEBUG_SHEET 0
 
 using namespace std;
-using namespace boost;
+namespace gregorian = boost::gregorian;
+namespace posix_time = boost::posix_time;
 
 namespace orcus { namespace spreadsheet {
 
@@ -57,11 +62,10 @@ const row_t sheet::max_row_limit = 1048575;
 const col_t sheet::max_col_limit = 1023;
 
 sheet::sheet(document& doc, sheet_t sheet_index) :
-    mp_impl(new sheet_impl(doc, *this, sheet_index)) {}
+    mp_impl(std::make_unique<detail::sheet_impl>(doc, *this, sheet_index)) {}
 
-sheet::~sheet()
+sheet::~sheet() noexcept
 {
-    delete mp_impl;
 }
 
 void sheet::set_auto(row_t row, col_t col, std::string_view s)
@@ -69,7 +73,7 @@ void sheet::set_auto(row_t row, col_t col, std::string_view s)
     if (s.empty())
         return;
 
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
 
     // First, see if this can be parsed as a number.
     char* endptr = nullptr;
@@ -77,39 +81,39 @@ void sheet::set_auto(row_t row, col_t col, std::string_view s)
     const char* endptr_check = s.data() + s.size();
     if (endptr == endptr_check)
         // Treat this as a numeric value.
-        cxt.set_numeric_cell(ixion::abs_address_t(mp_impl->m_sheet,row,col), val);
+        cxt.set_numeric_cell(ixion::abs_address_t(mp_impl->sheet_id,row,col), val);
     else
         // Treat this as a string value.
-        cxt.set_string_cell(ixion::abs_address_t(mp_impl->m_sheet,row,col), s);
+        cxt.set_string_cell(ixion::abs_address_t(mp_impl->sheet_id,row,col), s);
 }
 
 void sheet::set_string(row_t row, col_t col, string_id_t sindex)
 {
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
-    cxt.set_string_cell(ixion::abs_address_t(mp_impl->m_sheet,row,col), sindex);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
+    cxt.set_string_cell(ixion::abs_address_t(mp_impl->sheet_id,row,col), sindex);
 
 #if ORCUS_DEBUG_SHEET
-    cout << "sheet::set_string: sheet=" << mp_impl->m_sheet << "; row=" << row << "; col=" << col << "; si=" << sindex << endl;
+    cout << "sheet::set_string: sheet=" << mp_impl->sheet_id << "; row=" << row << "; col=" << col << "; si=" << sindex << endl;
 #endif
 }
 
 void sheet::set_value(row_t row, col_t col, double value)
 {
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
-    cxt.set_numeric_cell(ixion::abs_address_t(mp_impl->m_sheet,row,col), value);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
+    cxt.set_numeric_cell(ixion::abs_address_t(mp_impl->sheet_id,row,col), value);
 }
 
 void sheet::set_bool(row_t row, col_t col, bool value)
 {
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
-    cxt.set_boolean_cell(ixion::abs_address_t(mp_impl->m_sheet,row,col), value);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
+    cxt.set_boolean_cell(ixion::abs_address_t(mp_impl->sheet_id,row,col), value);
 }
 
 void sheet::set_date_time(row_t row, col_t col, int year, int month, int day, int hour, int minute, double second)
 {
     // Convert this to a double value representing days since epoch.
 
-    date_time_t dt_origin = mp_impl->m_doc.get_origin_date();
+    date_time_t dt_origin = mp_impl->doc.get_origin_date();
 
     gregorian::date origin(dt_origin.year, dt_origin.month, dt_origin.day);
     gregorian::date d(year, month, day);
@@ -140,13 +144,11 @@ void sheet::set_format(row_t row_start, col_t col_start, row_t row_end, col_t co
 {
     for (col_t col = col_start; col <= col_end; ++col)
     {
-        cell_format_type::iterator itr = mp_impl->m_cell_formats.find(col);
-        if (itr == mp_impl->m_cell_formats.end())
+        auto itr = mp_impl->cell_formats.find(col);
+        if (itr == mp_impl->cell_formats.end())
         {
-            auto p = std::make_unique<segment_row_index_type>(0, mp_impl->m_doc.get_sheet_size().rows+1, 0);
-
-            pair<cell_format_type::iterator, bool> r =
-                mp_impl->m_cell_formats.insert(cell_format_type::value_type(col, std::move(p)));
+            auto p = std::make_unique<detail::segment_row_index_type>(0, mp_impl->doc.get_sheet_size().rows, 0);
+            auto r = mp_impl->cell_formats.emplace(col, std::move(p));
 
             if (!r.second)
             {
@@ -157,26 +159,37 @@ void sheet::set_format(row_t row_start, col_t col_start, row_t row_end, col_t co
             itr = r.first;
         }
 
-        segment_row_index_type& con = *itr->second;
+        detail::segment_row_index_type& con = *itr->second;
         con.insert_back(row_start, row_end+1, index);
     }
 }
 
+void sheet::set_column_format(col_t col, col_t col_span, std::size_t index)
+{
+    if (col_span > 0)
+        mp_impl->column_formats.insert_back(col, col + col_span, index);
+}
+
+void sheet::set_row_format(row_t row, std::size_t index)
+{
+    mp_impl->row_formats.insert_back(row, row+1, index);
+}
+
 void sheet::set_formula(row_t row, col_t col, const ixion::formula_tokens_store_ptr_t& tokens)
 {
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
-    ixion::abs_address_t pos(mp_impl->m_sheet, row, col);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
+    ixion::abs_address_t pos(mp_impl->sheet_id, row, col);
 
     cxt.set_formula_cell(pos, tokens);
     try
     {
         ixion::register_formula_cell(cxt, pos);
-        mp_impl->m_doc.insert_dirty_cell(pos);
+        mp_impl->doc.insert_dirty_cell(pos);
     }
-    catch (const ixion::formula_registration_error& e)
+    catch ([[maybe_unused]] const ixion::formula_registration_error& e)
     {
 #if ORCUS_DEBUG_SHEET
-        cout << "sheet::set_formula: sheet=" << mp_impl->m_sheet << "; row=" << row << "; col=" << col << "; e=" << e.what() << endl;
+        cout << "sheet::set_formula: sheet=" << mp_impl->sheet_id << "; row=" << row << "; col=" << col << "; e=" << e.what() << endl;
 #endif
     }
 }
@@ -185,71 +198,71 @@ void sheet::set_formula(
     row_t row, col_t col, const ixion::formula_tokens_store_ptr_t& tokens,
     ixion::formula_result result)
 {
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
-    ixion::abs_address_t pos(mp_impl->m_sheet, row, col);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
+    ixion::abs_address_t pos(mp_impl->sheet_id, row, col);
 
     cxt.set_formula_cell(pos, tokens, result);
 
     try
     {
         ixion::register_formula_cell(cxt, pos);
-        mp_impl->m_doc.insert_dirty_cell(pos);
+        mp_impl->doc.insert_dirty_cell(pos);
     }
-    catch (const ixion::formula_registration_error& e)
+    catch ([[maybe_unused]] const ixion::formula_registration_error& e)
     {
 #if ORCUS_DEBUG_SHEET
-        cout << "sheet::set_formula: sheet=" << mp_impl->m_sheet << "; row=" << row << "; col=" << col << "; e=" << e.what() << endl;
+        cout << "sheet::set_formula: sheet=" << mp_impl->sheet_id << "; row=" << row << "; col=" << col << "; e=" << e.what() << endl;
 #endif
     }
 }
 
 void sheet::set_grouped_formula(const range_t& range, ixion::formula_tokens_t tokens)
 {
-    ixion::abs_range_t pos = to_ixion_range(mp_impl->m_sheet, range);
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
+    ixion::abs_range_t pos = to_ixion_range(mp_impl->sheet_id, range);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
 
     cxt.set_grouped_formula_cells(pos, std::move(tokens));
     try
     {
         ixion::register_formula_cell(cxt, pos.first);
-        mp_impl->m_doc.insert_dirty_cell(pos.first);
+        mp_impl->doc.insert_dirty_cell(pos.first);
     }
-    catch (const ixion::formula_registration_error& e)
+    catch ([[maybe_unused]] const ixion::formula_registration_error& e)
     {
 #if ORCUS_DEBUG_SHEET
-        cout << "sheet::set_formula: sheet=" << mp_impl->m_sheet << "; range=" << range << "; e=" << e.what() << endl;
+        cout << "sheet::set_formula: sheet=" << mp_impl->sheet_id << "; range=" << range << "; e=" << e.what() << endl;
 #endif
     }
 }
 
 void sheet::set_grouped_formula(const range_t& range, ixion::formula_tokens_t tokens, ixion::formula_result result)
 {
-    ixion::abs_range_t pos = to_ixion_range(mp_impl->m_sheet, range);
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
+    ixion::abs_range_t pos = to_ixion_range(mp_impl->sheet_id, range);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
 
     cxt.set_grouped_formula_cells(pos, std::move(tokens), std::move(result));
     try
     {
         ixion::register_formula_cell(cxt, pos.first);
-        mp_impl->m_doc.insert_dirty_cell(pos.first);
+        mp_impl->doc.insert_dirty_cell(pos.first);
     }
-    catch (const ixion::formula_registration_error& e)
+    catch ([[maybe_unused]] const ixion::formula_registration_error& e)
     {
 #if ORCUS_DEBUG_SHEET
-        cout << "sheet::set_formula: sheet=" << mp_impl->m_sheet << "; range=" << range << "; e=" << e.what() << endl;
+        cout << "sheet::set_formula: sheet=" << mp_impl->sheet_id << "; range=" << range << "; e=" << e.what() << endl;
 #endif
     }
 }
 
-void sheet::set_col_width(col_t col, col_width_t width)
+void sheet::set_col_width(col_t col, col_t col_span, col_width_t width)
 {
-    mp_impl->m_col_width_pos =
-        mp_impl->m_col_widths.insert(mp_impl->m_col_width_pos, col, col+1, width).first;
+    mp_impl->col_width_pos =
+        mp_impl->col_widths.insert(mp_impl->col_width_pos, col, col+col_span, width).first;
 }
 
 col_width_t sheet::get_col_width(col_t col, col_t* col_start, col_t* col_end) const
 {
-    col_widths_store_type& col_widths = mp_impl->m_col_widths;
+    detail::col_widths_store_type& col_widths = mp_impl->col_widths;
     if (!col_widths.is_tree_valid())
         col_widths.build_tree();
 
@@ -260,15 +273,15 @@ col_width_t sheet::get_col_width(col_t col, col_t* col_start, col_t* col_end) co
     return ret;
 }
 
-void sheet::set_col_hidden(col_t col, bool hidden)
+void sheet::set_col_hidden(col_t col, col_t col_span, bool hidden)
 {
-    mp_impl->m_col_hidden_pos =
-        mp_impl->m_col_hidden.insert(mp_impl->m_col_hidden_pos, col, col+1, hidden).first;
+    mp_impl->col_hidden_pos =
+        mp_impl->col_hidden.insert(mp_impl->col_hidden_pos, col, col+col_span, hidden).first;
 }
 
 bool sheet::is_col_hidden(col_t col, col_t* col_start, col_t* col_end) const
 {
-    col_hidden_store_type& col_hidden = mp_impl->m_col_hidden;
+    detail::col_hidden_store_type& col_hidden = mp_impl->col_hidden;
     if (!col_hidden.is_tree_valid())
         col_hidden.build_tree();
 
@@ -281,13 +294,13 @@ bool sheet::is_col_hidden(col_t col, col_t* col_start, col_t* col_end) const
 
 void sheet::set_row_height(row_t row, row_height_t height)
 {
-    mp_impl->m_row_height_pos =
-        mp_impl->m_row_heights.insert(mp_impl->m_row_height_pos, row, row+1, height).first;
+    mp_impl->row_height_pos =
+        mp_impl->row_heights.insert(mp_impl->row_height_pos, row, row+1, height).first;
 }
 
 row_height_t sheet::get_row_height(row_t row, row_t* row_start, row_t* row_end) const
 {
-    row_heights_store_type& row_heights = mp_impl->m_row_heights;
+    detail::row_heights_store_type& row_heights = mp_impl->row_heights;
     if (!row_heights.is_tree_valid())
         row_heights.build_tree();
 
@@ -300,13 +313,13 @@ row_height_t sheet::get_row_height(row_t row, row_t* row_start, row_t* row_end) 
 
 void sheet::set_row_hidden(row_t row, bool hidden)
 {
-    mp_impl->m_row_hidden_pos =
-        mp_impl->m_row_hidden.insert(mp_impl->m_row_hidden_pos, row, row+1, hidden).first;
+    mp_impl->row_hidden_pos =
+        mp_impl->row_hidden.insert(mp_impl->row_hidden_pos, row, row+1, hidden).first;
 }
 
 bool sheet::is_row_hidden(row_t row, row_t* row_start, row_t* row_end) const
 {
-    row_hidden_store_type& row_hidden = mp_impl->m_row_hidden;
+    detail::row_hidden_store_type& row_hidden = mp_impl->row_hidden;
     if (!row_hidden.is_tree_valid())
         row_hidden.build_tree();
 
@@ -319,12 +332,12 @@ bool sheet::is_row_hidden(row_t row, row_t* row_start, row_t* row_end) const
 
 void sheet::set_merge_cell_range(const range_t& range)
 {
-    detail::col_merge_size_type::iterator it_col = mp_impl->m_merge_ranges.find(range.first.column);
-    if (it_col == mp_impl->m_merge_ranges.end())
+    detail::col_merge_size_type::iterator it_col = mp_impl->merge_ranges.find(range.first.column);
+    if (it_col == mp_impl->merge_ranges.end())
     {
         auto p = std::make_unique<detail::merge_size_type>();
         pair<detail::col_merge_size_type::iterator, bool> r =
-            mp_impl->m_merge_ranges.insert(
+            mp_impl->merge_ranges.insert(
                 detail::col_merge_size_type::value_type(range.first.column, std::move(p)));
 
         if (!r.second)
@@ -342,8 +355,8 @@ void sheet::set_merge_cell_range(const range_t& range)
 
 void sheet::fill_down_cells(row_t src_row, col_t src_col, row_t range_size)
 {
-    ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
-    ixion::abs_address_t src_pos(mp_impl->m_sheet, src_row, src_col);
+    ixion::model_context& cxt = mp_impl->doc.get_model_context();
+    ixion::abs_address_t src_pos(mp_impl->sheet_id, src_row, src_col);
     cxt.fill_down_cells(src_pos, range_size);
 }
 
@@ -355,8 +368,8 @@ range_t sheet::get_merge_cell_range(row_t row, col_t col) const
     ret.last.column = col;
     ret.last.row = row;
 
-    detail::col_merge_size_type::const_iterator it_col = mp_impl->m_merge_ranges.find(col);
-    if (it_col == mp_impl->m_merge_ranges.end())
+    detail::col_merge_size_type::const_iterator it_col = mp_impl->merge_ranges.find(col);
+    if (it_col == mp_impl->merge_ranges.end())
         return ret; // not a merged cell
 
     const detail::merge_size_type& col_data = *it_col->second;
@@ -373,23 +386,23 @@ range_t sheet::get_merge_cell_range(row_t row, col_t col) const
 
 size_t sheet::get_string_identifier(row_t row, col_t col) const
 {
-    const ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
-    return cxt.get_string_identifier(ixion::abs_address_t(mp_impl->m_sheet, row, col));
+    const ixion::model_context& cxt = mp_impl->doc.get_model_context();
+    return cxt.get_string_identifier(ixion::abs_address_t(mp_impl->sheet_id, row, col));
 }
 
 auto_filter_t* sheet::get_auto_filter_data()
 {
-    return mp_impl->mp_auto_filter_data.get();
+    return mp_impl->auto_filter_data.get();
 }
 
 const auto_filter_t* sheet::get_auto_filter_data() const
 {
-    return mp_impl->mp_auto_filter_data.get();
+    return mp_impl->auto_filter_data.get();
 }
 
 void sheet::set_auto_filter_data(auto_filter_t* p)
 {
-    mp_impl->mp_auto_filter_data.reset(p);
+    mp_impl->auto_filter_data.reset(p);
 }
 
 ixion::abs_range_t sheet::get_data_range() const
@@ -399,21 +412,21 @@ ixion::abs_range_t sheet::get_data_range() const
 
 sheet_t sheet::get_index() const
 {
-    return mp_impl->m_sheet;
+    return mp_impl->sheet_id;
 }
 
 date_time_t sheet::get_date_time(row_t row, col_t col) const
 {
-    const ixion::model_context& cxt = mp_impl->m_doc.get_model_context();
+    const ixion::model_context& cxt = mp_impl->doc.get_model_context();
 
     // raw value as days since epoch.
     double dt_raw = cxt.get_numeric_value(
-        ixion::abs_address_t(mp_impl->m_sheet, row, col));
+        ixion::abs_address_t(mp_impl->sheet_id, row, col));
 
     double days_since_epoch = std::floor(dt_raw);
     double time_fraction = dt_raw - days_since_epoch;
 
-    date_time_t dt_origin = mp_impl->m_doc.get_origin_date();
+    date_time_t dt_origin = mp_impl->doc.get_origin_date();
 
     posix_time::ptime origin(
         gregorian::date(
@@ -453,16 +466,16 @@ date_time_t sheet::get_date_time(row_t row, col_t col) const
     return date_time_t(d.year(), d.month(), d.day(), hours, minutes, seconds);
 }
 
-void sheet::finalize()
+void sheet::finalize_import()
 {
-    mp_impl->m_col_widths.build_tree();
-    mp_impl->m_row_heights.build_tree();
+    mp_impl->col_widths.build_tree();
+    mp_impl->row_heights.build_tree();
 }
 
 void sheet::dump_flat(std::ostream& os) const
 {
-    detail::flat_dumper dumper(mp_impl->m_doc);
-    dumper.dump(os, mp_impl->m_sheet);
+    detail::flat_dumper dumper(mp_impl->doc);
+    dumper.dump(os, mp_impl->sheet_id);
 }
 
 void sheet::dump_check(ostream& os, std::string_view sheet_name) const
@@ -473,43 +486,68 @@ void sheet::dump_check(ostream& os, std::string_view sheet_name) const
 
 void sheet::dump_html(std::ostream& os) const
 {
-    if (!mp_impl->m_col_widths.is_tree_valid())
-        mp_impl->m_col_widths.build_tree();
+    if (!mp_impl->col_widths.is_tree_valid())
+        mp_impl->col_widths.build_tree();
 
-    if (!mp_impl->m_row_heights.is_tree_valid())
-        mp_impl->m_row_heights.build_tree();
+    if (!mp_impl->row_heights.is_tree_valid())
+        mp_impl->row_heights.build_tree();
 
-    detail::html_dumper dumper(mp_impl->m_doc, mp_impl->m_merge_ranges, mp_impl->m_sheet);
+    detail::html_dumper dumper(mp_impl->doc, mp_impl->merge_ranges, mp_impl->sheet_id);
     dumper.dump(os);
 }
 
 void sheet::dump_json(std::ostream& os) const
 {
-    detail::json_dumper dumper(mp_impl->m_doc);
-    dumper.dump(os, mp_impl->m_sheet);
+    detail::json_dumper dumper(mp_impl->doc);
+    dumper.dump(os, mp_impl->sheet_id);
 }
 
 void sheet::dump_csv(std::ostream& os) const
 {
-    detail::csv_dumper dumper(mp_impl->m_doc);
-    dumper.dump(os, mp_impl->m_sheet);
+    detail::csv_dumper dumper(mp_impl->doc);
+    dumper.dump(os, mp_impl->sheet_id);
+}
+
+void sheet::dump_debug_state(const std::string& output_dir, std::string_view sheet_name) const
+{
+    fs::path outdir{output_dir};
+    detail::sheet_debug_state_dumper dumper(*mp_impl, sheet_name);
+    dumper.dump(outdir);
 }
 
 size_t sheet::get_cell_format(row_t row, col_t col) const
 {
-    cell_format_type::const_iterator itr = mp_impl->m_cell_formats.find(col);
-    if (itr == mp_impl->m_cell_formats.end())
-        return 0;
+    // Check the cell format store first
+    auto it = mp_impl->cell_formats.find(col);
+    if (it != mp_impl->cell_formats.end())
+    {
+        detail::segment_row_index_type& con = *it->second;
+        if (!con.is_tree_valid())
+            con.build_tree();
 
-    segment_row_index_type& con = *itr->second;
-    if (!con.is_tree_valid())
-        con.build_tree();
+        // Return only if the index is not a default index
+        std::size_t index;
+        if (con.search_tree(row, index).second && index)
+            return index;
+    }
 
-    size_t index;
-    if (!con.search_tree(row, index).second)
-        return 0;
+    // Not found in the cell format store. Check the row store.
+    if (!mp_impl->row_formats.is_tree_valid())
+        mp_impl->row_formats.build_tree();
 
-    return index;
+    std::size_t index;
+    if (mp_impl->row_formats.search_tree(row, index).second && index)
+        return index;
+
+    // Not found in the row store. Check the column store.
+    if (!mp_impl->column_formats.is_tree_valid())
+        mp_impl->column_formats.build_tree();
+
+    if (mp_impl->column_formats.search_tree(col, index).second && index)
+        return index;
+
+    // Not found. Return the default format index.
+    return 0;
 }
 
 }}

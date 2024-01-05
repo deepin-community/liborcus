@@ -6,23 +6,21 @@
  */
 
 #include "orcus_filter_global.hpp"
-#include "pstring.hpp"
 #include "orcus/config.hpp"
 #include "orcus/interface.hpp"
-#include "orcus/global.hpp"
 #include "orcus/spreadsheet/factory.hpp"
 
 #include <mdds/sorted_string_map.hpp>
-#include <boost/filesystem.hpp>
 #include <vector>
 #include <iostream>
 #include <fstream>
+
+#include "filesystem_env.hpp"
 
 using namespace std;
 using namespace orcus;
 
 namespace po = boost::program_options;
-namespace fs = boost::filesystem;
 
 namespace orcus {
 
@@ -30,7 +28,7 @@ extra_args_handler::~extra_args_handler() {}
 
 namespace {
 
-const std::map<dump_format_t, pstring> descriptions =
+const std::map<dump_format_t, std::string_view> descriptions =
 {
     std::make_pair(dump_format_t::check, "Flat format that fully encodes document content. Suitable for automated testing."),
     std::make_pair(dump_format_t::csv,   "CSV format."),
@@ -38,6 +36,8 @@ const std::map<dump_format_t, pstring> descriptions =
     std::make_pair(dump_format_t::html,  "HTML format."),
     std::make_pair(dump_format_t::json,  "JSON format."),
     std::make_pair(dump_format_t::xml,   "This format is currently unsupported."),
+    std::make_pair(dump_format_t::yaml,  "This format is currently unsupported."),
+    std::make_pair(dump_format_t::debug_state, "This format dumps the internal state of the document in detail, useful for debugging."),
     std::make_pair(dump_format_t::none,  "No output to be generated. Maybe useful during development."),
 };
 
@@ -73,9 +73,9 @@ std::string gen_help_output_format()
     std::ostringstream os;
     os << "Specify the output format.  Supported format types are:" << endl;
 
-    for (const std::pair<pstring, dump_format_t>& entry : get_dump_format_entries())
+    for (std::pair<std::string_view, dump_format_t> entry : get_dump_format_entries())
     {
-        pstring desc;
+        std::string_view desc;
         auto it_desc = descriptions.find(entry.second);
         if (it_desc != descriptions.end())
             desc = it_desc->second;

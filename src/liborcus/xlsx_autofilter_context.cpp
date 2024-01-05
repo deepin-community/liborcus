@@ -37,7 +37,7 @@ void xlsx_autofilter_context::end_child_context(
 {
 }
 
-void xlsx_autofilter_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs)
+void xlsx_autofilter_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs)
 {
     xml_token_pair_t parent = push_stack(ns, name);
 
@@ -68,7 +68,7 @@ void xlsx_autofilter_context::start_element(xmlns_id_t ns, xml_token_t name, con
         case XML_filter:
         {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_filters);
-            pstring val = for_each(
+            std::string_view val = for_each(
                 attrs.begin(), attrs.end(),
                 single_attr_getter(m_pool, NS_ooxml_xlsx, XML_val)).get_value();
             if (!val.empty())
@@ -124,6 +124,15 @@ void xlsx_autofilter_context::push_to_model(spreadsheet::iface::import_auto_filt
         af.commit_column();
     }
     af.commit();
+}
+
+void xlsx_autofilter_context::reset()
+{
+    m_pool.clear();
+    m_ref_range = std::string_view{};
+    m_cur_col = -1;
+    m_cur_match_values.clear();
+    m_column_filters.clear();
 }
 
 }

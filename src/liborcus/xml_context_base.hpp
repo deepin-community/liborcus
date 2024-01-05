@@ -54,7 +54,7 @@ public:
      *         element, or nullptr if the current context can handle the
      *         element.
      */
-    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) = 0;
+    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
 
     /**
      * This method gets called when the child context is about to get phased
@@ -66,10 +66,13 @@ public:
      * @param child pointer to the child context object that is about to get
      *              phased out.
      */
-    virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child) = 0;
+    virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
     /**
-     * Called on the opening of each element.
+     * Called on the opening of each element. The implementor should call
+     * push_stack() at the beginning of this method to have the base class keep
+     * track of the element stack. Be sure to also call pop_stack() in
+     * end_element() to maintain correct element stack.
      *
      * @param ns namespace token
      * @param name element name
@@ -83,8 +86,10 @@ public:
      * @param ns namespace token
      * @param name element name
      *
-     * @return true if the base element of the context is closing, false
-     *         otherwise.
+     * @return true if the element that's closing is the root element of the
+     *         context, else return false. The implementor should simply call
+     *         pop_stack() and use the returned value from it as this method's
+     *         return value.
      */
     virtual bool end_element(xmlns_id_t ns, xml_token_t name) = 0;
 
@@ -95,7 +100,7 @@ public:
      * @param str content value.
      * @param transient whether or not the value is transient.
      */
-    virtual void characters(std::string_view str, bool transient) = 0;
+    virtual void characters(std::string_view str, bool transient);
 
     bool evaluate_child_element(xmlns_id_t ns, xml_token_t name) const;
 
@@ -105,19 +110,23 @@ public:
 
     void set_config(const config& opt);
 
-    void transfer_common(const xml_context_base& parent);
-
     void set_always_allowed_elements(xml_elem_set_t elems);
 
 protected:
     void init_element_validator(const xml_element_validator::rule* rules, std::size_t n_rules);
 
     session_context& get_session_context();
+    const session_context& get_session_context() const;
     const tokens& get_tokens() const;
     xml_token_pair_t push_stack(xmlns_id_t ns, xml_token_t name);
     bool pop_stack(xmlns_id_t ns, xml_token_t name);
     xml_token_pair_t get_current_stack(xmlns_id_t ns, xml_token_t name);
     xml_token_pair_t get_current_element() const;
+
+    /**
+     * @warning Don't call this at the root element, or it will throw an
+     *          exception.
+     */
     const xml_token_pair_t& get_parent_element() const;
     void warn_unhandled() const;
     void warn_unexpected() const;
@@ -161,7 +170,11 @@ protected:
     std::string_view intern(const xml_token_attr_t& attr);
     std::string_view intern(std::string_view s);
 
+    void register_child(xml_context_base* child);
+
 private:
+    std::vector<xml_context_base*> m_child_contexts;
+
     config m_config;
     const xmlns_context* mp_ns_cxt;
     session_context& m_session_cxt;

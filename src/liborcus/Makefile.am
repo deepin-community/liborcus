@@ -10,7 +10,6 @@ EXTRA_PROGRAMS = \
 	yaml-document-tree-test \
 	xml-map-tree-test \
 	common-test \
-	format-detection-test \
 	dom-tree-test \
 	json-structure-tree-test \
 	json-map-tree-test \
@@ -19,21 +18,41 @@ EXTRA_PROGRAMS = \
 
 TESTS =
 
+EXTRA_DIST = \
+	xml_element_types.hpp
+
 if HAVE_STATIC_LIB
 AM_CPPFLAGS += -D__ORCUS_STATIC_LIB=1
 else
 AM_CPPFLAGS += -D__ORCUS_BUILDING_DLL=1
 endif
 
+if HAVE_FILESYSTEM
+AM_CPPFLAGS += "-DHAVE_FILESYSTEM=1"
+endif
+
+if HAVE_EXPERIMENTAL_FILESYSTEM
+AM_CPPFLAGS += "-DHAVE_EXPERIMENTAL_FILESYSTEM=1"
+endif
+
 liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS = \
 	$(ZLIB_CFLAGS)
 
 liborcus_@ORCUS_API_VERSION@_la_LDFLAGS = \
-	-no-undefined $(BOOST_SYSTEM_LDFLAGS) $(BOOST_FILESYSTEM_LDFLAGS)
+	-no-undefined $(BOOST_SYSTEM_LDFLAGS)
 
 liborcus_@ORCUS_API_VERSION@_la_LIBADD = \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
-	 $(BOOST_SYSTEM_LIBS) $(ZLIB_LIBS) $(BOOST_FILESYSTEM_LIBS)
+	 $(BOOST_SYSTEM_LIBS) $(ZLIB_LIBS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+liborcus_@ORCUS_API_VERSION@_la_LDFLAGS += -lstdc++fs
+else
+liborcus_@ORCUS_API_VERSION@_la_LDFLAGS += $(BOOST_FILESYSTEM_LDFLAGS)
+liborcus_@ORCUS_API_VERSION@_la_LIBADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
 
 AM_CPPFLAGS += -DSRCDIR=\""$(top_srcdir)"\"
 
@@ -48,7 +67,7 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES = \
 	format_detection.cpp \
 	formula_result.hpp \
 	formula_result.cpp \
-	global.cpp \
+	impl_utils.hpp \
 	info.cpp \
 	interface.cpp \
 	json_document_tree.cpp \
@@ -67,10 +86,13 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES = \
 	orcus_xml_impl.cpp \
 	orcus_xml_map_def.cpp \
 	measurement.cpp \
+	number_utils.cpp \
+	number_utils.hpp \
 	xml_context_base.hpp \
 	xml_context_base.cpp \
 	xml_context_global.hpp \
 	xml_context_global.cpp \
+	xml_element_types.cpp \
 	xml_element_validator.hpp \
 	xml_element_validator.cpp \
 	xml_empty_context.hpp \
@@ -139,8 +161,8 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES += \
 	opc_tokens.inl \
 	orcus_xlsx.cpp \
 	orcus_import_xlsx.cpp \
-	xlsx_context.cpp \
-	xlsx_context.hpp \
+	xlsx_shared_strings_context.cpp \
+	xlsx_shared_strings_context.hpp \
 	xlsx_drawing_context.hpp \
 	xlsx_drawing_context.cpp \
 	xlsx_handler.cpp \
@@ -155,6 +177,8 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES += \
 	xlsx_pivot_context.hpp \
 	xlsx_sheet_context.cpp \
 	xlsx_sheet_context.hpp \
+	xlsx_styles_context.cpp \
+	xlsx_styles_context.hpp \
 	xlsx_conditional_format_context.cpp \
 	xlsx_conditional_format_context.hpp \
 	xlsx_table_context.cpp \
@@ -170,7 +194,6 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES += \
 
 xlsx_sheet_context_test_SOURCES = \
 	formula_result.cpp \
-	global.cpp \
 	ooxml_global.cpp \
 	ooxml_namespace_types.cpp \
 	ooxml_schemas.cpp \
@@ -187,6 +210,7 @@ xlsx_sheet_context_test_SOURCES = \
 	xlsx_types.cpp \
 	xml_context_base.cpp \
 	xml_context_global.cpp \
+	xml_element_types.cpp \
 	xml_element_validator.cpp \
 	xml_empty_context.cpp \
 	xml_util.cpp
@@ -224,14 +248,18 @@ endif # WITH_XLS_XML_FILTER
 if WITH_ODS_FILTER
 
 liborcus_@ORCUS_API_VERSION@_la_SOURCES += \
+	odf_document_styles_context.hpp \
+	odf_document_styles_context.cpp \
 	odf_para_context.hpp \
 	odf_para_context.cpp \
 	odf_styles.hpp \
 	odf_styles.cpp \
 	odf_styles_context.hpp \
 	odf_styles_context.cpp \
-	odf_number_formatting_context.hpp \
-	odf_number_formatting_context.cpp \
+	odf_style_context.hpp \
+	odf_style_context.cpp \
+	odf_number_format_context.hpp \
+	odf_number_format_context.cpp \
 	odf_token_constants.hpp \
 	odf_token_constants.inl \
 	odf_tokens.hpp \
@@ -239,8 +267,6 @@ liborcus_@ORCUS_API_VERSION@_la_SOURCES += \
 	odf_tokens.cpp \
 	ods_content_xml_context.hpp \
 	ods_content_xml_context.cpp \
-	ods_content_xml_handler.hpp \
-	ods_content_xml_handler.cpp \
 	ods_dde_links_context.hpp \
 	ods_dde_links_context.cpp \
 	ods_session_data.hpp \
@@ -274,23 +300,31 @@ endif # WITH_ODS_FILTER
 if WITH_GNUMERIC_FILTER
 
 liborcus_@ORCUS_API_VERSION@_la_SOURCES += \
+	gnumeric_cell_context.cpp \
 	gnumeric_cell_context.hpp \
+	gnumeric_context.cpp \
 	gnumeric_context.hpp \
-	gnumeric_detection_handler.hpp \
 	gnumeric_detection_handler.cpp \
+	gnumeric_detection_handler.hpp \
+	gnumeric_filter_context.cpp \
+	gnumeric_filter_context.hpp \
+	gnumeric_handler.cpp \
 	gnumeric_handler.hpp \
-	gnumeric_helper.hpp \
+	gnumeric_names_context.cpp \
+	gnumeric_names_context.hpp \
+	gnumeric_sheet_context.cpp \
 	gnumeric_sheet_context.hpp \
+	gnumeric_styles_context.cpp \
+	gnumeric_styles_context.hpp \
 	gnumeric_token_constants.hpp \
 	gnumeric_token_constants.inl \
-	gnumeric_tokens.hpp \
-	gnumeric_cell_context.cpp \
-	gnumeric_context.cpp \
-	gnumeric_handler.cpp \
-	gnumeric_helper.cpp \
-	gnumeric_sheet_context.cpp \
 	gnumeric_tokens.cpp \
+	gnumeric_tokens.hpp \
 	gnumeric_tokens.inl \
+	gnumeric_types.cpp \
+	gnumeric_types.hpp \
+	gnumeric_value_format_parser.cpp \
+	gnumeric_value_format_parser.hpp \
 	orcus_gnumeric.cpp
 
 liborcus_@ORCUS_API_VERSION@_la_LDFLAGS += \
@@ -303,19 +337,22 @@ liborcus_@ORCUS_API_VERSION@_la_LIBADD += \
 
 EXTRA_PROGRAMS += \
 	gnumeric-cell-context-test \
-	gnumeric-sheet-context-test \
-	gnumeric-helper-test
+	gnumeric-sheet-context-test
 
 gnumeric_cell_context_test_SOURCES = \
+	number_utils.cpp \
 	session_context.cpp \
 	gnumeric_cell_context_test.cpp \
 	gnumeric_cell_context.cpp \
+	gnumeric_value_format_parser.cpp \
 	xml_context_base.cpp \
+	xml_element_types.cpp \
 	xml_element_validator.cpp \
 	xml_empty_context.cpp \
 	xml_util.cpp \
 	gnumeric_namespace_types.cpp \
 	gnumeric_tokens.cpp \
+	gnumeric_types.cpp \
 	odf_namespace_types.cpp \
 	spreadsheet_interface.cpp
 
@@ -334,9 +371,15 @@ gnumeric_sheet_context_test_SOURCES = \
 	session_context.cpp \
 	gnumeric_sheet_context_test.cpp \
 	gnumeric_sheet_context.cpp \
+	gnumeric_names_context.cpp \
 	gnumeric_cell_context.cpp \
-	gnumeric_helper.cpp \
+	gnumeric_filter_context.cpp \
+	gnumeric_styles_context.cpp \
+	gnumeric_value_format_parser.cpp \
+	gnumeric_types.cpp \
+	number_utils.cpp \
 	xml_context_base.cpp \
+	xml_element_types.cpp \
 	xml_element_validator.cpp \
 	xml_empty_context.cpp \
 	xml_util.cpp \
@@ -355,22 +398,23 @@ gnumeric_sheet_context_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.l
 
 TESTS += gnumeric-sheet-context-test
 
-# gnumeric-helper-test
-
-gnumeric_helper_test_SOURCES = \
-	gnumeric_helper_test.cpp \
-	string_helper.hpp \
-	string_helper.cpp
-
-gnumeric_helper_test_LDADD = \
-	liborcus-@ORCUS_API_VERSION@.la \
-	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
-
-gnumeric_helper_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS)
-
-TESTS += gnumeric-helper-test
-
 endif # WITH_GNUMERIC_FILTER
+
+if WITH_PARQUET_FILTER
+
+liborcus_@ORCUS_API_VERSION@_la_SOURCES += \
+	orcus_parquet.cpp
+
+liborcus_@ORCUS_API_VERSION@_la_CXXFLAGS += \
+	$(PARQUET_CFLAGS)
+
+liborcus_@ORCUS_API_VERSION@_la_LDFLAGS += \
+	$(PARQUET_LDFLAGS)
+
+liborcus_@ORCUS_API_VERSION@_la_LIBADD += \
+	$(PARQUET_LIBS)
+
+endif # WITH_PARQUET_FILTER
 
 # css-document-tree-test
 
@@ -381,7 +425,15 @@ css_document_tree_test_SOURCES = \
 css_document_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
-	$(BOOST_FILESYSTEM_LIBS) $(BOOST_SYSTEM_LIBS)
+	$(BOOST_SYSTEM_LIBS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+css_document_tree_test_LDADD += -lstdc++fs
+else
+css_document_tree_test_LDADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
 
 # json-document-tree-test
 
@@ -394,7 +446,15 @@ json_document_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
 	../test/liborcus-test.a \
-	$(BOOST_FILESYSTEM_LIBS) $(BOOST_SYSTEM_LIBS)
+	$(BOOST_SYSTEM_LIBS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+json_document_tree_test_LDADD += -lstdc++fs
+else
+json_document_tree_test_LDADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
 
 json_document_tree_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS)
 
@@ -408,7 +468,15 @@ yaml_document_tree_test_SOURCES = \
 yaml_document_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
-	$(BOOST_FILESYSTEM_LIBS) $(BOOST_SYSTEM_LIBS)
+	$(BOOST_SYSTEM_LIBS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+yaml_document_tree_test_LDADD += -lstdc++fs
+else
+yaml_document_tree_test_LDADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
 
 yaml_document_tree_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(AM_CPPFLAGS)
 
@@ -425,7 +493,9 @@ xml_map_tree_test_SOURCES = \
 
 xml_map_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
-	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a \
+    $(BOOST_SYSTEM_LIBS)
 
 # xml-structure-tree-test
 
@@ -440,24 +510,22 @@ xml_structure_tree_test_CPPFLAGS = -I$(top_builddir)/lib/liborcus/liborcus.la $(
 xml_structure_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
-	$(BOOST_FILESYSTEM_LIBS) $(BOOST_SYSTEM_LIBS)
+	$(BOOST_SYSTEM_LIBS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+xml_structure_tree_test_LDADD += -lstdc++fs
+else
+xml_structure_tree_test_LDADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
 
 # common-test
 
 common_test_SOURCES = \
-	global.cpp \
 	common_test.cpp
 
 common_test_LDADD = \
-	liborcus-@ORCUS_API_VERSION@.la \
-	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
-
-# format-detection-test
-
-format_detection_test_SOURCES = \
-	format_detection_test.cpp
-
-format_detection_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
 
@@ -474,7 +542,15 @@ json_structure_tree_test_SOURCES = json_structure_tree_test.cpp
 json_structure_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
 	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
-	$(BOOST_SYSTEM_LIBS) $(BOOST_FILESYSTEM_LIBS)
+	$(BOOST_SYSTEM_LIBS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+json_structure_tree_test_LDADD += -lstdc++fs
+else
+json_structure_tree_test_LDADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
 
 # json-map-tree-test
 
@@ -483,7 +559,8 @@ json_map_tree_test_SOURCES = json_map_tree_test.cpp \
 	spreadsheet_impl_types.cpp
 json_map_tree_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
-	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	$(BOOST_SYSTEM_LIBS)
 
 # xpath-parser-test
 
@@ -492,7 +569,8 @@ xpath_parser_test_SOURCES = \
 	xpath_parser.cpp
 xpath_parser_test_LDADD = \
 	liborcus-@ORCUS_API_VERSION@.la \
-	../parser/liborcus-parser-@ORCUS_API_VERSION@.la
+	../parser/liborcus-parser-@ORCUS_API_VERSION@.la \
+	$(BOOST_SYSTEM_LIBS)
 
 TESTS += \
 	css-document-tree-test \
@@ -500,7 +578,6 @@ TESTS += \
 	yaml-document-tree-test \
 	xml-map-tree-test \
 	common-test \
-	format-detection-test \
 	dom-tree-test \
 	json-structure-tree-test \
 	json-map-tree-test \
@@ -510,3 +587,4 @@ TESTS += \
 distclean-local:
 	rm -rf $(TESTS)
 
+@VALGRIND_CHECK_RULES@

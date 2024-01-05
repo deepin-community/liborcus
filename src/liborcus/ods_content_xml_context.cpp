@@ -8,12 +8,12 @@
 #include "ods_content_xml_context.hpp"
 #include "odf_token_constants.hpp"
 #include "odf_namespace_types.hpp"
-#include "odf_styles_context.hpp"
 #include "session_context.hpp"
 #include "ods_session_data.hpp"
+#include "impl_utils.hpp"
 
-#include "orcus/global.hpp"
-#include "orcus/spreadsheet/import_interface.hpp"
+#include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/spreadsheet/import_interface_styles.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -31,13 +31,13 @@ namespace {
 
 namespace cell_value {
 
-typedef mdds::sorted_string_map<ods_content_xml_context::cell_value_type> map_type;
+using map_type = mdds::sorted_string_map<ods_content_xml_context::cell_value_type, mdds::string_view_map_entry>;
 
 // Keys must be sorted.
 map_type::entry entries[] = {
-    { ORCUS_ASCII("date"),   ods_content_xml_context::vt_date },
-    { ORCUS_ASCII("float"),  ods_content_xml_context::vt_float },
-    { ORCUS_ASCII("string"), ods_content_xml_context::vt_string }
+    { "date",   ods_content_xml_context::vt_date },
+    { "float",  ods_content_xml_context::vt_float },
+    { "string", ods_content_xml_context::vt_string }
 };
 
 const map_type& get()
@@ -51,12 +51,12 @@ const map_type& get()
 } // namespace cell_value
 
 void pick_up_named_range_or_expression(
-    session_context& cxt, const xml_attrs_t& attrs, xmlns_id_t exp_attr_ns, xml_token_t exp_attr_name,
+    session_context& cxt, const xml_token_attrs_t& attrs, xmlns_id_t exp_attr_ns, xml_token_t exp_attr_name,
     ods_session_data::named_exp_type name_type, ss::sheet_t scope)
 {
-    pstring name;
-    pstring expression;
-    pstring base;
+    std::string_view name;
+    std::string_view expression;
+    std::string_view base;
 
     for (const xml_token_attr_t& attr : attrs)
     {
@@ -77,10 +77,10 @@ void pick_up_named_range_or_expression(
         }
     }
 
-    ods_session_data& ods_data = static_cast<ods_session_data&>(*cxt.mp_data);
+    auto& ods_data = cxt.get_data<ods_session_data>();
 
     if (!name.empty() && !expression.empty() && !base.empty())
-        ods_data.m_named_exps.emplace_back(name, expression, base, name_type, scope);
+        ods_data.named_exps.emplace_back(name, expression, base, name_type, scope);
 }
 
 } // anonymous namespace
@@ -114,13 +114,18 @@ ods_content_xml_context::cell_attr::cell_attr() :
 ods_content_xml_context::ods_content_xml_context(session_context& session_cxt, const tokens& tokens, spreadsheet::iface::import_factory* factory) :
     xml_context_base(session_cxt, tokens),
     mp_factory(factory),
-    m_row(0), m_col(0),
+    m_row(0), m_col(0), m_col_repeated(0),
     m_para_index(0),
     m_has_content(false),
     m_styles(),
+    m_child_styles(session_cxt, tokens, mp_factory->get_styles()),
     m_child_para(session_cxt, tokens, factory->get_shared_strings(), m_styles),
     m_child_dde_links(session_cxt, tokens)
 {
+    register_child(&m_child_styles);
+    register_child(&m_child_para);
+    register_child(&m_child_dde_links);
+
     spreadsheet::iface::import_global_settings* gs = mp_factory->get_global_settings();
     if (gs)
     {
@@ -129,30 +134,25 @@ ods_content_xml_context::ods_content_xml_context(session_context& session_cxt, c
     }
 }
 
-ods_content_xml_context::~ods_content_xml_context()
-{
-}
+ods_content_xml_context::~ods_content_xml_context() = default;
 
 xml_context_base* ods_content_xml_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
     if (ns == NS_odf_text && name == XML_p)
     {
         m_child_para.reset();
-        m_child_para.transfer_common(*this);
         return &m_child_para;
     }
 
     if (ns == NS_odf_office && name == XML_automatic_styles)
     {
-        mp_child.reset(new styles_context(get_session_context(), get_tokens(), m_styles, mp_factory->get_styles()));
-        mp_child->transfer_common(*this);
-        return mp_child.get();
+        m_child_styles.reset();
+        return &m_child_styles;
     }
 
     if (ns == NS_odf_table && name == XML_dde_links)
     {
         m_child_dde_links.reset();
-        m_child_dde_links.transfer_common(*this);
         return &m_child_dde_links;
     }
 
@@ -169,64 +169,31 @@ void ods_content_xml_context::end_child_context(xmlns_id_t ns, xml_token_t name,
     }
     else if (ns == NS_odf_office && name == XML_automatic_styles)
     {
+        auto new_styles = m_child_styles.pop_styles();
+        merge(m_styles, new_styles);
+        assert(new_styles.empty());
+
         if (get_config().debug)
-            cout << "styles picked up:" << endl;
+            dump_state(m_styles, std::cout);
 
-        odf_styles_map_type::const_iterator it = m_styles.begin(), it_end = m_styles.end();
-        for (; it != it_end; ++it)
+        spreadsheet::iface::import_styles* xstyles = mp_factory->get_styles();
+        if (xstyles)
         {
-            if (get_config().debug)
-                cout << "  style: " << it->first << " [ ";
-
-            switch (it->second->family)
+            for (const auto& [style_name, style_value] : m_styles)
             {
-                case style_family_table_column:
+                if (style_value->family == style_family_table_cell)
                 {
-                    if (get_config().debug)
-                        cout << "column width: " << it->second->column_data->width.to_string();
-                    break;
+                    // TODO: Actually we need a boolean flag to see if it is an automatic style or a real style
+                    //  currently we have no way to set a real style to a cell anyway
+                    const auto& cell = std::get<odf_style::cell>(style_value->data);
+                    m_cell_format_map.insert(name2id_type::value_type(style_name, cell.xf));
                 }
-                case style_family_table_row:
-                {
-                    if (get_config().debug)
-                        cout << "row height: " << it->second->row_data->height.to_string();
-                    break;
-                }
-                case style_family_table_cell:
-                {
-                    const odf_style::cell& cell = *it->second->cell_data;
-                    if (get_config().debug)
-                        cout << "xf ID: " << cell.xf;
-
-                    spreadsheet::iface::import_styles* styles = mp_factory->get_styles();
-                    if (styles)
-                    {
-                        // TODO: Actually we need a boolean flag to see if it is an automatic style or a real style
-                        //  currently we have no way to set a real style to a cell anyway
-                        m_cell_format_map.insert(name2id_type::value_type(it->first, cell.xf));
-                    }
-                    break;
-                }
-                case style_family_text:
-                {
-                    if (get_config().debug)
-                    {
-                        const odf_style::text& data = *it->second->text_data;
-                        cout << "font ID: " << data.font;
-                    }
-                    break;
-                }
-                default:
-                    ;
             }
-
-            if (get_config().debug)
-                cout << " ]" << endl;
         }
     }
 }
 
-void ods_content_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs)
+void ods_content_xml_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs)
 {
     xml_token_pair_t parent = push_stack(ns, name);
 
@@ -359,11 +326,7 @@ bool ods_content_xml_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void ods_content_xml_context::characters(std::string_view /*str*/, bool /*transient*/)
-{
-}
-
-void ods_content_xml_context::start_null_date(const xml_attrs_t& attrs)
+void ods_content_xml_context::start_null_date(const xml_token_attrs_t& attrs)
 {
     spreadsheet::iface::import_global_settings* gs = mp_factory->get_global_settings();
     if (!gs)
@@ -378,12 +341,12 @@ void ods_content_xml_context::start_null_date(const xml_attrs_t& attrs)
             null_date = attr.value;
     }
 
-    date_time_t val = to_date_time(null_date);
+    date_time_t val = date_time_t::from_chars(null_date);
 
     gs->set_origin_date(val.year, val.month, val.day);
 }
 
-void ods_content_xml_context::start_table(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void ods_content_xml_context::start_table(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs)
 {
     static const xml_elem_set_t expected = {
         { NS_odf_office, XML_spreadsheet },
@@ -428,7 +391,7 @@ void ods_content_xml_context::end_table()
     }
 }
 
-void ods_content_xml_context::start_named_range(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void ods_content_xml_context::start_named_range(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs)
 {
     xml_element_expected(parent, NS_odf_table, XML_named_expressions);
 
@@ -441,7 +404,7 @@ void ods_content_xml_context::end_named_range()
 {
 }
 
-void ods_content_xml_context::start_named_expression(const xml_token_pair_t& parent, const xml_attrs_t& attrs)
+void ods_content_xml_context::start_named_expression(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs)
 {
     xml_element_expected(parent, NS_odf_table, XML_named_expressions);
 
@@ -454,7 +417,7 @@ void ods_content_xml_context::end_named_expression()
 {
 }
 
-void ods_content_xml_context::start_column(const xml_attrs_t& attrs)
+void ods_content_xml_context::start_column(const xml_token_attrs_t& attrs)
 {
     if (!m_cur_sheet.sheet)
         return;
@@ -466,31 +429,47 @@ void ods_content_xml_context::start_column(const xml_attrs_t& attrs)
         return;
 
     std::string_view style_name;
+    std::string_view default_cell_style_name;
+    m_col_repeated = 1;
 
     for (const xml_token_attr_t& attr : attrs)
     {
         if (attr.ns == NS_odf_table)
         {
-            if (attr.name == XML_style_name)
-                style_name = attr.value;
+            switch (attr.name)
+            {
+                case XML_style_name:
+                    style_name = attr.value;
+                    break;
+                case XML_default_cell_style_name:
+                    default_cell_style_name = intern(attr);
+                    break;
+                case XML_number_columns_repeated:
+                    m_col_repeated = to_long(attr.value);
+                    break;
+            }
         }
     }
 
-    auto it = m_styles.find(style_name);
-    if (it == m_styles.end())
-        // Style by this name not found.
-        return;
+    if (auto it = m_styles.find(style_name); it != m_styles.end())
+    {
+        const odf_style& style = *it->second;
 
-    const odf_style& style = *it->second;
-    sheet_props->set_column_width(m_col, style.column_data->width.value, style.column_data->width.unit);
+        sheet_props->set_column_width(
+            m_col, m_col_repeated,
+            std::get<odf_style::column>(style.data).width.value,
+            std::get<odf_style::column>(style.data).width.unit);
+    }
+
+    push_default_column_cell_style(default_cell_style_name, m_col_repeated);
 }
 
 void ods_content_xml_context::end_column()
 {
-    ++m_col;
+    m_col += m_col_repeated;
 }
 
-void ods_content_xml_context::start_row(const xml_attrs_t& attrs)
+void ods_content_xml_context::start_row(const xml_token_attrs_t& attrs)
 {
     m_col = 0;
     m_row_attr = row_attr();
@@ -530,9 +509,9 @@ void ods_content_xml_context::start_row(const xml_attrs_t& attrs)
             const odf_style& style = *it->second;
             if (style.family == style_family_table_row)
             {
-                const odf_style::row& row_data = *style.row_data;
-                if (row_data.height_set)
-                    sheet_props->set_row_height(m_row, row_data.height.value, row_data.height.unit);
+                const auto& data = std::get<odf_style::row>(style.data);
+                if (data.height_set)
+                    sheet_props->set_row_height(m_row, data.height.value, data.height.unit);
             }
         }
     }
@@ -549,7 +528,7 @@ void ods_content_xml_context::end_row()
     m_row += m_row_attr.number_rows_repeated;
 }
 
-void ods_content_xml_context::start_cell(const xml_attrs_t& attrs)
+void ods_content_xml_context::start_cell(const xml_token_attrs_t& attrs)
 {
     m_cell_attr = cell_attr();
 
@@ -665,10 +644,7 @@ void ods_content_xml_context::start_cell(const xml_attrs_t& attrs)
 
 void ods_content_xml_context::end_cell()
 {
-    name2id_type::const_iterator it = m_cell_format_map.find(m_cell_attr.style_name);
-    if (m_cur_sheet.sheet && it != m_cell_format_map.end())
-        m_cur_sheet.sheet->set_format(m_row, m_col, it->second);
-
+    push_cell_format();
     push_cell_value();
 
     ++m_col;
@@ -681,6 +657,94 @@ void ods_content_xml_context::end_cell()
     m_has_content = false;
 }
 
+std::optional<std::size_t> ods_content_xml_context::push_named_cell_style(std::string_view style_name)
+{
+    ss::iface::import_styles* xstyles = mp_factory->get_styles();
+    if (!xstyles)
+        return {};
+
+    const ods_session_data& ods_data = get_session_context().get_data<ods_session_data>();
+
+    auto it = ods_data.styles_map.find(style_name);
+    if (it == ods_data.styles_map.end())
+        return {};
+
+    // found in the named styles store.
+    const odf_style& style = *it->second;
+    if (style.family != style_family_table_cell)
+        // it's a named style but not a cell style
+        return {};
+
+    // It references a named style. Create a direct cell (aka automatic) style
+    // that references this named style, and set that as the cell format since
+    // we can't reference a named style directly from a cell.
+    const auto& celldata = std::get<odf_style::cell>(style.data);
+
+    ss::iface::import_xf* xf = xstyles->start_xf(ss::xf_category_t::cell);
+    ENSURE_INTERFACE(xf, import_xf);
+    xf->set_style_xf(celldata.xf);
+    std::size_t xfid = xf->commit();
+    m_cell_format_map.insert({style_name, xfid});
+    return xfid;
+}
+
+void ods_content_xml_context::push_default_column_cell_style(
+    std::string_view style_name, ss::col_t span)
+{
+    if (span < 1)
+    {
+        std::ostringstream os;
+        os << "Column " << m_col << " on sheet " << m_cur_sheet.index << " has an invalid span of " << span;
+        warn(os.str());
+        return;
+    }
+
+    if (style_name.empty())
+        return;
+
+    if (!m_cur_sheet.sheet)
+        return;
+
+    if (auto it = m_cell_format_map.find(style_name); it != m_cell_format_map.end())
+    {
+        // automatic style already present for this name.
+        m_cur_sheet.sheet->set_column_format(m_col, span, it->second);
+        return;
+    }
+
+    auto xfid = push_named_cell_style(style_name);
+    if (!xfid)
+    {
+        std::ostringstream os;
+        os << "failed to push a new cell style of name '" << style_name << "' to cache";
+        warn(os.str());
+        return;
+    }
+
+    m_cur_sheet.sheet->set_column_format(m_col, span, *xfid);
+}
+
+void ods_content_xml_context::push_cell_format()
+{
+    if (!m_cur_sheet.sheet)
+        return;
+
+    if (auto it = m_cell_format_map.find(m_cell_attr.style_name); it != m_cell_format_map.end())
+    {
+        for (ss::col_t col_offset = 0; col_offset < m_cell_attr.number_columns_repeated; ++col_offset)
+            m_cur_sheet.sheet->set_format(m_row, m_col + col_offset, it->second);
+        // style key found and direct cell format set.
+        return;
+    }
+
+    auto xfid = push_named_cell_style(m_cell_attr.style_name);
+    if (!xfid)
+        return;
+
+    for (ss::col_t col_offset = 0; col_offset < m_cell_attr.number_columns_repeated; ++col_offset)
+        m_cur_sheet.sheet->set_format(m_row, m_col + col_offset, *xfid);
+}
+
 void ods_content_xml_context::push_cell_value()
 {
     assert(m_cur_sheet.index >= 0); // this is expected to be called only within a valid sheet scope.
@@ -689,12 +753,11 @@ void ods_content_xml_context::push_cell_value()
     if (has_formula)
     {
         // Store formula cell data for later processing.
-        ods_session_data& ods_data =
-            static_cast<ods_session_data&>(*get_session_context().mp_data);
-        ods_data.m_formulas.emplace_back(
+        auto& ods_data = get_session_context().get_data<ods_session_data>();
+        ods_data.formulas.emplace_back(
             m_cur_sheet.index, m_row, m_col, m_cell_attr.formula_grammar, m_cell_attr.formula);
 
-        ods_session_data::formula& formula_data = ods_data.m_formulas.back();
+        ods_session_data::formula& formula_data = ods_data.formulas.back();
 
         // Store formula result.
         switch (m_cell_attr.type)
@@ -728,7 +791,7 @@ void ods_content_xml_context::push_cell_value()
                 break;
             case vt_date:
             {
-                date_time_t val = to_date_time(m_cell_attr.date_value);
+                date_time_t val = date_time_t::from_chars(m_cell_attr.date_value);
                 m_cur_sheet.sheet->set_date_time(
                     m_row, m_col, val.year, val.month, val.day, val.hour, val.minute, val.second);
                 break;
@@ -741,15 +804,14 @@ void ods_content_xml_context::push_cell_value()
 
 void ods_content_xml_context::end_spreadsheet()
 {
-    ods_session_data& ods_data =
-        static_cast<ods_session_data&>(*get_session_context().mp_data);
+    auto& ods_data = get_session_context().get_data<ods_session_data>();
 
     ss::iface::import_reference_resolver* resolver =
         mp_factory->get_reference_resolver(ss::formula_ref_context_t::named_expression_base);
 
     if (resolver)
     {
-        for (const ods_session_data::named_exp& data : ods_data.m_named_exps)
+        for (const ods_session_data::named_exp& data : ods_data.named_exps)
         {
             if (get_config().debug)
             {
@@ -798,7 +860,7 @@ void ods_content_xml_context::end_spreadsheet()
     // Push all formula cells.  Formula cells needs to be processed after all
     // the sheet data have been imported, else 3D reference would fail to
     // resolve.
-    for (ods_session_data::formula& data : ods_data.m_formulas)
+    for (ods_session_data::formula& data : ods_data.formulas)
     {
         if (data.sheet < 0 || static_cast<size_t>(data.sheet) >= m_tables.size())
             // Invalid sheet index.
@@ -831,7 +893,7 @@ void ods_content_xml_context::end_spreadsheet()
     }
 
     // Clear the formula buffer.
-    ods_data.m_formulas.clear();
+    ods_data.formulas.clear();
 }
 
 }

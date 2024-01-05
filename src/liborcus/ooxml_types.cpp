@@ -7,14 +7,12 @@
 
 #include "ooxml_types.hpp"
 
-#include "orcus/global.hpp"
-
 namespace orcus {
 
-opc_rel_extra::~opc_rel_extra() {}
+opc_rel_extra::~opc_rel_extra() = default;
 
-opc_rel_extras_t::opc_rel_extras_t() {}
-opc_rel_extras_t::~opc_rel_extras_t() {}
+opc_rel_extras_t::opc_rel_extras_t() = default;
+opc_rel_extras_t::~opc_rel_extras_t() = default;
 
 opc_rel_extras_t::opc_rel_extras_t(opc_rel_extras_t&& other) :
     data(std::move(other.data)) {}

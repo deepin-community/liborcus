@@ -13,11 +13,10 @@
 #include <orcus/spreadsheet/document.hpp>
 #include <orcus/spreadsheet/view.hpp>
 #include <orcus/exception.hpp>
-#include <orcus/global.hpp>
 #include <orcus/string_pool.hpp>
-#include "pstring.hpp"
 
 #include "factory_pivot.hpp"
+#include "factory_shared_strings.hpp"
 #include "factory_sheet.hpp"
 #include "global_settings.hpp"
 
@@ -166,10 +165,17 @@ public:
 
 using sheet_ifaces_type = std::vector<std::unique_ptr<import_sheet>>;
 
-}
+} // anonymous namespace
+
+import_factory_config::import_factory_config() = default;
+import_factory_config::import_factory_config(const import_factory_config& other) = default;
+import_factory_config::~import_factory_config() = default;
+
+import_factory_config& import_factory_config::operator=(const import_factory_config& other) = default;
 
 struct import_factory::impl
 {
+    std::shared_ptr<import_factory_config> m_config;
     import_factory& m_envelope;
     document& m_doc;
     view* m_view;
@@ -181,6 +187,7 @@ struct import_factory::impl
     import_ref_resolver m_ref_resolver;
     import_global_named_exp m_global_named_exp;
     import_styles m_styles;
+    detail::import_shared_strings shared_strings;
 
     sheet_ifaces_type m_sheets;
 
@@ -188,6 +195,7 @@ struct import_factory::impl
     formula_error_policy_t m_error_policy;
 
     impl(import_factory& envelope, document& doc) :
+        m_config(std::make_shared<import_factory_config>()),
         m_envelope(envelope),
         m_doc(doc),
         m_view(nullptr),
@@ -197,19 +205,22 @@ struct import_factory::impl
         m_pc_records(doc),
         m_ref_resolver(doc),
         m_global_named_exp(doc),
-        m_styles(doc.get_styles(), doc.get_string_pool()),
+        m_styles(m_config, doc.get_styles(), doc.get_string_pool()),
+        shared_strings(doc.get_string_pool(), doc.get_model_context(), doc.get_styles(), doc.get_shared_strings()),
         m_recalc_formula_cells(false),
-        m_error_policy(formula_error_policy_t::fail) {}
+        m_error_policy(formula_error_policy_t::fail)
+    {
+    }
 };
 
 import_factory::import_factory(document& doc) :
     mp_impl(std::make_unique<impl>(*this, doc)) {}
 
-import_factory::import_factory(document& doc, view& view) :
+import_factory::import_factory(document& doc, view& view_store) :
     mp_impl(std::make_unique<impl>(*this, doc))
 {
     // Store the optional view store.
-    mp_impl->m_view = &view;
+    mp_impl->m_view = &view_store;
 }
 
 import_factory::~import_factory() {}
@@ -221,7 +232,7 @@ iface::import_global_settings* import_factory::get_global_settings()
 
 iface::import_shared_strings* import_factory::get_shared_strings()
 {
-    return mp_impl->m_doc.get_shared_strings();
+    return &mp_impl->shared_strings;
 }
 
 iface::import_styles* import_factory::get_styles()
@@ -301,10 +312,16 @@ iface::import_sheet* import_factory::get_sheet(sheet_t sheet_index)
 
 void import_factory::finalize()
 {
-    mp_impl->m_doc.finalize();
+    mp_impl->m_doc.finalize_import();
 
     if (mp_impl->m_recalc_formula_cells)
         mp_impl->m_doc.recalc_formula_cells();
+}
+
+void import_factory::set_config(const import_factory_config& config)
+{
+    // NB: update the object state.
+    *mp_impl->m_config = config;
 }
 
 void import_factory::set_default_row_size(row_t row_size)

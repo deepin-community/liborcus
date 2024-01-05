@@ -7,15 +7,12 @@
 
 #include "cli_global.hpp"
 
-#include "orcus/global.hpp"
-
 #include <iostream>
 #include <fstream>
 
-#include <boost/filesystem.hpp>
+#include "filesystem_env.hpp"
 
 namespace po = boost::program_options;
-namespace fs = boost::filesystem;
 
 namespace orcus {
 

@@ -8,8 +8,8 @@
 #ifndef INCLUDED_ORCUS_PARSER_BASE_HPP
 #define INCLUDED_ORCUS_PARSER_BASE_HPP
 
-#include "orcus/env.hpp"
-#include "orcus/exception.hpp"
+#include "env.hpp"
+#include "exception.hpp"
 
 #include <string>
 #include <cstdlib>
@@ -19,46 +19,25 @@
 
 namespace orcus {
 
-/**
- * Exception related to parsing error that includes the offset in the stream
- * where the error occurred.
- */
-class ORCUS_PSR_DLLPUBLIC parse_error : public general_error
-{
-    std::ptrdiff_t m_offset;  /// offset in the stream where the error occurred.
-protected:
-    parse_error(const std::string& msg, std::ptrdiff_t offset);
-    parse_error(const std::string& cls, const std::string& msg, std::ptrdiff_t offset);
-
-    static std::string build_message(const char* msg_before, char c, const char* msg_after);
-    static std::string build_message(const char* msg_before, const char* p, size_t n, const char* msg_after);
-
-public:
-    std::ptrdiff_t offset() const;
-};
-
 class ORCUS_PSR_DLLPUBLIC parser_base
 {
 protected:
-    using numeric_parser_type = std::function<double(const char*&, size_t)>;
+    using numeric_parser_type = std::function<const char*(const char*, const char*, double&)>;
 
     const char* const mp_begin;
     const char* mp_char;
     const char* mp_end;
-    const bool m_transient_stream;
 
 private:
-    std::function<double(const char*&, size_t)> m_func_parse_numeric;
+    numeric_parser_type m_func_parse_numeric;
 
 protected:
-    parser_base(const char* p, size_t n, bool transient_stream);
+    parser_base(const char* p, size_t n);
 
     void set_numeric_parser(const numeric_parser_type& func)
     {
         m_func_parse_numeric = func;
     }
-
-    bool transient_stream() const { return m_transient_stream; }
 
     bool has_char() const
     {
@@ -78,9 +57,43 @@ protected:
 
     char cur_char() const { return *mp_char; }
 
-    char next_char() const;
+    /**
+     * Peek a character at specified offset from the current position without
+     * advancing the current position.
+     *
+     * @note The caller <strong>must</strong> ensure that the specified offset
+     *       position is a valid position.  This method does not check its
+     *       validity.
+     *
+     * @param offset offset from the current position to peek at.
+     *
+     * @return character at a specified offset position from the current
+     *         position.
+     */
+    char peek_char(std::size_t offset=1) const;
 
-    void skip(const char* chars_to_skip, size_t n_chars_to_skip);
+    /**
+     * Peek a segment of contiguous characters of a specified length starting
+     * from the current position.
+     *
+     * @note The caller <strong>must</strong> ensure that the specified
+     *       substring segment is entirely valid.  This method does not check
+     *       its validity.
+     *
+     * @param length length of the segment to peek.
+     *
+     * @return segment of contiguous characters.
+     */
+    std::string_view peek_chars(std::size_t length) const;
+
+    /**
+     * Skip an optional byte order mark at the current position of the stream.
+     *
+     * Currently we only check for UTF-8 BOM.
+     */
+    void skip_bom();
+
+    void skip(std::string_view chars_to_skip);
 
     /**
      * Skip all characters that are 0-32 in ASCII range
@@ -92,12 +105,11 @@ protected:
      * character sequence.
      *
      * @param expected sequence of characters to match against.
-     * @param n_expected length of the character sequence.
      *
      * @return true if it matches specified character sequence, false
      *         otherwise.
      */
-    bool parse_expected(const char* expected, size_t n_expected);
+    bool parse_expected(std::string_view expected);
 
     /**
      * Try to parse the next characters as double, or return NaN in case of

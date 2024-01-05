@@ -6,7 +6,6 @@
  */
 
 #include "orcus/sax_ns_parser.hpp"
-#include "orcus/global.hpp"
 #include "orcus/dom_tree.hpp"
 #include "orcus/xml_namespace.hpp"
 #include "orcus/stream.hpp"
@@ -204,7 +203,7 @@ void test_xml_encoded_attrs()
     assert(!content.empty());
 
     sax_handler_encoded_attrs hdl;
-    sax_parser<sax_handler_encoded_attrs> parser(content.data(), content.size(), hdl);
+    sax_parser<sax_handler_encoded_attrs> parser(content.str(), hdl);
     parser.parse();
 
     vector<string> expected;

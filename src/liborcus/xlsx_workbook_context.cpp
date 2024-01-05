@@ -13,11 +13,8 @@
 #include "session_context.hpp"
 #include "xlsx_session_data.hpp"
 
-#include "orcus/global.hpp"
 #include "orcus/measurement.hpp"
 #include "orcus/spreadsheet/import_interface.hpp"
-
-using namespace std;
 
 namespace orcus {
 
@@ -33,7 +30,7 @@ xlsx_workbook_context::xlsx_workbook_context(
     init_ooxml_context(*this);
 }
 
-xlsx_workbook_context::~xlsx_workbook_context() {}
+xlsx_workbook_context::~xlsx_workbook_context() = default;
 
 xml_context_base* xlsx_workbook_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -44,11 +41,11 @@ void xlsx_workbook_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*n
 {
 }
 
-void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs)
+void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs)
 {
     xml_token_pair_t parent = push_stack(ns, name);
     session_context& cxt = get_session_context();
-    string_pool& sp = cxt.m_string_pool;
+    string_pool& sp = cxt.spool;
 
     if (ns == NS_ooxml_xlsx)
     {
@@ -69,7 +66,7 @@ void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const
             {
                 xml_element_expected(parent, NS_ooxml_xlsx, XML_sheets);
 
-                pstring rid;
+                std::string_view rid;
                 xlsx_rel_sheet_info sheet;
 
                 std::for_each(attrs.begin(), attrs.end(),
@@ -84,9 +81,8 @@ void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const
                                     break;
                                 case XML_sheetId:
                                 {
-                                    const pstring& val = attr.value;
-                                    if (!val.empty())
-                                        sheet.id = to_long(val);
+                                    if (!attr.value.empty())
+                                        sheet.id = to_long(attr.value);
                                     break;
                                 }
                                 default:
@@ -134,7 +130,7 @@ void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const
                                 if (attr.transient)
                                 {
                                     m_defined_name =
-                                        cxt.m_string_pool.intern(m_defined_name).first;
+                                        cxt.spool.intern(m_defined_name).first;
                                 }
                                 break;
                             }
@@ -156,9 +152,9 @@ void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const
             {
                 xml_element_expected(parent, NS_ooxml_xlsx, XML_pivotCaches);
 
-                pstring rid;
+                std::string_view rid;
                 long cache_id = -1;
-                for_each(attrs.begin(), attrs.end(),
+                std::for_each(attrs.begin(), attrs.end(),
                     [&](const xml_token_attr_t& attr)
                     {
                         if (!attr.ns || attr.ns == NS_ooxml_xlsx)
@@ -206,8 +202,8 @@ bool xlsx_workbook_context::end_element(xmlns_id_t ns, xml_token_t name)
         {
             push_defined_name();
 
-            m_defined_name.clear();
-            m_defined_name_exp.clear();
+            m_defined_name = std::string_view{};
+            m_defined_name_exp = std::string_view{};
             m_defined_name_scope = -1;
         }
     }
@@ -218,7 +214,7 @@ void xlsx_workbook_context::characters(std::string_view str, bool transient)
 {
     std::string_view sv(str);
     xml_token_pair_t cur = get_current_element();
-    string_pool& sp = get_session_context().m_string_pool;
+    string_pool& sp = get_session_context().spool;
 
     if (cur.first == NS_ooxml_xlsx)
     {

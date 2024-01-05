@@ -13,7 +13,6 @@
 
 #include "orcus/measurement.hpp"
 #include "orcus/string_pool.hpp"
-#include "orcus/global.hpp"
 
 #include <iostream>
 #include <limits>
@@ -26,7 +25,7 @@ namespace {
 
 class headers_attr_parser
 {
-    pstring m_guid;
+    std::string_view m_guid;
     long m_highest_revid;
     long m_version;
     bool m_disk_revisions;
@@ -34,7 +33,7 @@ class headers_attr_parser
 public:
     headers_attr_parser() : m_highest_revid(-1), m_version(-1), m_disk_revisions(false) {}
 
-    pstring get_last_guid() const { return m_guid; }
+    std::string_view get_last_guid() const { return m_guid; }
     long get_highest_revid() const { return m_highest_revid; }
     long get_version() const { return m_version; }
     bool is_disk_revisions() const { return m_disk_revisions; }
@@ -71,9 +70,9 @@ class header_attr_parser
 {
     string_pool* m_pool;
 
-    pstring m_guid;
-    pstring m_username;
-    pstring m_rid;
+    std::string_view m_guid;
+    std::string_view m_username;
+    std::string_view m_rid;
 
     date_time_t m_date_time;
     long m_next_sheet_id;
@@ -84,9 +83,9 @@ public:
     header_attr_parser(string_pool& pool) :
         m_pool(&pool), m_next_sheet_id(-1), m_min_revid(-1), m_max_revid(-1) {}
 
-    pstring get_guid() const { return m_guid; }
-    pstring get_username() const { return m_username; }
-    pstring get_rid() const { return m_rid; }
+    std::string_view get_guid() const { return m_guid; }
+    std::string_view get_username() const { return m_username; }
+    std::string_view get_rid() const { return m_rid; }
     date_time_t get_date_time() const { return m_date_time; }
     long get_next_sheet_id() const { return m_next_sheet_id; }
     long get_min_revid() const { return m_min_revid; }
@@ -102,7 +101,7 @@ public:
                     m_guid = attr.value;
                 break;
                 case XML_dateTime:
-                    m_date_time = to_date_time(attr.value);
+                    m_date_time = date_time_t::from_chars(attr.value);
                 break;
                 case XML_maxSheetId:
                     m_next_sheet_id = to_long(attr.value);
@@ -171,7 +170,7 @@ void xlsx_revheaders_context::start_element(xmlns_id_t ns, xml_token_t name, con
             case XML_header:
             {
                 xml_element_expected(parent, NS_ooxml_xlsx, XML_headers);
-                header_attr_parser func(get_session_context().m_string_pool);
+                header_attr_parser func(get_session_context().spool);
                 func = for_each(attrs.begin(), attrs.end(), func);
                 cout << "* revision header (guid:" << func.get_guid() << ")" << endl;
                 cout << "  - timestamp: " << func.get_date_time().to_string() << endl;
@@ -275,7 +274,7 @@ class rrc_attr_parser
     long m_revision_id;
     long m_sheet_id;
 
-    pstring m_ref;
+    std::string_view m_ref;
     xlsx_rev_row_column_action_t m_action_type;
 
     bool m_end_of_list;
@@ -287,7 +286,7 @@ public:
     long get_revision_id() const { return m_revision_id; }
     long get_sheet_id() const { return m_sheet_id; }
     bool is_end_of_list() const { return m_end_of_list; }
-    pstring get_ref() const { return m_ref; }
+    std::string_view get_ref() const { return m_ref; }
     xlsx_rev_row_column_action_t get_action_type() const { return m_action_type; }
 
     void operator() (const xml_token_attr_t& attr)
@@ -323,13 +322,13 @@ public:
 
 class cell_data_attr_parser
 {
-    pstring m_ref;
+    std::string_view m_ref;
     xlsx_cell_t m_type;
 
 public:
     cell_data_attr_parser() : m_type(xlsx_ct_numeric) {}
 
-    pstring get_ref() const { return m_ref; }
+    std::string_view get_ref() const { return m_ref; }
     xlsx_cell_t get_cell_type() const { return m_type; }
 
     void operator() (const xml_token_attr_t& attr)
@@ -467,7 +466,7 @@ void xlsx_revlog_context::start_element(xmlns_id_t ns, xml_token_t name, const v
 
                 m_cur_formula = false;
                 m_cur_value = 0.0;
-                m_cur_string.clear();
+                m_cur_string = std::string_view{};
 
                 cout << "  - new cell position: " << func.get_ref() << endl;
                 cout << "  - new cell type: " << to_string(m_cur_cell_type) << endl;
@@ -566,7 +565,7 @@ void xlsx_revlog_context::characters(std::string_view str, bool transient)
             case XML_t:
                 m_cur_string = str;
                 if (transient)
-                    m_cur_string = get_session_context().m_string_pool.intern(m_cur_string).first;
+                    m_cur_string = get_session_context().spool.intern(m_cur_string).first;
             break;
             default:
                 ;

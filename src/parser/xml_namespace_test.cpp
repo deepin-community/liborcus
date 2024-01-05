@@ -7,27 +7,27 @@
 
 #include "test_global.hpp"
 #include "orcus/xml_namespace.hpp"
-#include "pstring.hpp"
 
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
 
-using namespace std;
 using namespace orcus;
 
 namespace {
 
 void test_basic()
 {
-    pstring xmlns1("http://some.xmlns/");
-    pstring xmlns2("http://other.xmlns/");
+    ORCUS_TEST_FUNC_SCOPE;
+
+    std::string_view xmlns1("http://some.xmlns/");
+    std::string_view xmlns2("http://other.xmlns/");
 
     xmlns_repository repo;
     xmlns_context cxt1 = repo.create_context();
     xmlns_context cxt2 = repo.create_context();
 
-    pstring empty, myns("myns");
+    std::string_view empty, myns("myns");
     {
         // context 1
         xmlns_id_t test1 = cxt1.push(empty, xmlns1); // register default namespace.
@@ -53,8 +53,10 @@ void test_basic()
 
 void test_all_namespaces()
 {
-    pstring key1("a"), key2("b"), key3("c");
-    pstring ns1("foo"), ns2("baa"), ns3("hmm");
+    ORCUS_TEST_FUNC_SCOPE;
+
+    std::string_view key1("a"), key2("b"), key3("c");
+    std::string_view ns1("foo"), ns2("baa"), ns3("hmm");
 
     xmlns_repository repo;
     xmlns_context cxt = repo.create_context();
@@ -67,7 +69,7 @@ void test_all_namespaces()
     ns = cxt.push(key3, ns3);
     assert(ns3 == ns);
 
-    vector<xmlns_id_t> all_ns = cxt.get_all_namespaces();
+    std::vector<xmlns_id_t> all_ns = cxt.get_all_namespaces();
     assert(all_ns.size() == 3);
     assert(ns1 == all_ns[0]);
     assert(ns2 == all_ns[1]);
@@ -110,6 +112,8 @@ void test_predefined_ns()
 
 void test_xml_name_t()
 {
+    ORCUS_TEST_FUNC_SCOPE;
+
     xml_name_t name1;
     name1.ns = NS_test_name1;
     name1.name = "foo";
@@ -127,6 +131,8 @@ void test_xml_name_t()
 
 void test_ns_context()
 {
+    ORCUS_TEST_FUNC_SCOPE;
+
     xmlns_repository repo;
     repo.add_predefined_values(NS_test_all);
 
@@ -193,6 +199,30 @@ void test_ns_context()
     assert(id1 == id2);
 }
 
+void test_repo_move()
+{
+    ORCUS_TEST_FUNC_SCOPE;
+
+    static_assert(!std::is_copy_constructible_v<xmlns_repository>);
+    static_assert(std::is_move_constructible_v<xmlns_repository>);
+
+    xmlns_repository repo;
+    repo.add_predefined_values(NS_test_all);
+
+    xmlns_repository repo_moved = std::move(repo); // move construction
+    xmlns_repository repo_moved2;
+    repo_moved2 = std::move(repo_moved); // move assignment
+
+    xmlns_id_t ns_id = repo_moved2.get_identifier(0);
+    assert(ns_id != XMLNS_UNKNOWN_ID);
+    ns_id = repo_moved2.get_identifier(1);
+    assert(ns_id != XMLNS_UNKNOWN_ID);
+    ns_id = repo_moved2.get_identifier(2);
+    assert(ns_id != XMLNS_UNKNOWN_ID);
+    ns_id = repo_moved2.get_identifier(3);
+    assert(ns_id == XMLNS_UNKNOWN_ID);
+}
+
 } // anonymous namespace
 
 int main()
@@ -202,6 +232,7 @@ int main()
     test_predefined_ns();
     test_xml_name_t();
     test_ns_context();
+    test_repo_move();
 
     return EXIT_SUCCESS;
 }

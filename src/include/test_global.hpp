@@ -12,7 +12,6 @@
 // release build
 #undef NDEBUG
 #include <cassert>
-#define NDEBUG
 #else
 // debug build
 #include <cassert>
@@ -50,6 +49,8 @@ void verify_content(
     const char* filename, size_t line_no, std::string_view expected, const std::string& actual);
 
 }} // namespace orcus::test
+
+#define ORCUS_TEST_FUNC_SCOPE orcus::test::stack_printer __sp__(__func__)
 
 #endif
 

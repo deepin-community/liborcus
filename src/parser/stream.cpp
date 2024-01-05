@@ -7,7 +7,8 @@
 
 #include <orcus/stream.hpp>
 #include <orcus/exception.hpp>
-#include <orcus/global.hpp>
+
+#include "utf8.hpp"
 
 #include <sstream>
 #include <fstream>
@@ -18,11 +19,11 @@
 #include <codecvt>
 #include <iostream>
 
-#include <boost/filesystem.hpp>
+#include "filesystem_env.hpp"
+
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
-namespace fs = boost::filesystem;
 namespace bip = boost::interprocess;
 
 namespace orcus {
@@ -86,7 +87,7 @@ std::string convert_utf16_to_utf8(const char* p, size_t n, unicode_t ut)
             ;
     }
 
-#if defined(_WIN32)
+#if defined(_MSC_VER)
     // char16_t does not work with MSVC just yet. This is a workaround. c.f.
     // https://stackoverflow.com/questions/32055357/visual-studio-c-2015-stdcodecvt-with-char16-t-or-char32-t
     const int16_t* pi16 = reinterpret_cast<const int16_t*>(buf.data());
@@ -105,8 +106,15 @@ std::tuple<std::string_view, size_t, size_t> find_line_with_offset(std::string_v
     const char* p_end = p0 + strm.size();
     const char* p_offset = p0 + offset;
 
+    if (p_offset >= p_end)
+    {
+        std::ostringstream os;
+        os << "offset value of " << offset << " is out-of-bound for a stream of length " << strm.size();
+        throw std::invalid_argument(os.str());
+    }
+
     // Determine the line number.
-    size_t line_num = 1;
+    std::size_t line_num = 0;
     for (const char* p = p0; p != p_offset; ++p)
     {
         if (*p == '\n')
@@ -174,16 +182,12 @@ struct file_content::impl
 file_content::file_content() :
     mp_impl(std::make_unique<impl>()) {}
 
-file_content::file_content(file_content&& other) :
-    mp_impl(std::move(other.mp_impl))
-{
-    other.mp_impl = std::make_unique<impl>();
-}
+file_content::file_content(file_content&& other) = default;
 
 file_content::file_content(std::string_view filepath) :
     mp_impl(std::make_unique<impl>(filepath)) {}
 
-file_content::~file_content() {}
+file_content::~file_content() = default;
 
 const char* file_content::data() const
 {
@@ -250,13 +254,8 @@ memory_content::memory_content() : mp_impl(std::make_unique<impl>()) {}
 memory_content::memory_content(std::string_view s) :
     mp_impl(std::make_unique<impl>(s)) {}
 
-memory_content::memory_content(memory_content&& other) :
-    mp_impl(std::move(other.mp_impl))
-{
-    other.mp_impl = std::make_unique<impl>();
-}
-
-memory_content::~memory_content() {}
+memory_content::memory_content(memory_content&& other) = default;
+memory_content::~memory_content() = default;
 
 const char* memory_content::data() const
 {
@@ -302,32 +301,33 @@ std::string_view memory_content::str() const
     return mp_impl->content;
 }
 
-line_with_offset::line_with_offset(std::string _line, size_t _line_number, size_t _offset_on_line) :
+line_with_offset::line_with_offset(std::string _line, std::size_t _line_number, std::size_t _offset_on_line) :
     line(std::move(_line)),
     line_number(_line_number),
     offset_on_line(_offset_on_line)
 {}
 
-line_with_offset::line_with_offset(const line_with_offset& other) :
-    line(other.line),
-    line_number(other.line_number),
-    offset_on_line(other.offset_on_line)
-{}
+line_with_offset::line_with_offset(const line_with_offset& other) = default;
+line_with_offset::line_with_offset(line_with_offset&& other) = default;
+line_with_offset::~line_with_offset() = default;
 
-line_with_offset::line_with_offset(line_with_offset&& other) :
-    line(std::move(other.line)),
-    line_number(other.line_number),
-    offset_on_line(other.offset_on_line)
-{}
+bool line_with_offset::operator== (const line_with_offset& other) const
+{
+    return line == other.line && line_number == other.line_number && offset_on_line == other.offset_on_line;
+}
 
-line_with_offset::~line_with_offset() {}
+bool line_with_offset::operator!= (const line_with_offset& other) const
+{
+    return !operator==(other);
+}
 
 std::string create_parse_error_output(std::string_view strm, std::ptrdiff_t offset)
 {
-    if (offset < 0)
+    if (strm.empty() || offset < 0)
         return std::string();
 
     const size_t max_line_length = 60;
+    offset = std::min<std::ptrdiff_t>(strm.size() - 1, offset);
 
     auto line_info = find_line_with_offset(strm, offset);
     std::string_view line = std::get<0>(line_info);
@@ -337,7 +337,7 @@ std::string create_parse_error_output(std::string_view strm, std::ptrdiff_t offs
     if (offset_on_line < 30)
     {
         std::ostringstream os;
-        os << line_num << ":" << (offset_on_line+1) << ": ";
+        os << (line_num+1) << ":" << (offset_on_line+1) << ": ";
         size_t line_num_width = os.str().size();
 
         // Truncate line if it's too long.
@@ -408,6 +408,38 @@ size_t locate_first_different_char(std::string_view left, std::string_view right
     }
 
     return n;
+}
+
+std::size_t calc_logical_string_length(std::string_view s)
+{
+    std::size_t length = 0;
+
+    const char* p = s.data();
+    const char* p_end = p + s.size();
+
+    while (p < p_end)
+    {
+        ++length;
+
+        auto n_bytes = calc_utf8_byte_length(*p);
+        if (!n_bytes || n_bytes > 4)
+        {
+            std::ostringstream os;
+            os << "'" << s << "' contains invalid character at position " << std::distance(s.data(), p);
+            throw std::invalid_argument(os.str());
+        }
+
+        p += n_bytes;
+    }
+
+    if (p != p_end)
+    {
+        std::ostringstream os;
+        os << "last character of '" << s << "' ended prematurely";
+        throw std::invalid_argument(os.str());
+    }
+
+    return length;
 }
 
 }

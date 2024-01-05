@@ -6,6 +6,7 @@ liborcus_HEADERS = \
 	export_interface.hpp \
 	import_interface.hpp \
 	import_interface_pivot.hpp \
+	import_interface_styles.hpp \
 	import_interface_view.hpp
 
 if BUILD_SPREADSHEET_MODEL
@@ -14,6 +15,7 @@ liborcus_HEADERS += \
 	auto_filter.hpp \
 	config.hpp \
 	document.hpp \
+	document_types.hpp \
 	factory.hpp \
 	pivot.hpp \
 	shared_strings.hpp \

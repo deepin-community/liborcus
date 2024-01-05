@@ -9,7 +9,6 @@
 #include "orcus/json_parser.hpp"
 #include "orcus/json_document_tree.hpp"
 #include "orcus/config.hpp"
-#include "pstring.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -177,10 +176,10 @@ public:
         }
     }
 
-    void object_key(const char* p, size_t len, bool /*transient*/)
+    void object_key(std::string_view key, bool /*transient*/)
     {
         parser_stack& cur = m_stack.back();
-        cur.key = PyUnicode_FromStringAndSize(p, len);
+        cur.key = PyUnicode_FromStringAndSize(key.data(), key.size());
     }
 
     void end_object()
@@ -213,9 +212,9 @@ public:
         push_value(Py_None);
     }
 
-    void string(const char* p, size_t len, bool /*transient*/)
+    void string(std::string_view val, bool /*transient*/)
     {
-        push_value(PyUnicode_FromStringAndSize(p, len));
+        push_value(PyUnicode_FromStringAndSize(val.data(), val.size()));
     }
 
     void number(double val)
@@ -242,13 +241,13 @@ PyObject* json_loads(PyObject* /*module*/, PyObject* args, PyObject* kwargs)
     }
 
     json_parser_handler hdl;
-    orcus::json_parser<json_parser_handler> parser(stream, strlen(stream), hdl);
+    orcus::json_parser<json_parser_handler> parser(stream, hdl);
     try
     {
         parser.parse();
         return hdl.get_root();
     }
-    catch (const orcus::json::parse_error& e)
+    catch (const orcus::parse_error& e)
     {
         PyErr_SetString(PyExc_TypeError, e.what());
     }

@@ -7,10 +7,9 @@
 
 #include "test_global.hpp"
 #include <orcus/string_pool.hpp>
-#include "pstring.hpp"
-#include <orcus/global.hpp>
 
-using namespace std;
+#include <type_traits>
+
 using namespace orcus;
 
 void test_basic()
@@ -20,7 +19,7 @@ void test_basic()
     string_pool pool;
     assert(pool.size() == 0);
 
-    pair<pstring, bool> ret = pool.intern("foo");
+    std::pair<std::string_view, bool> ret = pool.intern("foo");
     assert(ret.first == "foo");
     assert(ret.second); // new instance
 
@@ -34,34 +33,41 @@ void test_basic()
     assert(!ret.second);
 
     ret = pool.intern("A");
-    cout << "interned string: " << ret.first << endl;
+    std::cout << "interned string: " << ret.first << std::endl;
     assert(ret.second);
     assert(pool.size() == 2);
 
     // Duplicate string.
     ret = pool.intern("A");
-    cout << "interned string: " << ret.first << endl;
+    std::cout << "interned string: " << ret.first << std::endl;
     assert(!ret.second);
 
     ret = pool.intern("B");
-    cout << "interned string: " << ret.first << endl;
+    std::cout << "interned string: " << ret.first << std::endl;
     assert(pool.size() == 3);
 
-    // Interning an already-intern string should return a pstring with
+    // Interning an already-intern string should return a string_view with
     // identical memory address.
-    pstring str = ret.first;
-    pstring str2 = pool.intern(str).first;
+    std::string_view str = ret.first;
+    std::string_view str2 = pool.intern(str).first;
     assert(str == str2);
     assert(pool.size() == 3);
-    assert(str.get() == str2.get()); // their memory address should be identical.
+    assert(str.data() == str2.data()); // their memory address should be identical.
 
-    pstring static_str(static_text);
+    std::string_view static_str(static_text);
     ret = pool.intern(static_str);
     str = ret.first;
-    cout << "interned string: " << str << endl;
+    std::cout << "interned string: " << str << std::endl;
     assert(pool.size() == 4);
     assert(str == static_str);
-    assert(str.get() != static_str.get());
+    assert(str.data() != static_str.data());
+
+    // Make sure that the pool remains usable after calling clear().
+    pool.clear();
+    assert(pool.size() == 0);
+    ret = pool.intern(static_str);
+    assert(ret.second); // it should be a new string
+    assert(ret.first == static_str);
 }
 
 void test_merge()
@@ -72,12 +78,12 @@ void test_merge()
     pool1.intern("A");
     pool1.intern("B");
     pool1.intern("C");
-    pstring v1 = pool1.intern("same value").first;
+    std::string_view v1 = pool1.intern("same value").first;
 
     pool2->intern("D");
     pool2->intern("E");
     pool2->intern("F");
-    pstring v2 = pool2->intern("same value").first;
+    std::string_view v2 = pool2->intern("same value").first;
 
     assert(pool1.size() == 4);
     assert(pool2->size() == 4);
@@ -101,10 +107,27 @@ void test_merge()
     assert(entries.size() == pool1.size());
 }
 
+void test_move()
+{
+    static_assert(!std::is_copy_constructible_v<orcus::string_pool>);
+    static_assert(std::is_move_constructible_v<orcus::string_pool>);
+
+    string_pool pool1;
+    pool1.intern("A");
+    pool1.intern("B");
+    pool1.intern("C");
+    pool1.intern("D");
+    pool1.intern("E");
+
+    string_pool pool2 = std::move(pool1);
+    assert(pool2.size() == 5);
+}
+
 int main()
 {
     test_basic();
     test_merge();
+    test_move();
 
     return EXIT_SUCCESS;
 }

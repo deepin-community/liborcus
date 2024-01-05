@@ -22,6 +22,9 @@ struct xmlns_context_impl;
 /**
  * Central XML namespace repository that stores all namespaces that are used
  * in the current session.
+ *
+ * @warning this class is not copyable, but is movable; however, the
+ *          moved-from object will not be usable after the move.
  */
 class ORCUS_PSR_DLLPUBLIC xmlns_repository
 {
@@ -32,14 +35,17 @@ class ORCUS_PSR_DLLPUBLIC xmlns_repository
 
     xmlns_id_t intern(std::string_view uri);
 
-    xmlns_repository(const xmlns_repository&); // disabled
-    xmlns_repository& operator= (const xmlns_repository&); // disabled
-
     size_t get_index(xmlns_id_t ns_id) const;
 
 public:
+    xmlns_repository(const xmlns_repository&) = delete;
+    xmlns_repository& operator= (const xmlns_repository&) = delete;
+
     xmlns_repository();
+    xmlns_repository(xmlns_repository&& other);
     ~xmlns_repository();
+
+    xmlns_repository& operator= (xmlns_repository&&);
 
     /**
      * Add a set of predefined namespace values to the repository.
@@ -55,6 +61,15 @@ public:
      */
     void add_predefined_values(const xmlns_id_t* predefined_ns);
 
+    /**
+     * Create a context object associated with this namespace repository.
+     *
+     * @warning Since this context object references values stored in the repo,
+     *          make sure that it will not out-live the repository object
+     *          itself.
+     *
+     * @return context object to use for a new XML stream.
+     */
     xmlns_context create_context();
 
     /**
@@ -66,8 +81,11 @@ public:
      */
     xmlns_id_t get_identifier(size_t index) const;
 
+    /**
+     * See xmlns_context::get_short_name() for the explanation of this method,
+     * which works identically to it.
+     */
     std::string get_short_name(xmlns_id_t ns_id) const;
-    std::string get_short_name(size_t index) const;
 };
 
 /**
@@ -76,7 +94,7 @@ public:
  * instance of this class any longer than the life cycle of the xml stream
  * it is used in.
  *
- * An empty key value is associated with a default namespace.
+ * An empty key value i.e. `""` is associated with a default namespace.
  */
 class ORCUS_PSR_DLLPUBLIC xmlns_context
 {
@@ -95,17 +113,33 @@ public:
     xmlns_context& operator= (const xmlns_context& r);
     xmlns_context& operator= (xmlns_context&& r);
 
-    xmlns_id_t push(std::string_view key, std::string_view uri);
-    void pop(std::string_view key);
+    /**
+     * Push a new namespace alias-value pair to the stack.
+     *
+     * @param alias namespace alias to push onto the stack.  If the same alias
+     *              is already present, this overwrites it until it gets popped
+     *              off the stack.
+     * @param uri namespace name to associate with the alias.
+     *
+     * @return normalized namespace identifier for the namespace name.
+     */
+    xmlns_id_t push(std::string_view alias, std::string_view uri);
+
+    /**
+     * Pop a namespace alias from the stack.
+     *
+     * @param alias namespace alias to pop from the stack.
+     */
+    void pop(std::string_view alias);
 
     /**
      * Get the currnet namespace identifier for a specified namespace alias.
      *
-     * @param key namespace alias to get the current namespace identifier for.
+     * @param alias namespace alias to get the current namespace identifier for.
      *
      * @return current namespace identifier associated with the alias.
      */
-    xmlns_id_t get(std::string_view key) const;
+    xmlns_id_t get(std::string_view alias) const;
 
     /**
      * Get a unique index value associated with a specified identifier.  An
@@ -123,8 +157,8 @@ public:
      * but still guaranteed to be unique to the identifier it is associated
      * with.
      *
-     * <p>Note that the xmlns_repository class has method of the same
-     * name, and that method works identically to this method.</p>
+     * @note The xmlns_repository class has method of the same name, and that
+     *       method works identically to this method.
      *
      * @param ns_id a namespace identifier to obtain short name for.
      *

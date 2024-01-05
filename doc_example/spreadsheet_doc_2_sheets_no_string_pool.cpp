@@ -74,6 +74,10 @@ public:
 
     virtual void set_format(ss::row_t, ss::col_t, ss::row_t, ss::col_t, std::size_t) override {}
 
+    virtual void set_column_format(ss::col_t, ss::col_t, std::size_t) override {}
+
+    virtual void set_row_format(ss::col_t, std::size_t) override {}
+
     virtual void fill_down_cells(ss::row_t, ss::col_t, ss::row_t) override {}
 };
 //!code-end: my_sheet
@@ -109,10 +113,11 @@ public:
 int main()
 {
     std::filesystem::path input_dir = std::getenv("INPUTDIR");
+    auto filepath = input_dir / "multi-sheets.ods";
 
     my_import_factory factory;
     orcus::orcus_ods loader(&factory);
-    loader.read_file(input_dir / "multi-sheets.ods");
+    loader.read_file(filepath.native());
 
     return EXIT_SUCCESS;
 }

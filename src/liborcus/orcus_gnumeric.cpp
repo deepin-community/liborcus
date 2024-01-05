@@ -122,13 +122,13 @@ bool orcus_gnumeric::detect(const unsigned char* buffer, size_t size)
     return false;
 }
 
-void orcus_gnumeric::read_file(const string& filepath)
+void orcus_gnumeric::read_file(std::string_view filepath)
 {
 #if ORCUS_DEBUG_GNUMERIC
     cout << "reading " << filepath << endl;
 #endif
 
-    file_content content(filepath.data());
+    file_content content(filepath);
     if (content.empty())
         return;
 
@@ -143,6 +143,12 @@ void orcus_gnumeric::read_stream(std::string_view stream)
     std::string file_content;
     if (!decompress_gzip(stream.data(), stream.size(), file_content))
         return;
+
+    if (auto* gs = mp_impl->mp_factory->get_global_settings(); gs)
+    {
+        gs->set_origin_date(1899, 12, 30);
+        gs->set_default_formula_grammar(spreadsheet::formula_grammar_t::gnumeric);
+    }
 
     mp_impl->read_content_xml(file_content, get_config());
     mp_impl->mp_factory->finalize();

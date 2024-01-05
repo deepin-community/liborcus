@@ -10,20 +10,17 @@
 #include <orcus/stream.hpp>
 #include <orcus/json_document_tree.hpp>
 #include <orcus/json_parser_base.hpp>
-#include <orcus/global.hpp>
 #include <orcus/config.hpp>
 #include <orcus/xml_namespace.hpp>
 #include <orcus/dom_tree.hpp>
 
-#include <boost/filesystem.hpp>
+#include "filesystem_env.hpp"
 
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <cmath>
 #include <cstring>
-
-namespace fs = boost::filesystem;
 
 using namespace orcus;
 
@@ -152,7 +149,7 @@ void test_json_parse()
 {
     json_config test_config;
 
-    for (std::size_t i = 0; i < ORCUS_N_ELEMENTS(json_test_dirs); ++i)
+    for (std::size_t i = 0; i < std::size(json_test_dirs); ++i)
     {
         fs::path basedir = json_test_dirs[i];
         verify_input(test_config, basedir);
@@ -164,7 +161,7 @@ void test_json_resolve_refs()
     json_config test_config;
     test_config.resolve_references = true;
 
-    for (size_t i = 0; i < ORCUS_N_ELEMENTS(json_test_refs_dirs); ++i)
+    for (size_t i = 0; i < std::size(json_test_refs_dirs); ++i)
     {
         fs::path basedir = json_test_refs_dirs[i];
         verify_input(test_config, basedir);
@@ -181,7 +178,7 @@ void test_json_parse_empty()
         "{\"key1\": {}, \"key2\": {}}"
     };
 
-    for (size_t i = 0; i < ORCUS_N_ELEMENTS(tests); ++i)
+    for (size_t i = 0; i < std::size(tests); ++i)
     {
         const char* test = tests[i];
         std::cout << "JSON stream: '" << test << "' (" << std::strlen(test) << ")" << std::endl;
@@ -190,7 +187,7 @@ void test_json_parse_empty()
         {
             doc.load(test, test_config);
         }
-        catch (const json::parse_error& e)
+        catch (const parse_error& e)
         {
             std::cout << create_parse_error_output(test, e.offset()) << std::endl;
             std::cout << e.what() << std::endl;
@@ -212,7 +209,7 @@ void test_json_parse_invalid()
         "\"key\": {\"inner\": 12}"
     };
 
-    for (std::size_t i = 0; i < ORCUS_N_ELEMENTS(invalids); ++i)
+    for (std::size_t i = 0; i < std::size(invalids); ++i)
     {
         const char* invalid_json = invalids[i];
         json::document_tree doc;
@@ -222,7 +219,7 @@ void test_json_parse_invalid()
             std::cerr << "Invalid JSON expression is parsed as valid: '" << invalid_json << "'" << std::endl;
             assert(false);
         }
-        catch (const json::parse_error& e)
+        catch (const parse_error& e)
         {
             // works as expected.
             std::cout << "invalid expression tested: " << invalid_json << std::endl;

@@ -1,13 +1,11 @@
 #                            -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.65])
-
 # ===================
 # Version information
 # ===================
 m4_define([orcus_major_version], [0])
-m4_define([orcus_minor_version], [17])
+m4_define([orcus_minor_version], [19])
 m4_define([orcus_micro_version], [2])
 m4_define([orcus_version], [orcus_major_version.orcus_minor_version.orcus_micro_version])
 
@@ -15,7 +13,7 @@ m4_define([orcus_version], [orcus_major_version.orcus_minor_version.orcus_micro_
 # API information
 # ===============
 m4_define([orcus_major_api_version], [0])
-m4_define([orcus_minor_api_version], [17])
+m4_define([orcus_minor_api_version], [18])
 m4_define([orcus_api_version], [orcus_major_version.orcus_minor_api_version])
 
 # =============
@@ -36,16 +34,25 @@ CXXFLAGS="-fvisibility=hidden $CXXFLAGS -Wall -pthread -Wshadow"
 # ===========================
 AC_PROG_CPP
 AC_PROG_CXX
+LT_INIT([win32-dll disable-static pic-only])
 AC_PROG_INSTALL
 AC_PROG_LN_S
-AC_PROG_LIBTOOL
-AC_LIBTOOL_WIN32_DLL
 PKG_PROG_PKG_CONFIG([0.20])
 
 # =====================
 # Find required headers
 # =====================
 AC_CHECK_HEADERS([stdlib.h sys/time.h unistd.h])
+
+# ===================================
+# Check for filesystem implementation
+# ===================================
+AC_CHECK_HEADER([filesystem], [have_filesystem=yes], [have_filesystem=no], [])
+
+AC_CHECK_HEADER([experimental/filesystem], [have_experimental_filesystem=yes], [have_experimental_filesystem=no], [])
+
+AM_CONDITIONAL([HAVE_FILESYSTEM], [test "x$have_filesystem" = "xyes"])
+AM_CONDITIONAL([HAVE_EXPERIMENTAL_FILESYSTEM], [test "x$have_experimental_filesystem" = "xyes"])
 
 # =============================================================
 # Checks for typedefs, structures, and compiler characteristics
@@ -69,7 +76,7 @@ AC_DEFINE([BOOST_ALL_NO_LIB], [], [Disable boost's evil autolink.])
 # ======================
 # Set required ixion api
 # ======================
-IXION_REQUIRED_API_VERSION=0.17
+IXION_REQUIRED_API_VERSION=0.18
 AC_SUBST(IXION_REQUIRED_API_VERSION)
 
 # =============
@@ -85,8 +92,10 @@ AC_SUBST(ORCUS_MINOR_VERSION)
 AC_SUBST(ORCUS_MICRO_VERSION)
 
 BOOST_REQUIRE([1.36])
-BOOST_FILESYSTEM
 BOOST_SYSTEM
+AS_IF([test "x$have_filesystem" != "xyes" -a "x$have_experimental_filesystem" != "xyes"], [
+    BOOST_FILESYSTEM
+])
 
 # =========================================================
 # Determine if we are going to build static lib (for MinGW)
@@ -98,7 +107,7 @@ AM_CONDITIONAL([HAVE_STATIC_LIB],
 # Development Utilities
 # =====================
 AC_ARG_ENABLE(debug-utils,
-        AC_HELP_STRING([--enable-debug-utils], [Build with extra checks useful during development.]),
+        AS_HELP_STRING([--enable-debug-utils], [Build with extra checks useful during development.]),
         [enable_debug_utils="$enableval"],
         [enable_debug_utils=no]
 )
@@ -112,7 +121,7 @@ AC_ARG_ENABLE(debug,
         [enable_debug=no]
 )
 AS_IF([test "x$enable_debug" != "xno"], [
-        CXXFLAGS="$CXXFLAGS -g -O0 -DMDDS_ASSERT_STRING_MAP"
+        CXXFLAGS="$CXXFLAGS -g -O0"
         enable_debug_utils=yes
 ], [
         CXXFLAGS="$CXXFLAGS -O2"
@@ -120,7 +129,7 @@ AS_IF([test "x$enable_debug" != "xno"], [
 ])
 
 AS_IF([test "x$enable_debug_utils" != "xno"], [
-        CXXFLAGS="$CXXFLAGS -D__ORCUS_DEBUG_UTILS"
+        CXXFLAGS="$CXXFLAGS -g -D__ORCUS_DEBUG_UTILS -DMDDS_SORTED_STRING_MAP_DEBUG"
 ])
 
 # zlib is a hard requirement in liborcus-parser.
@@ -176,17 +185,42 @@ AC_ARG_WITH(gnumeric-filter,
         [with_gnumeric_filter=yes]
 )
 
+# ======================
+# parquet filter support
+# ======================
+AC_ARG_WITH(parquet-filter,
+            AS_HELP_STRING([--with-parquet-filter],
+                           [Disables the parquet import filter. The parquet import filter depends on Apache Arrow.]),
+        [with_parquet_filter="$withval"],
+        [with_parquet_filter=no]
+)
+
 AC_ARG_WITH(cpu-features,
         AS_HELP_STRING([--with-cpu-features], [Enables custom CPU features.]),
         [with_cpu_features="$withval"],
         [with_cpu_features=no]
 )
 
+AC_ARG_WITH(benchmark,
+        AS_HELP_STRING([--without-benchmark], [Disables building of benchmark testing programs.]),
+        [with_benchmark="$withval"],
+        [with_benchmark=yes]
+)
+
+AC_ARG_WITH(doc-example,
+        AS_HELP_STRING([--with-doc-example], [Enables building of example code used in documentation.]),
+        [with_doc_example="$withval"],
+        [with_doc_example=no]
+)
+
 AM_CONDITIONAL([WITH_ODS_FILTER], [test "x$with_ods_filter" != "xno"])
 AM_CONDITIONAL([WITH_XLSX_FILTER], [test "x$with_xlsx_filter" != "xno"])
 AM_CONDITIONAL([WITH_XLS_XML_FILTER], [test "x$with_xls_xml_filter" != "xno"])
 AM_CONDITIONAL([WITH_GNUMERIC_FILTER], [test "x$with_gnumeric_filter" != "xno"])
+AM_CONDITIONAL([WITH_PARQUET_FILTER], [test "x$with_parquet_filter" != "xno"])
 AM_CONDITIONAL([WITH_TOOLS], [test "x$with_tools" != "xno"])
+AM_CONDITIONAL([WITH_BENCHMARK], [test "x$with_benchmark" != "xno"])
+AM_CONDITIONAL([WITH_DOC_EXAMPLE], [test "x$with_doc_example" != "xno"])
 
 AS_IF([test "x$with_ods_filter" != "xno"], [
         CXXFLAGS="$CXXFLAGS -D__ORCUS_ODS"
@@ -205,6 +239,11 @@ AS_IF([test "x$with_gnumeric_filter" != "xno"], [
         BOOST_IOSTREAMS
 ])
 
+AS_IF([test "x$with_parquet_filter" != "xno"], [
+        CXXFLAGS="$CXXFLAGS -D__ORCUS_PARQUET"
+        PKG_CHECK_MODULES([PARQUET], [parquet])
+])
+
 AS_IF([test "x$with_cpu_features" != "xno"], [
         CXXFLAGS="$CXXFLAGS -D__ORCUS_CPU_FEATURES"
 ])
@@ -217,7 +256,7 @@ AS_IF([test "x$with_tools" != "xno"], [
 # ============
 # mdds support
 # ============
-PKG_CHECK_MODULES([MDDS],[mdds-2.0 >= 1.9.99])
+PKG_CHECK_MODULES([MDDS],[mdds-2.1 >= 2.1.1])
 CXXFLAGS="$CXXFLAGS $MDDS_CFLAGS"
 
 # =================
@@ -230,7 +269,7 @@ AC_ARG_ENABLE(spreadsheet-model,
         [enable_spreadsheet_model=yes]
 )
 AS_IF([test "x$enable_spreadsheet_model" != "xno"], [
-        PKG_CHECK_MODULES([LIBIXION],[libixion-$IXION_REQUIRED_API_VERSION >= 0.16.99])
+        PKG_CHECK_MODULES([LIBIXION],[libixion-$IXION_REQUIRED_API_VERSION >= 0.19.0])
         CXXFLAGS="$CXXFLAGS -D__ORCUS_SPREADSHEET_MODEL"
         BOOST_DATE_TIME
 ])
@@ -329,6 +368,8 @@ AS_IF([test x"$enable_werror" = "xyes"], [
         CXXFLAGS="$CXXFLAGS -Werror"
 ])
 
+AX_VALGRIND_CHECK()
+
 AC_CONFIG_FILES([Makefile
         liborcus-$ORCUS_API_VERSION.pc:liborcus.pc.in
         liborcus-spreadsheet-model-$ORCUS_API_VERSION.pc:liborcus-spreadsheet-model.pc.in
@@ -366,7 +407,8 @@ Build configuration:
         ods-filter             $with_ods_filter
         xlsx-filter            $with_xlsx_filter
         xls-xml-filter         $with_xls_xml_filter
-        xls-gnumeric           $with_gnumeric_filter
+        gnumeric               $with_gnumeric_filter
+        parquet                $with_parquet_filter
         tools                  $with_tools
         python                 $enable_python
         python-xlsx            $with_python_xlsx
@@ -374,6 +416,8 @@ Build configuration:
         python-xls-xml         $with_python_xls_xml
         python-gnumeric        $with_python_gnumeric
         cpu-features           $with_cpu_features
+        benchmark              $with_benchmark
+        doc-example            $with_doc_example
 ==============================================================================
 ])
 

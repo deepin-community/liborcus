@@ -13,7 +13,6 @@
 #include "orcus/spreadsheet/shared_strings.hpp"
 #include "orcus/spreadsheet/document.hpp"
 #include "orcus/spreadsheet/sheet.hpp"
-#include "orcus/global.hpp"
 
 #include <ixion/address.hpp>
 #include <ixion/model_context.hpp>
@@ -202,103 +201,126 @@ void print_formatted_text(std::ostream& strm, const std::string& text, const for
 
 void build_border_style(std::ostringstream& os, const char* style_name, const border_attrs_t& attrs)
 {
+    if (!attrs.style || *attrs.style == border_style_t::none)
+        return;
+
     os << style_name << ": ";
-    if (attrs.style == border_style_t::thin)
+    switch (*attrs.style)
     {
-        os << "solid 1px ";
-    }
-    else if (attrs.style == border_style_t::medium)
-    {
-        os << "solid 2px ";
-    }
-    else if (attrs.style == border_style_t::thick)
-    {
-        os << "solid 3px ";
-    }
-    else if (attrs.style == border_style_t::hair)
-    {
-        os << "solid 0.5px ";
-    }
-    else if (attrs.style == border_style_t::dotted)
-    {
-        os << "dotted 1px ";
-    }
-    else if (attrs.style == border_style_t::dashed)
-    {
-        os << "dashed 1px ";
-    }
-    else if (attrs.style == border_style_t::double_border)
-    {
-        os << "3px double ";
-    }
-    else if (attrs.style == border_style_t::dash_dot)
-    {
-        // CSS doesn't support dash-dot.
-        os << "dashed 1px ";
-    }
-    else if (attrs.style == border_style_t::dash_dot_dot)
-    {
-        // CSS doesn't support dash-dot-dot.
-        os << "dashed 1px ";
-    }
-    else if (attrs.style == border_style_t::medium_dashed)
-    {
-        os << "dashed 2px ";
-    }
-    else if (attrs.style == border_style_t::medium_dash_dot)
-    {
-        // CSS doesn't support dash-dot.
-        os << "dashed 2px ";
-    }
-    else if (attrs.style == border_style_t::medium_dash_dot_dot)
-    {
-        // CSS doesn't support dash-dot-dot.
-        os << "dashed 2px ";
-    }
-    else if (attrs.style == border_style_t::slant_dash_dot)
-    {
-        // CSS doesn't support dash-dot.
-        os << "dashed 2px ";
+        case border_style_t::thin:
+        {
+            os << "solid 1px ";
+            break;
+        }
+        case border_style_t::medium:
+        {
+            os << "solid 2px ";
+            break;
+        }
+        case border_style_t::thick:
+        {
+            os << "solid 3px ";
+            break;
+        }
+        case border_style_t::hair:
+        {
+            os << "solid 0.5px ";
+            break;
+        }
+        case border_style_t::dotted:
+        {
+            os << "dotted 1px ";
+            break;
+        }
+        case border_style_t::dashed:
+        {
+            os << "dashed 1px ";
+            break;
+        }
+        case border_style_t::double_border:
+        {
+            os << "3px double ";
+            break;
+        }
+        case border_style_t::dash_dot:
+        {
+            // CSS doesn't support dash-dot.
+            os << "dashed 1px ";
+            break;
+        }
+        case border_style_t::dash_dot_dot:
+        {
+            // CSS doesn't support dash-dot-dot.
+            os << "dashed 1px ";
+            break;
+        }
+        case border_style_t::medium_dashed:
+        {
+            os << "dashed 2px ";
+            break;
+        }
+        case border_style_t::medium_dash_dot:
+        {
+            // CSS doesn't support dash-dot.
+            os << "dashed 2px ";
+            break;
+        }
+        case border_style_t::medium_dash_dot_dot:
+        {
+            // CSS doesn't support dash-dot-dot.
+            os << "dashed 2px ";
+            break;
+        }
+        case border_style_t::slant_dash_dot:
+        {
+            // CSS doesn't support dash-dot.
+            os << "dashed 2px ";
+            break;
+        }
+        default:;
     }
 
-    build_rgb_color(os, attrs.border_color);
+    build_rgb_color(os, *attrs.border_color);
     os << "; ";
 }
 
 void build_style_string(std::string& str, const styles& styles, const cell_format_t& fmt)
 {
     std::ostringstream os;
-    if (fmt.font)
+
     {
         const font_t* p = styles.get_font(fmt.font);
         if (p)
         {
-            if (!p->name.empty())
-                os << "font-family: " << p->name << ";";
+            if (p->name && !p->name.value().empty())
+                os << "font-family: " << *p->name << ";";
             if (p->size)
-                os << "font-size: " << p->size << "pt;";
-            if (p->bold)
+                os << "font-size: " << *p->size << "pt;";
+            if (p->bold && *p->bold)
                 os << "font-weight: bold;";
-            if (p->italic)
+            if (p->italic && *p->italic)
                 os << "font-style: italic;";
 
-            const color_t& r = p->color;
-            if (r.red || r.green || r.blue)
+            if (p->color)
             {
-                os << "color: ";
-                build_rgb_color(os, r);
-                os << ";";
+                const color_t& r = *p->color;
+                if (r.red || r.green || r.blue)
+                {
+                    os << "color: ";
+                    build_rgb_color(os, r);
+                    os << ";";
+                }
             }
         }
     }
-    if (fmt.fill)
+
     {
         const fill_t* p = styles.get_fill(fmt.fill);
         if (p)
         {
-            if (p->pattern_type == fill_pattern_t::solid)
+            if (p->pattern_type && *p->pattern_type == fill_pattern_t::solid && p->fg_color)
             {
-                const color_t& r = p->fg_color;
+                const color_t& r = *p->fg_color;
                 os << "background-color: ";
                 build_rgb_color(os, r);
                 os << ";";
@@ -306,7 +328,6 @@ void build_style_string(std::string& str, const styles& styles, const cell_forma
         }
     }
 
-    if (fmt.border)
     {
         const border_t* p = styles.get_border(fmt.border);
         if (p)
@@ -441,7 +462,7 @@ void html_dumper::dump(std::ostream& os) const
         const ixion::model_context& cxt = m_doc.get_model_context();
         const ixion::formula_name_resolver* resolver =
             m_doc.get_formula_name_resolver(spreadsheet::formula_ref_context_t::global);
-        const import_shared_strings* sstrings = m_doc.get_shared_strings();
+        const shared_strings& sstrings = m_doc.get_shared_strings();
 
         elem table(os, p_table);
 
@@ -505,7 +526,6 @@ void html_dumper::dump(std::ostream& os) const
                     }
                 }
 
-                if (xf_id)
                 {
                     // Apply cell format.
                     const styles& styles = m_doc.get_styles();
@@ -536,7 +556,7 @@ void html_dumper::dump(std::ostream& os) const
                         size_t sindex = cxt.get_string_identifier(pos);
                         const std::string* p = cxt.get_string(sindex);
                         assert(p);
-                        const format_runs_t* pformat = sstrings->get_format_runs(sindex);
+                        const format_runs_t* pformat = sstrings.get_format_runs(sindex);
                         if (pformat)
                             print_formatted_text(os, *p, *pformat);
                         else

@@ -6,6 +6,7 @@
  */
 
 #include "number_format.hpp"
+#include "ostream_utils.hpp"
 
 #include <ostream>
 #include <iomanip>
@@ -15,9 +16,8 @@ namespace orcus { namespace spreadsheet { namespace detail {
 
 void format_to_file_output(std::ostream& os, double v)
 {
-    std::ios_base::fmtflags origflags = os.flags();
+    ::orcus::detail::ostream_format_guard guard(os);
     os << std::setprecision(std::numeric_limits<double>::digits10 + 1) << v;
-    os.setf(origflags);
 }
 
 }}}
