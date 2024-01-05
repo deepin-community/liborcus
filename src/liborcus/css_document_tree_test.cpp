@@ -9,7 +9,6 @@
 #include <orcus/css_types.hpp>
 #include <orcus/css_parser_base.hpp>
 #include <orcus/stream.hpp>
-#include <orcus/global.hpp>
 
 #include <cstdlib>
 #include <cassert>
@@ -17,11 +16,9 @@
 #include <sstream>
 #include <iterator>
 
-#include <boost/filesystem.hpp>
+#include "filesystem_env.hpp"
 
 using namespace orcus;
-
-namespace fs = boost::filesystem;
 
 bool check_prop(const css_properties_t& props, std::string_view key, std::string_view val)
 {
@@ -94,7 +91,7 @@ void test_css_invalids()
         if (!fs::is_regular_file(path))
             continue;
 
-        if (fs::extension(path) != ".css")
+        if (path.extension().string() != ".css")
             continue;
 
         std::cout << "parsing invalid file " << path.filename().string() << "..." << std::endl;
@@ -109,7 +106,7 @@ void test_css_invalids()
             doc.load(content.str());
             assert(!"css::parse_error was not thrown, but expected to be.");
         }
-        catch (const css::parse_error&)
+        catch (const parse_error&)
         {
             // This is expected.
         }
@@ -220,7 +217,7 @@ void test_css_parse_basic3()
     {
         // h1, h2, h3 and h4 all have identical set of properties.
         const char* names[] = { "h1", "h2", "h3", "h4" };
-        size_t n = ORCUS_N_ELEMENTS(names);
+        std::size_t n = std::size(names);
 
         for (size_t i = 0; i < n; ++i)
         {

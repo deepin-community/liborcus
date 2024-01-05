@@ -9,9 +9,13 @@
 #define INCLUDED_ORCUS_ODF_STYLES_HPP
 
 #include <orcus/measurement.hpp>
+#include <orcus/spreadsheet/types.hpp>
 
 #include <map>
 #include <memory>
+#include <variant>
+#include <ostream>
+#include <optional>
 
 namespace orcus {
 
@@ -45,16 +49,16 @@ struct odf_style
 
     struct cell
     {
-        size_t font;
-        size_t fill;
-        size_t border;
-        size_t protection;
-
-        size_t xf;
-        bool automatic_style;
-
-        cell() : font(0), fill(0), border(0), protection(0),
-                xf(0), automatic_style(false) {}
+        std::size_t font = 0;
+        std::size_t fill = 0;
+        std::size_t border = 0;
+        std::size_t protection = 0;
+        std::size_t xf = 0;
+        std::size_t number_format = 0;
+        spreadsheet::hor_alignment_t hor_align = spreadsheet::hor_alignment_t::unknown;
+        spreadsheet::ver_alignment_t ver_align = spreadsheet::ver_alignment_t::unknown;
+        std::optional<bool> wrap_text;
+        std::optional<bool> shrink_to_fit;
     };
 
     struct table
@@ -67,6 +71,7 @@ struct odf_style
 
     struct paragraph
     {
+        spreadsheet::hor_alignment_t hor_align = spreadsheet::hor_alignment_t::unknown;
     };
 
     struct text
@@ -74,47 +79,47 @@ struct odf_style
         size_t font;
     };
 
+    using data_type = std::variant<column, row, cell, table, graphic, paragraph, text>;
+
     std::string_view name;
+    std::string_view display_name;
     odf_style_family family;
     std::string_view parent_name;
 
-    union {
-        column* column_data;
-        row* row_data;
-        table* table_data;
-        cell* cell_data;
-        graphic* graphic_data;
-        paragraph* paragraph_data;
-        text* text_data;
-    };
+    data_type data;
 
     odf_style(const odf_style&) = delete;
     odf_style& operator=(const odf_style&) = delete;
 
     odf_style();
-    odf_style(std::string_view _name, odf_style_family _family, std::string_view parent);
+    odf_style(std::string_view _name, std::string_view _display_name, odf_style_family _family, std::string_view parent);
 
     ~odf_style();
 };
 
-struct number_formatting_style
+struct odf_number_format
 {
-    size_t number_formatting;
-
     std::string_view name;
-    std::string number_formatting_code;
-    bool is_volatile;
-    std::string_view character_stream;
+    std::string code;
+    bool is_volatile = false;
 
-    number_formatting_style():
-        number_formatting(0),
-        is_volatile(0)
-        {}
-
-    number_formatting_style(std::string_view style_name, const bool volatile_style);
+    odf_number_format() = default;
+    odf_number_format(std::string_view _name, bool _is_volatile);
 };
 
-typedef std::map<std::string_view, std::unique_ptr<odf_style>> odf_styles_map_type;
+using odf_styles_map_type = std::map<std::string_view, std::unique_ptr<odf_style>>;
+
+/**
+ * Merge two styles collections into one.
+ *
+ * @param dst destination where all the styles will be stored when the call
+ *            returns.
+ * @param src source collection to move all the styles from. After the call
+ *            returns this one will be empty.
+ */
+void merge(odf_styles_map_type& dst, odf_styles_map_type& src);
+
+void dump_state(const odf_styles_map_type& styles_map, std::ostream& os);
 
 }
 

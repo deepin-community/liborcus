@@ -19,31 +19,35 @@
 #include <optional>
 #include <mdds/sorted_string_map.hpp>
 
-using namespace std;
+using std::cout;
+using std::endl;
 
 namespace orcus {
 
 namespace {
 
-typedef mdds::sorted_string_map<xlsx_pivot_cache_def_context::source_type> pc_source_type;
+namespace pc_source {
+
+using map_type = mdds::sorted_string_map<xlsx_pivot_cache_def_context::source_type, mdds::string_view_map_entry>;
 
 // Keys must be sorted.
-pc_source_type::entry pc_source_entries[] = {
-    { ORCUS_ASCII("consolidation"), xlsx_pivot_cache_def_context::source_type::consolidation },
-    { ORCUS_ASCII("external"),      xlsx_pivot_cache_def_context::source_type::external      },
-    { ORCUS_ASCII("scenario"),      xlsx_pivot_cache_def_context::source_type::scenario      },
-    { ORCUS_ASCII("worksheet"),     xlsx_pivot_cache_def_context::source_type::worksheet     },
+constexpr map_type::entry entries[] = {
+    { "consolidation", xlsx_pivot_cache_def_context::source_type::consolidation },
+    { "external",      xlsx_pivot_cache_def_context::source_type::external      },
+    { "scenario",      xlsx_pivot_cache_def_context::source_type::scenario      },
+    { "worksheet",     xlsx_pivot_cache_def_context::source_type::worksheet     },
 };
 
-const pc_source_type& get_pc_source_map()
+const map_type& get()
 {
-    static pc_source_type source_map(
-        pc_source_entries,
-        sizeof(pc_source_entries)/sizeof(pc_source_entries[0]),
+    static const map_type map(
+        entries, std::size(entries),
         xlsx_pivot_cache_def_context::source_type::unknown);
 
-    return source_map;
+    return map;
 }
+
+} // namespace pc_source
 
 }
 
@@ -74,8 +78,8 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
         {
             xml_element_expected(parent, XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN);
 
-            pstring refreshed_by;
-            pstring rid;
+            std::string_view refreshed_by;
+            std::string_view rid;
             long record_count = -1;
 
             for_each(attrs.begin(), attrs.end(),
@@ -123,7 +127,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
             {
                 // The rid string here must be persistent beyond the current
                 // context.
-                rid = get_session_context().m_string_pool.intern(rid).first;
+                rid = get_session_context().spool.intern(rid).first;
 
                 m_pcache_info.data.insert(
                     opc_rel_extras_t::map_type::value_type(
@@ -136,7 +140,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
         {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_pivotCacheDefinition);
 
-            pstring source_type_s;
+            std::string_view source_type_s;
 
             for_each(attrs.begin(), attrs.end(),
                 [&](const xml_token_attr_t& attr)
@@ -147,9 +151,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
                     switch (attr.name)
                     {
                         case XML_type:
-                            m_source_type =
-                                get_pc_source_map().find(attr.value.data(), attr.value.size());
-
+                            m_source_type = pc_source::get().find(attr.value);
                             source_type_s = attr.value;
                             break;
                         default:
@@ -170,7 +172,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
                 throw xml_structure_error(
                     "worksheetSource element encountered while the source type is not worksheet.");
 
-            pstring ref, sheet_name, table_name;
+            std::string_view ref, sheet_name, table_name;
 
             for_each(attrs.begin(), attrs.end(),
                 [&](const xml_token_attr_t& attr)
@@ -227,7 +229,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
         {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_cacheFields);
 
-            pstring field_name;
+            std::string_view field_name;
             long numfmt_id = -1;
 
             for_each(attrs.begin(), attrs.end(),
@@ -297,7 +299,7 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
             if (group_base >= 0)
             {
                 // This is a group field.
-                m_pcache_field_group = m_pcache.create_field_group(group_base);
+                m_pcache_field_group = m_pcache.start_field_group(group_base);
             }
             break;
         }
@@ -370,10 +372,10 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
                             interval = to_double(attr.value);
                             break;
                         case XML_startDate:
-                            start_date = to_date_time(attr.value);
+                            start_date = date_time_t::from_chars(attr.value);
                             break;
                         case XML_endDate:
-                            end_date = to_date_time(attr.value);
+                            end_date = date_time_t::from_chars(attr.value);
                             break;
                         case XML_groupBy:
                             group_by = spreadsheet::to_pivot_cache_group_by_enum(attr.value);
@@ -384,18 +386,21 @@ void xlsx_pivot_cache_def_context::start_element(xmlns_id_t ns, xml_token_t name
                 }
             );
 
-            // Pass the values to the interface.
-            m_pcache_field_group->set_range_grouping_type(group_by);
-            m_pcache_field_group->set_range_auto_start(auto_start);
-            m_pcache_field_group->set_range_auto_end(auto_end);
-            m_pcache_field_group->set_range_start_number(start);
-            m_pcache_field_group->set_range_end_number(end);
-            m_pcache_field_group->set_range_interval(interval);
+            if (m_pcache_field_group)
+            {
+                // Pass the values to the interface.
+                m_pcache_field_group->set_range_grouping_type(group_by);
+                m_pcache_field_group->set_range_auto_start(auto_start);
+                m_pcache_field_group->set_range_auto_end(auto_end);
+                m_pcache_field_group->set_range_start_number(start);
+                m_pcache_field_group->set_range_end_number(end);
+                m_pcache_field_group->set_range_interval(interval);
 
-            if (start_date)
-                m_pcache_field_group->set_range_start_date(*start_date);
-            if (end_date)
-                m_pcache_field_group->set_range_end_date(*end_date);
+                if (start_date)
+                    m_pcache_field_group->set_range_start_date(*start_date);
+                if (end_date)
+                    m_pcache_field_group->set_range_end_date(*end_date);
+            }
 
             if (get_config().debug)
             {
@@ -574,7 +579,7 @@ void xlsx_pivot_cache_def_context::start_element_s(
         return;
     }
 
-    pstring value;
+    std::string_view value;
 
     for_each(attrs.begin(), attrs.end(),
         [&](const xml_token_attr_t& attr)
@@ -749,7 +754,7 @@ void xlsx_pivot_cache_def_context::start_element_d(
                     switch (attr.name)
                     {
                         case XML_v:
-                            dt = to_date_time(attr.value);
+                            dt = date_time_t::from_chars(attr.value);
                         break;
                         case XML_u:
                             // flag for unused item.
@@ -938,10 +943,10 @@ void xlsx_pivot_cache_def_context::start_element_shared_items(
                     max_value = to_double(attr.value);
                     break;
                 case XML_minDate:
-                    min_date = to_date_time(attr.value);
+                    min_date = date_time_t::from_chars(attr.value);
                     break;
                 case XML_maxDate:
-                    max_date = to_date_time(attr.value);
+                    max_date = date_time_t::from_chars(attr.value);
                     break;
                 case XML_longText:
                     has_long_text = to_bool(attr.value);
@@ -1066,7 +1071,7 @@ void xlsx_pivot_cache_rec_context::start_element(xmlns_id_t ns, xml_token_t name
         }
         case XML_e: // error value
         {
-            pstring cv = single_attr_getter::get(attrs, NS_ooxml_xlsx, XML_v);
+            std::string_view cv = single_attr_getter::get(attrs, NS_ooxml_xlsx, XML_v);
 
             if (get_config().debug)
                 cout << "  * e = " << cv << endl;
@@ -1099,10 +1104,6 @@ bool xlsx_pivot_cache_rec_context::end_element(xmlns_id_t ns, xml_token_t name)
     }
 
     return pop_stack(ns, name);
-}
-
-void xlsx_pivot_cache_rec_context::characters(std::string_view /*str*/, bool /*transient*/)
-{
 }
 
 xlsx_pivot_table_context::xlsx_pivot_table_context(session_context& cxt, const tokens& tokens) :

@@ -32,7 +32,7 @@ void print_stack(const tokens& tokens, const xml_elem_stack_t& elem_stack, const
         xmlns_id_t ns = itr->first;
         if (ns_cxt)
         {
-            pstring alias = ns_cxt->get_alias(ns);
+            std::string_view alias = ns_cxt->get_alias(ns);
             if (!alias.empty())
                 cerr << alias << ":";
         }
@@ -58,6 +58,19 @@ xml_context_base::~xml_context_base()
 }
 
 void xml_context_base::declaration(const xml_declaration_t& /*decl*/)
+{
+}
+
+xml_context_base* xml_context_base::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
+{
+    return nullptr;
+}
+
+void xml_context_base::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/, xml_context_base* /*child*/)
+{
+}
+
+void xml_context_base::characters(std::string_view /*str*/, bool /*transient*/)
 {
 }
 
@@ -108,17 +121,17 @@ void xml_context_base::set_ns_context(const xmlns_context* p)
 {
     mp_ns_cxt = p;
     m_elem_printer.set_ns_context(p);
+
+    for (auto* child : m_child_contexts)
+        child->set_ns_context(p);
 }
 
 void xml_context_base::set_config(const config& opt)
 {
     m_config = opt;
-}
 
-void xml_context_base::transfer_common(const xml_context_base& parent)
-{
-    set_config(parent.m_config);
-    set_ns_context(parent.mp_ns_cxt);
+    for (auto* child : m_child_contexts)
+        child->set_config(opt);
 }
 
 void xml_context_base::set_always_allowed_elements(xml_elem_set_t elems)
@@ -133,6 +146,11 @@ void xml_context_base::init_element_validator(
 }
 
 session_context& xml_context_base::get_session_context()
+{
+    return m_session_cxt;
+}
+
+const session_context& xml_context_base::get_session_context() const
 {
     return m_session_cxt;
 }
@@ -319,5 +337,12 @@ std::string_view xml_context_base::intern(std::string_view s)
     return m_session_cxt.intern(s);
 }
 
+void xml_context_base::register_child(xml_context_base* child)
+{
+    assert(child);
+    m_child_contexts.push_back(child);
 }
+
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

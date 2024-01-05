@@ -10,34 +10,42 @@
 
 #include "sax_parser.hpp"
 #include "xml_namespace.hpp"
-#include "global.hpp"
 
 #include <unordered_set>
 #include <vector>
-#include <memory>
 #include <algorithm>
 
 namespace orcus {
 
 struct sax_ns_parser_element
 {
-    xmlns_id_t ns;         // element namespace
-    std::string_view ns_alias;      // element namespace alias
-    std::string_view name;          // element name
-    std::ptrdiff_t begin_pos; // position of the opening brace '<'.
-    std::ptrdiff_t end_pos;   // position of the char after the closing brace '>'.
+    /** Element namespace identifier. */
+    xmlns_id_t ns;
+    /** Element namespace alias. */
+    std::string_view ns_alias;
+    /** Element name. */
+    std::string_view name;
+    /** Position of the opening brace '<'. */
+    std::ptrdiff_t begin_pos;
+    /** Position immediately after the closing brace '>'. */
+    std::ptrdiff_t end_pos;
 };
 
 struct sax_ns_parser_attribute
 {
-    xmlns_id_t ns;    // attribute namespace
-    std::string_view ns_alias; // attribute namespace alias
-    std::string_view name;     // attribute name
-    std::string_view value;    // attribute value
-    bool transient;   // whether or not the attribute value is transient.
+    /** Attribute namespace identifier. */
+    xmlns_id_t ns;
+    /** Attribute namespace alias. */
+    std::string_view ns_alias;
+    /** Attribute name. */
+    std::string_view name;
+    /** Attribute value. */
+    std::string_view value;
+    /** Whether or not the attribute value is transient. */
+    bool transient;
 };
 
-namespace __sax {
+namespace sax { namespace detail {
 
 struct entity_name
 {
@@ -70,57 +78,151 @@ struct elem_scope
     xmlns_id_t ns;
     std::string_view name;
     ns_keys_type ns_keys;
+
+    elem_scope() {}
+    elem_scope(const elem_scope&) = delete;
+    elem_scope(elem_scope&& other) = default;
 };
 
-typedef std::vector<std::unique_ptr<elem_scope>> elem_scopes_type;
+using elem_scopes_type = std::vector<elem_scope>;
 
-class pop_ns_by_key
-{
-    xmlns_context& m_cxt;
-public:
-    pop_ns_by_key(xmlns_context& cxt) : m_cxt(cxt) {}
-    void operator() (std::string_view key)
-    {
-        m_cxt.pop(key);
-    }
-};
-
-}
+}} // namespace sax::detail
 
 class sax_ns_handler
 {
 public:
-    void doctype(const orcus::sax::doctype_declaration& /*dtd*/) {}
+    /**
+     * Called when a doctype declaration &lt;!DOCTYPE ... &gt; is encountered.
+     *
+     * @param dtd struct containing doctype declaration data.
+     */
+    void doctype(const orcus::sax::doctype_declaration& dtd)
+    {
+        (void)dtd;
+    }
 
-    void start_declaration(std::string_view /*decl*/) {}
+    /**
+     * Called when &lt;?... is encountered, where the '...' may be an
+     * arbitraray dentifier.  One common declaration is &lt;?xml which is
+     * typically given at the start of an XML stream.
+     *
+     * @param decl name of the identifier.
+     */
+    void start_declaration(std::string_view decl)
+    {
+        (void)decl;
+    }
 
-    void end_declaration(std::string_view /*decl*/) {}
+    /**
+     * Called when the closing tag (&gt;) of a &lt;?... ?&gt; is encountered.
+     *
+     * @param decl name of the identifier.
+     */
+    void end_declaration(std::string_view decl)
+    {
+        (void)decl;
+    }
 
-    void start_element(const orcus::sax_ns_parser_element& /*elem*/) {}
+    /**
+     * Called at the start of each element.
+     *
+     * @param elem information of the element being parsed.
+     */
+    void start_element(const orcus::sax_ns_parser_element& elem)
+    {
+        (void)elem;
+    }
 
-    void end_element(const orcus::sax_ns_parser_element& /*elem*/) {}
+    /**
+     * Called at the end of each element.
+     *
+     * @param elem information of the element being parsed.
+     */
+    void end_element(const orcus::sax_ns_parser_element& elem)
+    {
+        (void)elem;
+    }
 
-    void characters(std::string_view /*val*/, bool /*transient*/) {}
+    /**
+     * Called when a segment of a text content is parsed.  Each text content
+     * is a direct child of an element, which may have multiple child contents
+     * when the element also has a child element that are direct sibling to
+     * the text contents or the text contents are splitted by a comment.
+     *
+     * @param val value of the text content.
+     * @param transient when true, the text content has been converted and is
+     *                  stored in a temporary buffer due to presence of one or
+     *                  more encoded characters, in which case <em>the passed
+     *                  text value needs to be either immediately converted to
+     *                  a non-text value or be interned within the scope of
+     *                  the callback</em>.
+     */
+    void characters(std::string_view val, bool transient)
+    {
+        (void)val;
+        (void)transient;
+    }
 
-    void attribute(std::string_view /*name*/, std::string_view /*val*/) {}
+    /**
+     * Called upon parsing of an attribute of a declaration.  The value of an
+     * attribute is assumed to be transient thus should be consumed within the
+     * scope of this callback.
+     *
+     * @param name name of an attribute.
+     * @param val value of an attribute.
+     *
+     * @todo Perhaps we should pass the transient flag here as well like all the
+     *       other places.
+     */
+    void attribute(std::string_view name, std::string_view val)
+    {
+        (void)name;
+        (void)val;
+    }
 
-    void attribute(const orcus::sax_ns_parser_attribute& /*attr*/) {}
+    /**
+     * Called upon parsing of an attribute of an element.  Note that <em>when
+     * the attribute's transient flag is set, the attribute value is stored in
+     * a temporary buffer due to a presence of encoded characters, and must be
+     * processed within the scope of the callback</em>.
+     *
+     * @param attr struct containing attribute information.
+     */
+    void attribute(const orcus::sax_ns_parser_attribute& attr)
+    {
+        (void)attr;
+    }
 };
 
 /**
- * SAX based XML parser with proper namespace handling.
+ * SAX based XML parser with extra namespace handling.
+ *
+ * It uses an instance of xmlns_context passed by the caller to validate and
+ * convert namespace values into identifiers.  The namespace identifier of
+ * each encountered element is always given even if one is not explicitly
+ * given.
+ *
+ * This parser keeps track of element scopes and detects non-matching element
+ * pairs.
+ *
+ * @tparam HandlerT Handler type with member functions for event callbacks.
+ *         Refer to @ref sax_ns_handler.
  */
-template<typename _Handler>
+template<typename HandlerT>
 class sax_ns_parser
 {
 public:
-    typedef _Handler handler_type;
+    typedef HandlerT handler_type;
 
-    sax_ns_parser(const char* content, const size_t size, xmlns_context& ns_cxt, handler_type& handler);
-    sax_ns_parser(const char* content, const size_t size, bool transient_stream,
-                  xmlns_context& ns_cxt, handler_type& handler);
-    ~sax_ns_parser();
+    sax_ns_parser(std::string_view content, xmlns_context& ns_cxt, handler_type& handler);
+    ~sax_ns_parser() = default;
 
+    /**
+     * Start parsing the document.
+     *
+     * @exception orcus::malformed_xml_error when it encounters a
+     *                 non-matching closing element.
+     */
     void parse();
 
 private:
@@ -130,9 +232,9 @@ private:
      */
     class handler_wrapper
     {
-        __sax::elem_scopes_type m_scopes;
-        __sax::ns_keys_type m_ns_keys;
-        __sax::entity_names_type m_attrs;
+        sax::detail::elem_scopes_type m_scopes;
+        sax::detail::ns_keys_type m_ns_keys;
+        sax::detail::entity_names_type m_attrs;
 
         sax_ns_parser_element m_elem;
         sax_ns_parser_attribute m_attr;
@@ -164,8 +266,8 @@ private:
 
         void start_element(const sax::parser_element& elem)
         {
-            m_scopes.push_back(std::make_unique<__sax::elem_scope>());
-            __sax::elem_scope& scope = *m_scopes.back();
+            m_scopes.emplace_back();
+            sax::detail::elem_scope& scope = m_scopes.back();
             scope.ns = m_ns_cxt.get(elem.ns);
             scope.name = elem.name;
             scope.ns_keys.swap(m_ns_keys);
@@ -182,9 +284,9 @@ private:
 
         void end_element(const sax::parser_element& elem)
         {
-            __sax::elem_scope& scope = *m_scopes.back();
+            sax::detail::elem_scope& scope = m_scopes.back();
             if (scope.ns != m_ns_cxt.get(elem.ns) || scope.name != elem.name)
-                throw sax::malformed_xml_error("mis-matching closing element.", -1);
+                throw malformed_xml_error("mis-matching closing element.", -1);
 
             m_elem.ns = scope.ns;
             m_elem.ns_alias = elem.ns;
@@ -194,7 +296,8 @@ private:
             m_handler.end_element(m_elem);
 
             // Pop all namespaces declared in this scope.
-            std::for_each(scope.ns_keys.begin(), scope.ns_keys.end(), __sax::pop_ns_by_key(m_ns_cxt));
+            for (const std::string_view& key : scope.ns_keys)
+                m_ns_cxt.pop(key);
 
             m_scopes.pop_back();
         }
@@ -213,11 +316,11 @@ private:
                 return;
             }
 
-            if (m_attrs.count(__sax::entity_name(attr.ns, attr.name)) > 0)
-                throw sax::malformed_xml_error(
+            if (m_attrs.count(sax::detail::entity_name(attr.ns, attr.name)) > 0)
+                throw malformed_xml_error(
                     "You can't define two attributes of the same name in the same element.", -1);
 
-            m_attrs.insert(__sax::entity_name(attr.ns, attr.name));
+            m_attrs.insert(sax::detail::entity_name(attr.ns, attr.name));
 
             if (attr.ns.empty() && attr.name == "xmlns")
             {
@@ -252,27 +355,15 @@ private:
     sax_parser<handler_wrapper> m_parser;
 };
 
-template<typename _Handler>
-sax_ns_parser<_Handler>::sax_ns_parser(
-    const char* content, const size_t size, xmlns_context& ns_cxt, handler_type& handler) :
-    m_wrapper(ns_cxt, handler), m_parser(content, size, m_wrapper)
+template<typename HandlerT>
+sax_ns_parser<HandlerT>::sax_ns_parser(
+    std::string_view content, xmlns_context& ns_cxt, handler_type& handler) :
+    m_wrapper(ns_cxt, handler), m_parser(content, m_wrapper)
 {
 }
 
-template<typename _Handler>
-sax_ns_parser<_Handler>::sax_ns_parser(
-    const char* content, const size_t size, bool transient_stream, xmlns_context& ns_cxt, handler_type& handler) :
-    m_wrapper(ns_cxt, handler), m_parser(content, size, transient_stream, m_wrapper)
-{
-}
-
-template<typename _Handler>
-sax_ns_parser<_Handler>::~sax_ns_parser()
-{
-}
-
-template<typename _Handler>
-void sax_ns_parser<_Handler>::parse()
+template<typename HandlerT>
+void sax_ns_parser<HandlerT>::parse()
 {
     m_parser.parse();
 }

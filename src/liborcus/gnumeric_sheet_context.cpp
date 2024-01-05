@@ -9,257 +9,40 @@
 #include "gnumeric_cell_context.hpp"
 #include "gnumeric_token_constants.hpp"
 #include "gnumeric_namespace_types.hpp"
-#include "gnumeric_helper.hpp"
-#include "orcus/global.hpp"
-#include "orcus/spreadsheet/import_interface.hpp"
-#include "gnumeric_helper.hpp"
+#include "impl_utils.hpp"
+
+#include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/spreadsheet/import_interface_styles.hpp>
+#include <orcus/measurement.hpp>
+
+namespace ss = orcus::spreadsheet;
 
 namespace orcus {
 
 namespace {
 
-class gnumeric_style_region_attr_parser
+ss::condition_operator_t get_condition_operator(int val)
 {
-public:
-    gnumeric_style_region_attr_parser(gnumeric_style_region& style_region_data):
-        m_style_region_data(style_region_data) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        switch(attr.name)
-        {
-            case XML_startCol:
-            {
-                size_t n = atoi(attr.value.data());
-                m_style_region_data.start_col = n;
-            }
-            break;
-            case XML_startRow:
-            {
-                size_t n = atoi(attr.value.data());
-                m_style_region_data.start_row = n;
-            }
-            break;
-            case XML_endCol:
-            {
-                size_t n = atoi(attr.value.data());
-                m_style_region_data.end_col = n;
-            }
-            break;
-            case XML_endRow:
-            {
-                size_t n = atoi(attr.value.data());
-                m_style_region_data.end_row = n;
-            }
-            break;
-            default:
-                ;
-        }
-    }
-
-private:
-    gnumeric_style_region& m_style_region_data;
-};
-
-class gnumeric_font_attr_parser
-{
-public:
-    gnumeric_font_attr_parser(spreadsheet::iface::import_styles& styles) :
-        m_styles(styles) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        switch(attr.name)
-        {
-            case XML_Unit:
-            {
-                double n = atoi(attr.value.data());
-                m_styles.set_font_size(n);
-            }
-            break;
-            case XML_Bold:
-            {
-                bool b = atoi(attr.value.data()) != 0;
-                m_styles.set_font_bold(b);
-            }
-            break;
-            case XML_Italic:
-            {
-                bool b = atoi(attr.value.data()) != 0;
-                m_styles.set_font_italic(b);
-            }
-            break;
-            case XML_Underline:
-            {
-                int n = atoi(attr.value.data());
-                switch (n)
-                {
-                    case 0:
-                        m_styles.set_font_underline(spreadsheet::underline_t::none);
-                    break;
-                    case 1:
-                        m_styles.set_font_underline(spreadsheet::underline_t::single_line);
-                    break;
-                    case 2:
-                        m_styles.set_font_underline(spreadsheet::underline_t::double_line);
-                    break;
-                    default:
-                        ;
-                }
-            }
-            break;
-        }
-    }
-
-private:
-    spreadsheet::iface::import_styles& m_styles;
-};
-
-class gnumeric_style_attr_parser
-{
-public:
-    gnumeric_style_attr_parser(spreadsheet::iface::import_styles& styles, gnumeric_color& front_color) :
-        m_styles(styles),
-        m_fill(false),
-        m_protection(false),
-        m_front_color(front_color) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        switch(attr.name)
-        {
-            case XML_Fore:
-            {
-                spreadsheet::color_elem_t red, green, blue;
-                gnumeric_helper::parse_RGB_color_attribute(red, green, blue, attr.value);
-                m_styles.set_fill_fg_color(255, red, green, blue);
-
-                m_fill = true;
-
-                m_front_color.red = red;
-                m_front_color.blue = blue;
-                m_front_color.green = green;
-            }
-            break;
-            case XML_Back:
-            {
-                spreadsheet::color_elem_t red, green, blue;
-                gnumeric_helper::parse_RGB_color_attribute(red, green, blue, attr.value);
-                m_styles.set_fill_bg_color(255, red, green, blue);
-
-                m_fill = true;
-            }
-            break;
-            case XML_Hidden:
-            {
-                bool b = atoi(attr.value.data());
-                m_styles.set_cell_hidden(b);
-
-                m_protection = true;
-            }
-            break;
-            case XML_Locked:
-            {
-                bool b = atoi(attr.value.data());
-                m_styles.set_cell_locked(b);
-
-                m_protection = true;
-            }
-            break;
-            case XML_Format:
-            {
-                if (attr.value != "General")
-                {
-                    m_styles.set_number_format_code(attr.value);
-                    size_t index = m_styles.commit_number_format();
-                    m_styles.set_xf_number_format(index);
-                }
-            }
-            break;
-            case XML_HAlign:
-            {
-                orcus::spreadsheet::hor_alignment_t hor_alignment = orcus::spreadsheet::hor_alignment_t::unknown;
-                if (attr.value == "GNM_HALIGN_CENTER")
-                    hor_alignment = orcus::spreadsheet::hor_alignment_t::center;
-                else if (attr.value == "GNM_HALIGN_RIGHT")
-                    hor_alignment = orcus::spreadsheet::hor_alignment_t::right;
-                else if (attr.value == "GNM_HALIGN_LEFT")
-                    hor_alignment = orcus::spreadsheet::hor_alignment_t::left;
-                else if (attr.value == "GNM_HALIGN_JUSTIFY")
-                    hor_alignment = orcus::spreadsheet::hor_alignment_t::justified;
-                else if (attr.value == "GNM_HALIGN_DISTRIBUTED")
-                    hor_alignment = orcus::spreadsheet::hor_alignment_t::distributed;
-                else if (attr.value == "GNM_HALIGN_FILL")
-                    hor_alignment = orcus::spreadsheet::hor_alignment_t::filled;
-
-                if (hor_alignment != orcus::spreadsheet::hor_alignment_t::unknown)
-                    m_styles.set_xf_apply_alignment(true);
-                m_styles.set_xf_horizontal_alignment(hor_alignment);
-            }
-            break;
-            case XML_VAlign:
-            {
-                orcus::spreadsheet::ver_alignment_t ver_alignment = orcus::spreadsheet::ver_alignment_t::unknown;
-                if (attr.value == "GNM_VALIGN_BOTTOM")
-                    ver_alignment = orcus::spreadsheet::ver_alignment_t::bottom;
-                else if (attr.value == "GNM_VALIGN_TOP")
-                    ver_alignment = orcus::spreadsheet::ver_alignment_t::top;
-                else if (attr.value == "GNM_VALIGN_CENTER")
-                    ver_alignment = orcus::spreadsheet::ver_alignment_t::middle;
-                else if (attr.value == "GNM_VALIGN_JUSTIFY")
-                    ver_alignment = orcus::spreadsheet::ver_alignment_t::justified;
-                else if (attr.value == "GNM_VALIGN_DISTRIBUTED")
-                    ver_alignment = orcus::spreadsheet::ver_alignment_t::distributed;
-
-                if (ver_alignment != orcus::spreadsheet::ver_alignment_t::unknown)
-                    m_styles.set_xf_apply_alignment(true);
-                m_styles.set_xf_vertical_alignment(ver_alignment);
-            }
-            break;
-        }
-    }
-
-    bool is_protection_set() const
-    {
-        return m_protection;
-    }
-
-    bool is_fill_set() const
-    {
-        return m_fill;
-    }
-
-private:
-    spreadsheet::iface::import_styles& m_styles;
-
-    bool m_fill;
-    bool m_protection;
-
-    gnumeric_color& m_front_color;
-};
-
-spreadsheet::condition_operator_t get_condition_operator(int val)
-{
-    switch(val)
+    switch (val)
     {
         case 0:
-            return spreadsheet::condition_operator_t::between;
+            return ss::condition_operator_t::between;
         case 1:
-            return spreadsheet::condition_operator_t::not_between;
+            return ss::condition_operator_t::not_between;
         case 2:
-            return spreadsheet::condition_operator_t::equal;
+            return ss::condition_operator_t::equal;
         case 3:
-            return spreadsheet::condition_operator_t::not_equal;
+            return ss::condition_operator_t::not_equal;
         case 4:
-            return spreadsheet::condition_operator_t::greater;
+            return ss::condition_operator_t::greater;
         case 5:
-            return spreadsheet::condition_operator_t::less;
+            return ss::condition_operator_t::less;
         case 6:
-            return spreadsheet::condition_operator_t::greater_equal;
+            return ss::condition_operator_t::greater_equal;
         case 7:
-            return spreadsheet::condition_operator_t::less_equal;
+            return ss::condition_operator_t::less_equal;
         case 8:
-            return spreadsheet::condition_operator_t::expression;
+            return ss::condition_operator_t::expression;
         case 9:
         case 10:
         case 11:
@@ -269,353 +52,169 @@ spreadsheet::condition_operator_t get_condition_operator(int val)
         case 15:
             break;
         case 16:
-            return spreadsheet::condition_operator_t::contains;
+            return ss::condition_operator_t::contains;
         case 17:
-            return spreadsheet::condition_operator_t::not_contains;
+            return ss::condition_operator_t::not_contains;
         case 18:
-            return spreadsheet::condition_operator_t::begins_with;
+            return ss::condition_operator_t::begins_with;
         case 19:
             break;
         case 20:
-            return spreadsheet::condition_operator_t::ends_with;
+            return ss::condition_operator_t::ends_with;
         case 21:
             break;
         case 22:
-            return spreadsheet::condition_operator_t::contains_error;
+            return ss::condition_operator_t::contains_error;
         case 23:
-            return spreadsheet::condition_operator_t::contains_no_error;
+            return ss::condition_operator_t::contains_no_error;
         default:
             break;
     }
-    return orcus::spreadsheet::condition_operator_t::unknown;
+    return ss::condition_operator_t::unknown;
 }
 
-class gnumeric_condition_attr_parser
-{
-public:
-    gnumeric_condition_attr_parser(spreadsheet::iface::import_conditional_format* cond_format):
-        m_cond_format(cond_format) {}
-
-    void operator()(const xml_token_attr_t& attr)
-    {
-        switch(attr.name)
-        {
-            case XML_Operator:
-            {
-                int val = atoi(attr.value.data());
-                spreadsheet::condition_operator_t op = get_condition_operator(val);
-                m_cond_format->set_operator(op);
-            }
-            break;
-            default:
-            break;
-        }
-    }
-
-private:
-    spreadsheet::iface::import_conditional_format* m_cond_format;
-};
-
-class gnumeric_col_row_info
-{
-public:
-    gnumeric_col_row_info() :
-        m_position(0),
-        m_num_repeated(1),
-        m_size(0.0),
-        m_hidden(false) {}
-
-    void operator()(const xml_token_attr_t& attr)
-    {
-        switch (attr.name)
-        {
-            case XML_No:
-            {
-                size_t i = atoi(attr.value.data());
-                m_position = i;
-            }
-            break;
-            case XML_Unit:
-            {
-                double n = atof(attr.value.data());
-                m_size = n;
-            }
-            break;
-            case XML_Count:
-            {
-                size_t i = atoi(attr.value.data());
-                m_num_repeated = i;
-            }
-            break;
-            case XML_Hidden:
-            {
-                bool b = atoi(attr.value.data()) != 0;
-                m_hidden = b;
-            }
-        }
-    }
-
-    size_t get_position() const
-    {
-        return m_position;
-    }
-
-    size_t get_col_row_repeated() const
-    {
-        return m_num_repeated;
-    }
-
-    double get_size() const
-    {
-        return m_size;
-    }
-
-    bool is_hidden() const
-    {
-        return m_hidden;
-    }
-
-private:
-    size_t m_position;
-    size_t m_num_repeated;
-    double m_size;
-    bool m_hidden;
-
-};
-
-enum gnumeric_filter_field_op_t
-{
-    filter_equal,
-    filter_greaterThan,
-    filter_lessThan,
-    filter_greaterThanEqual,
-    filter_lessThanEqual,
-    filter_notEqual,
-    filter_op_invalid
-};
-
-enum gnumeric_filter_field_type_t
-{
-    filter_expr,
-    filter_blanks,
-    filter_nonblanks,
-    filter_type_invalid
-};
-
-class gnumeric_autofilter_field_attr_parser
-{
-public:
-    gnumeric_autofilter_field_attr_parser(spreadsheet::iface::import_auto_filter& auto_filter):
-        m_auto_filter(auto_filter),
-        m_filter_field_type(filter_type_invalid),
-        m_filter_op(filter_op_invalid) {}
-
-    void operator() (const xml_token_attr_t& attr)
-    {
-        switch(attr.name)
-        {
-            case XML_Index:
-            {
-                spreadsheet::col_t col = atoi(attr.value.data());
-                m_auto_filter.set_column(col);
-            }
-            break;
-            case XML_Type:
-            {
-                if (attr.value == "expr")
-                    m_filter_field_type = filter_expr;
-                else if (attr.value == "blanks")
-                    m_filter_field_type = filter_blanks;
-                else if (attr.value == "nonblanks")
-                    m_filter_field_type = filter_nonblanks;
-            }
-            break;
-            case XML_Op0:
-            {
-                if (attr.value == "eq")
-                    m_filter_op = filter_equal;
-                else if (attr.value == "gt")
-                    m_filter_op = filter_greaterThan;
-                else if (attr.value == "lt")
-                    m_filter_op = filter_lessThan;
-                else if (attr.value == "gte")
-                    m_filter_op = filter_greaterThanEqual;
-                else if (attr.value == "lte")
-                    m_filter_op = filter_lessThanEqual;
-                else if (attr.value == "ne")
-                    m_filter_op = filter_notEqual;
-            }
-            break;
-            case XML_Value0:
-            {
-                m_filter_value_type = attr.value;
-            }
-            break;
-            case XML_ValueType0:
-            {
-                m_filter_value = attr.value;
-            }
-            break;
-            default:
-                ;
-        }
-    }
-
-    void finalize_filter_import()
-    {
-        switch (m_filter_field_type)
-        {
-            case filter_expr:
-                import_expr();
-                break;
-            case filter_type_invalid:
-                break;
-            default:
-                break;
-        }
-    }
-
-private:
-
-    void import_expr()
-    {
-        // only equal supported in API yet
-        if (m_filter_op != filter_equal)
-            return;
-
-        // import condition for integer (30), double(40) and string (60)
-        if (m_filter_value_type == "30" ||
-                m_filter_value_type == "40" ||
-                m_filter_value_type == "60" )
-        {
-            m_auto_filter.append_column_match_value(m_filter_value);
-        }
-    }
-
-    spreadsheet::iface::import_auto_filter& m_auto_filter;
-
-    gnumeric_filter_field_type_t m_filter_field_type;
-    gnumeric_filter_field_op_t m_filter_op;
-
-    pstring m_filter_value_type;
-    pstring m_filter_value;
-};
-
-}
-
+} // anonymous namespace
 
 gnumeric_sheet_context::gnumeric_sheet_context(
-    session_context& session_cxt, const tokens& tokens, spreadsheet::iface::import_factory* factory, spreadsheet::sheet_t sheet_index) :
+    session_context& session_cxt, const tokens& tokens, ss::iface::import_factory* factory) :
     xml_context_base(session_cxt, tokens),
     mp_factory(factory),
-    m_sheet_index(sheet_index),
-    mp_sheet(nullptr),
-    mp_auto_filter(nullptr)
+    m_cxt_cell(session_cxt, tokens, factory),
+    m_cxt_filter(session_cxt, tokens, factory),
+    m_cxt_names(session_cxt, tokens, factory),
+    m_cxt_styles(session_cxt, tokens, factory)
 {
+    static const xml_element_validator::rule rules[] = {
+        // parent element -> child element
+        { XMLNS_UNKNOWN_ID, XML_UNKNOWN_TOKEN, NS_gnumeric_gnm, XML_Sheet }, // root element
+        { NS_gnumeric_gnm, XML_Cells, NS_gnumeric_gnm, XML_Cell },
+        { NS_gnumeric_gnm, XML_Cols, NS_gnumeric_gnm, XML_ColInfo },
+        { NS_gnumeric_gnm, XML_MergedRegions, NS_gnumeric_gnm, XML_Merge },
+        { NS_gnumeric_gnm, XML_Rows, NS_gnumeric_gnm, XML_RowInfo },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Cells },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Cols },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Filters },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_MergedRegions },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Name },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Names },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Rows },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Selections },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_SheetLayout },
+        { NS_gnumeric_gnm, XML_Sheet, NS_gnumeric_gnm, XML_Styles },
+    };
+
+    init_element_validator(rules, std::size(rules));
+
+    register_child(&m_cxt_cell);
+    register_child(&m_cxt_filter);
+    register_child(&m_cxt_names);
+    register_child(&m_cxt_styles);
 }
 
-gnumeric_sheet_context::~gnumeric_sheet_context()
-{
-}
+gnumeric_sheet_context::~gnumeric_sheet_context() = default;
 
 xml_context_base* gnumeric_sheet_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
-    if (ns == NS_gnumeric_gnm && name == XML_Cells)
+    if (ns == NS_gnumeric_gnm)
     {
-        mp_child.reset(new gnumeric_cell_context(get_session_context(), get_tokens(), mp_factory, mp_sheet));
-        mp_child->transfer_common(*this);
-        return mp_child.get();
+        switch (name)
+        {
+            case XML_Cells:
+            {
+                m_cxt_cell.reset(mp_sheet);
+                return &m_cxt_cell;
+            }
+            case XML_Filter:
+            {
+                m_cxt_filter.reset(mp_sheet);
+                return &m_cxt_filter;
+            }
+            case XML_Names:
+            {
+                m_cxt_names.reset();
+                return &m_cxt_names;
+            }
+            case XML_Styles:
+            {
+                m_cxt_styles.reset(m_sheet);
+                return &m_cxt_styles;
+            }
+        }
     }
 
     return nullptr;
 }
 
-void gnumeric_sheet_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/, xml_context_base* /*child*/)
+void gnumeric_sheet_context::end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child)
 {
+    if (ns == NS_gnumeric_gnm)
+    {
+        switch (name)
+        {
+            case XML_Names:
+            {
+                assert(child == &m_cxt_names);
+                end_names();
+                break;
+            }
+            case XML_Styles:
+            {
+                assert(child == &m_cxt_styles);
+                end_styles();
+                break;
+            }
+        }
+    }
 }
 
-void gnumeric_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs)
+void gnumeric_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs)
 {
-    xml_token_pair_t parent = push_stack(ns, name);
+    push_stack(ns, name);
+
     if (ns == NS_gnumeric_gnm)
     {
         switch (name)
         {
             case XML_Font:
                 start_font(attrs);
-            break;
+                break;
+            case XML_Merge:
+                m_merge_area = std::string_view{};
+                break;
+            case XML_Name:
+                start_name(attrs);
+                break;
             case XML_Style:
                 start_style(attrs);
-            break;
+                break;
             case XML_StyleRegion:
                 start_style_region(attrs);
-            break;
+                break;
             case XML_ColInfo:
                 start_col(attrs);
-            break;
+                break;
             case XML_RowInfo:
                 start_row(attrs);
-            break;
-            case XML_Filters:
-                // don't need any special handling
-            break;
-            case XML_Filter:
-            {
-                spreadsheet::iface::import_reference_resolver* resolver =
-                    mp_factory->get_reference_resolver(spreadsheet::formula_ref_context_t::global);
-
-                mp_auto_filter = mp_sheet->get_auto_filter();
-
-                if (resolver && mp_auto_filter)
-                {
-                    for (const xml_token_attr_t& attr : attrs)
-                    {
-                        switch (attr.name)
-                        {
-                            case XML_Area:
-                            {
-                                spreadsheet::range_t range = to_rc_range(
-                                    resolver->resolve_range(attr.value));
-                                mp_auto_filter->set_range(range);
-                            }
-                            break;
-                            default:
-                                ;
-                        }
-                    }
-                }
-            }
-            break;
-            case XML_Field:
-            {
-                assert(parent.first == NS_gnumeric_gnm && parent.second == XML_Filter);
-                if (mp_auto_filter)
-                {
-                    gnumeric_autofilter_field_attr_parser parser =
-                        std::for_each(attrs.begin(), attrs.end(),
-                                gnumeric_autofilter_field_attr_parser(
-                                    *mp_auto_filter));
-                    parser.finalize_filter_import();
-                }
-            }
-            break;
+                break;
             case XML_Condition:
             {
-                if (!mp_region_data->contains_conditional_format)
+                if (!m_region_data->contains_conditional_format)
                 {
-                    mp_region_data->contains_conditional_format = true;
+                    m_region_data->contains_conditional_format = true;
                     end_style(false);
                 }
                 start_condition(attrs);
+                break;
             }
-            break;
             case XML_Expression0:
             case XML_Expression1:
-            break;
+                break;
             default:
-                ;
+                warn_unhandled();
         }
     }
+    else
+        warn_unhandled();
 }
 
 bool gnumeric_sheet_context::end_element(xmlns_id_t ns, xml_token_t name)
@@ -624,18 +223,15 @@ bool gnumeric_sheet_context::end_element(xmlns_id_t ns, xml_token_t name)
     {
         switch(name)
         {
-            case XML_Name:
-            {
-                xml_token_pair_t parent = get_parent_element();
-                if(parent.first == NS_gnumeric_gnm && parent.second == XML_Sheet)
-                    end_table();
-                else
-                    warn_unhandled();
-            }
-            break;
             case XML_Font:
                 end_font();
-            break;
+                break;
+            case XML_Merge:
+                end_merge();
+                break;
+            case XML_Name:
+                end_name();
+                break;
             case XML_Style:
             {
                 xml_token_pair_t parent = get_parent_element();
@@ -648,33 +244,23 @@ bool gnumeric_sheet_context::end_element(xmlns_id_t ns, xml_token_t name)
                     // The conditional format entry contains a mandatory style element
                     // Therefore when we have a conditional format the end_style method
                     // is already called in start_element of the XML_Condition case.
-                    if (!mp_region_data->contains_conditional_format)
+                    if (!m_region_data->contains_conditional_format)
                     {
                         end_style(false);
                     }
                 }
+                break;
             }
-            break;
-            case XML_Filter:
-                if (mp_auto_filter)
-                    mp_auto_filter->commit();
-            break;
-            case XML_Field:
-                if (mp_auto_filter)
-                    mp_auto_filter->commit_column();
-            break;
             case XML_StyleRegion:
                 end_style_region();
-            break;
+                break;
             case XML_Condition:
                 end_condition();
-            break;
+                break;
             case XML_Expression0:
             case XML_Expression1:
                 end_expression();
-            break;
-            default:
-                ;
+                break;
         }
     }
 
@@ -683,134 +269,463 @@ bool gnumeric_sheet_context::end_element(xmlns_id_t ns, xml_token_t name)
 
 void gnumeric_sheet_context::characters(std::string_view str, bool transient)
 {
-    if (transient)
-        chars = m_pool.intern(str).first;
+    const auto [ns, name] = get_current_element();
+
+    if (ns == NS_gnumeric_gnm)
+    {
+        switch (name)
+        {
+            case XML_Merge:
+            {
+                m_merge_area = transient ? intern(str) : str;
+                break;
+            }
+            case XML_Name:
+            {
+                m_name = transient ? intern(str) : str;
+                break;
+            }
+            default:
+                m_chars = transient ? intern(str) : str;
+        }
+    }
     else
-        chars = str;
-}
-
-void gnumeric_sheet_context::start_font(const xml_attrs_t& attrs)
-{
-    for_each(attrs.begin(), attrs.end(), gnumeric_font_attr_parser(*mp_factory->get_styles()));
-}
-
-void gnumeric_sheet_context::start_col(const xml_attrs_t& attrs)
-{
-    gnumeric_col_row_info col_info = for_each(attrs.begin(), attrs.end(),
-            gnumeric_col_row_info());
-    spreadsheet::iface::import_sheet_properties* p_sheet_props = mp_sheet->get_sheet_properties();
-    double col_size = col_info.get_size();
-    bool hidden = col_info.is_hidden();
-    for (size_t i = col_info.get_position(),
-            n = col_info.get_col_row_repeated() + col_info.get_position(); i < n; ++i)
     {
-        p_sheet_props->set_column_width(i, col_size, length_unit_t::point);
-        p_sheet_props->set_column_hidden(i, hidden);
+        m_chars = transient ? intern(str) : str;
     }
 }
 
-void gnumeric_sheet_context::start_row(const xml_attrs_t& attrs)
+void gnumeric_sheet_context::reset(ss::sheet_t sheet)
 {
-    gnumeric_col_row_info row_info = for_each(attrs.begin(), attrs.end(),
-            gnumeric_col_row_info());
-    spreadsheet::iface::import_sheet_properties* p_sheet_props = mp_sheet->get_sheet_properties();
-    double row_size = row_info.get_size();
-    bool hidden = row_info.is_hidden();
-    for (size_t i = row_info.get_position(),
-            n = row_info.get_col_row_repeated() + row_info.get_position(); i < n; ++i)
+    mp_sheet = nullptr;
+    mp_xf = nullptr;
+    m_sheet = sheet;
+
+    m_region_data.reset();
+
+    m_front_color.red = 0;
+    m_front_color.green = 0;
+    m_front_color.blue = 0;
+
+    m_chars = std::string_view{};
+    m_name = std::string_view{};
+    m_merge_area = std::string_view{};
+}
+
+std::vector<gnumeric_style> gnumeric_sheet_context::pop_styles()
+{
+    return std::move(m_styles);
+}
+
+void gnumeric_sheet_context::start_font(const xml_token_attrs_t& attrs)
+{
+    auto* styles = mp_factory->get_styles();
+    if (!styles)
+        return;
+
+    auto* font_style = styles->start_font_style();
+    ENSURE_INTERFACE(font_style, import_font_style);
+
+    for (const auto& attr : attrs)
     {
-        p_sheet_props->set_row_height(i, row_size, length_unit_t::point);
-        p_sheet_props->set_row_hidden(i, hidden);
+        switch (attr.name)
+        {
+            case XML_Unit:
+            {
+                double n = atoi(attr.value.data());
+                font_style->set_size(n);
+                break;
+            }
+            case XML_Bold:
+            {
+                bool b = atoi(attr.value.data()) != 0;
+                font_style->set_bold(b);
+                break;
+            }
+            case XML_Italic:
+            {
+                bool b = atoi(attr.value.data()) != 0;
+                font_style->set_italic(b);
+                break;
+            }
+            case XML_Underline:
+            {
+                int n = atoi(attr.value.data());
+                switch (n)
+                {
+                    case 0:
+                        font_style->set_underline(ss::underline_t::none);
+                        break;
+                    case 1:
+                        font_style->set_underline(ss::underline_t::single_line);
+                        break;
+                    case 2:
+                        font_style->set_underline(ss::underline_t::double_line);
+                        break;
+                }
+                break;
+            }
+        }
     }
 }
 
-void gnumeric_sheet_context::start_style(const xml_attrs_t& attrs)
+void gnumeric_sheet_context::start_col(const xml_token_attrs_t& attrs)
 {
-    const gnumeric_style_attr_parser& attr_parser = for_each(attrs.begin(), attrs.end(), gnumeric_style_attr_parser(*mp_factory->get_styles(), front_color));
-    spreadsheet::iface::import_styles& styles = *mp_factory->get_styles();
-    if (attr_parser.is_fill_set())
+    if (!mp_sheet)
+        return;
+
+    ss::iface::import_sheet_properties* sheet_props = mp_sheet->get_sheet_properties();
+    if (!sheet_props)
+        return;
+
+    long col = 0;
+    long col_span = 1;
+    double col_width = 0.0;
+    bool col_hidden = false;
+
+    for (const xml_token_attr_t& attr : attrs)
     {
-        size_t fill_id = styles.commit_fill();
-        styles.set_xf_fill(fill_id);
+        switch (attr.name)
+        {
+            case XML_No:
+            {
+                col = to_long(attr.value);
+                break;
+            }
+            case XML_Unit:
+            {
+                col_width = to_double(attr.value);
+                break;
+            }
+            case XML_Count:
+            {
+                col_span = to_long(attr.value);
+                break;
+            }
+            case XML_Hidden:
+            {
+                col_hidden = to_bool(attr.value);
+                break;
+            }
+        }
     }
-    if (attr_parser.is_protection_set())
+
+    sheet_props->set_column_width(col, col_span, col_width, length_unit_t::point);
+    sheet_props->set_column_hidden(col, col_span, col_hidden);
+}
+
+void gnumeric_sheet_context::start_row(const xml_token_attrs_t& attrs)
+{
+    if (!mp_sheet)
+        return;
+
+    ss::iface::import_sheet_properties* sheet_props = mp_sheet->get_sheet_properties();
+    if (!sheet_props)
+        return;
+
+    long row = 0;
+    long row_span = 1;
+    double row_height = 0.0;
+    bool row_hidden = false;
+
+    for (const xml_token_attr_t& attr : attrs)
     {
-        size_t protection_id = styles.commit_cell_protection();
-        styles.set_xf_protection(protection_id);
+        switch (attr.name)
+        {
+            case XML_No:
+            {
+                row = to_long(attr.value);
+                break;
+            }
+            case XML_Unit:
+            {
+                row_height = to_double(attr.value);
+                break;
+            }
+            case XML_Count:
+            {
+                row_span = to_long(attr.value);
+                break;
+            }
+            case XML_Hidden:
+            {
+                row_hidden = to_bool(attr.value);
+                break;
+            }
+        }
+    }
+
+    for (long i = 0; i < row_span; ++i)
+    {
+        sheet_props->set_row_height(row + i, row_height, length_unit_t::point);
+        sheet_props->set_row_hidden(row + i, row_hidden);
     }
 }
 
-void gnumeric_sheet_context::start_style_region(const xml_attrs_t& attrs)
+void gnumeric_sheet_context::start_style(const xml_token_attrs_t& attrs)
 {
-    mp_region_data.reset(new gnumeric_style_region());
-    for_each(attrs.begin(), attrs.end(), gnumeric_style_region_attr_parser(*mp_region_data));
+    auto* styles = mp_factory->get_styles();
+    if (!styles)
+        return;
+
+    auto* fill_style = styles->start_fill_style();
+    ENSURE_INTERFACE(fill_style, import_fill_style);
+
+    auto* cell_protection = styles->start_cell_protection();
+    ENSURE_INTERFACE(cell_protection, import_cell_protection);
+
+    auto* number_format = styles->start_number_format();
+    ENSURE_INTERFACE(number_format, import_number_format);
+
+    mp_xf = styles->start_xf(ss::xf_category_t::cell);
+    ENSURE_INTERFACE(mp_xf, import_xf);
+
+    bool fill_set = false;
+    bool protection_set = false;
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        switch (attr.name)
+        {
+            case XML_Fore:
+            {
+                auto color = parse_gnumeric_rgb(attr.value);
+                if (!color)
+                    break;
+
+                fill_style->set_fg_color(255, color->red, color->green, color->blue);
+                fill_set = true;
+                m_front_color = *color;
+                break;
+            }
+            case XML_Back:
+            {
+                auto color = parse_gnumeric_rgb(attr.value);
+                if (!color)
+                    break;
+
+                fill_style->set_bg_color(255, color->red, color->green, color->blue);
+                fill_set = true;
+                break;
+            }
+            case XML_Hidden:
+            {
+                bool b = atoi(attr.value.data());
+                cell_protection->set_hidden(b);
+
+                protection_set = true;
+                break;
+            }
+            case XML_Locked:
+            {
+                bool b = atoi(attr.value.data());
+                cell_protection->set_locked(b);
+
+                protection_set = true;
+                break;
+            }
+            case XML_Format:
+            {
+                if (attr.value != "General")
+                {
+                    number_format->set_code(attr.value);
+                    std::size_t index = number_format->commit();
+                    mp_xf->set_number_format(index);
+                }
+                break;
+            }
+            case XML_HAlign:
+            {
+                ss::hor_alignment_t hor_alignment = ss::hor_alignment_t::unknown;
+                if (attr.value == "GNM_HALIGN_CENTER")
+                    hor_alignment = ss::hor_alignment_t::center;
+                else if (attr.value == "GNM_HALIGN_RIGHT")
+                    hor_alignment = ss::hor_alignment_t::right;
+                else if (attr.value == "GNM_HALIGN_LEFT")
+                    hor_alignment = ss::hor_alignment_t::left;
+                else if (attr.value == "GNM_HALIGN_JUSTIFY")
+                    hor_alignment = ss::hor_alignment_t::justified;
+                else if (attr.value == "GNM_HALIGN_DISTRIBUTED")
+                    hor_alignment = ss::hor_alignment_t::distributed;
+                else if (attr.value == "GNM_HALIGN_FILL")
+                    hor_alignment = ss::hor_alignment_t::filled;
+
+                if (hor_alignment != ss::hor_alignment_t::unknown)
+                    mp_xf->set_apply_alignment(true);
+                mp_xf->set_horizontal_alignment(hor_alignment);
+                break;
+            }
+            case XML_VAlign:
+            {
+                ss::ver_alignment_t ver_alignment = ss::ver_alignment_t::unknown;
+                if (attr.value == "GNM_VALIGN_BOTTOM")
+                    ver_alignment = ss::ver_alignment_t::bottom;
+                else if (attr.value == "GNM_VALIGN_TOP")
+                    ver_alignment = ss::ver_alignment_t::top;
+                else if (attr.value == "GNM_VALIGN_CENTER")
+                    ver_alignment = ss::ver_alignment_t::middle;
+                else if (attr.value == "GNM_VALIGN_JUSTIFY")
+                    ver_alignment = ss::ver_alignment_t::justified;
+                else if (attr.value == "GNM_VALIGN_DISTRIBUTED")
+                    ver_alignment = ss::ver_alignment_t::distributed;
+
+                if (ver_alignment != ss::ver_alignment_t::unknown)
+                    mp_xf->set_apply_alignment(true);
+                mp_xf->set_vertical_alignment(ver_alignment);
+                break;
+            }
+        }
+    }
+
+    if (fill_set)
+    {
+        size_t fill_id = fill_style->commit();
+        mp_xf->set_fill(fill_id);
+    }
+    if (protection_set)
+    {
+        size_t protection_id = cell_protection->commit();
+        mp_xf->set_protection(protection_id);
+    }
 }
 
-void gnumeric_sheet_context::start_condition(const xml_attrs_t& attrs)
+void gnumeric_sheet_context::start_style_region(const xml_token_attrs_t& attrs)
 {
-    spreadsheet::iface::import_conditional_format* cond_format =
+    m_region_data = style_region{};
+
+    for (const xml_token_attr_t& attr : attrs)
+    {
+        switch (attr.name)
+        {
+            case XML_startCol:
+            {
+                size_t n = atoi(attr.value.data());
+                m_region_data->start_col = n;
+                break;
+            }
+            case XML_startRow:
+            {
+                size_t n = atoi(attr.value.data());
+                m_region_data->start_row = n;
+                break;
+            }
+            case XML_endCol:
+            {
+                size_t n = atoi(attr.value.data());
+                m_region_data->end_col = n;
+                break;
+            }
+            case XML_endRow:
+            {
+                size_t n = atoi(attr.value.data());
+                m_region_data->end_row = n;
+                break;
+            }
+            default:
+                ;
+        }
+    }
+}
+
+void gnumeric_sheet_context::start_condition(const xml_token_attrs_t& attrs)
+{
+    if (!mp_sheet)
+        return;
+
+    ss::iface::import_conditional_format* cond_format =
         mp_sheet->get_conditional_format();
-    if (cond_format)
+
+    if (!cond_format)
+        return;
+
+    for (const xml_token_attr_t& attr : attrs)
     {
-        for_each(attrs.begin(), attrs.end(), gnumeric_condition_attr_parser(cond_format));
+        switch (attr.name)
+        {
+            case XML_Operator:
+            {
+                int val = atoi(attr.value.data());
+                ss::condition_operator_t op = get_condition_operator(val);
+                cond_format->set_operator(op);
+                break;
+            }
+        }
     }
 }
 
-void gnumeric_sheet_context::end_table()
+void gnumeric_sheet_context::start_name(const xml_token_attrs_t& /*attrs*/)
 {
-    mp_sheet = mp_factory->append_sheet(m_sheet_index, chars);
+    m_name = std::string_view{};
 }
 
 void gnumeric_sheet_context::end_font()
 {
-    spreadsheet::iface::import_styles& styles = *mp_factory->get_styles();
-    styles.set_font_color(0, front_color.red, front_color.green, front_color.blue);
-    styles.set_font_name(chars);
-    size_t font_id = styles.commit_font();
-    styles.set_xf_font(font_id);
+    ss::iface::import_styles* styles = mp_factory->get_styles();
+    if (!styles)
+        return;
+
+    auto* font_style = styles->start_font_style();
+    ENSURE_INTERFACE(font_style, import_font_style);
+
+    font_style->set_color(0, m_front_color.red, m_front_color.green, m_front_color.blue);
+    font_style->set_name(m_chars);
+    size_t font_id = font_style->commit();
+
+    assert(mp_xf);
+    mp_xf->set_font(font_id);
 }
 
 void gnumeric_sheet_context::end_style(bool conditional_format)
 {
-    spreadsheet::iface::import_styles& styles = *mp_factory->get_styles();
-    size_t id = styles.commit_cell_xf();
+    ss::iface::import_styles* styles = mp_factory->get_styles();
+    if (!styles)
+        return;
+
+    assert(mp_xf);
+    size_t xf_id = mp_xf->commit();
     if (!conditional_format)
     {
-        mp_region_data->xf_id = id;
+        m_region_data->xf_id = xf_id;
     }
-    else
+    else if (mp_sheet)
     {
-        spreadsheet::iface::import_conditional_format* cond_format =
+        ss::iface::import_conditional_format* cond_format =
             mp_sheet->get_conditional_format();
         if (cond_format)
         {
-            cond_format->set_xf_id(id);
+            cond_format->set_xf_id(xf_id);
         }
     }
 }
 
 void gnumeric_sheet_context::end_style_region()
 {
-    mp_sheet->set_format(mp_region_data->start_row, mp_region_data->start_col,
-            mp_region_data->end_row, mp_region_data->end_col, mp_region_data->xf_id);
+    if (!mp_sheet)
+        return;
 
-    if (mp_region_data->contains_conditional_format)
+    mp_sheet->set_format(m_region_data->start_row, m_region_data->start_col,
+            m_region_data->end_row, m_region_data->end_col, m_region_data->xf_id);
+
+    if (m_region_data->contains_conditional_format)
     {
-        spreadsheet::iface::import_conditional_format* cond_format =
+        ss::iface::import_conditional_format* cond_format =
             mp_sheet->get_conditional_format();
         if (cond_format)
         {
-            cond_format->set_range(mp_region_data->start_row, mp_region_data->start_col,
-                    mp_region_data->end_row, mp_region_data->end_col);
+            cond_format->set_range(m_region_data->start_row, m_region_data->start_col,
+                    m_region_data->end_row, m_region_data->end_col);
             cond_format->commit_format();
         }
     }
-    mp_region_data.reset();
+    m_region_data.reset();
 }
 
 void gnumeric_sheet_context::end_condition()
 {
-    spreadsheet::iface::import_conditional_format* cond_format =
+    if (!mp_sheet)
+        return;
+
+    ss::iface::import_conditional_format* cond_format =
         mp_sheet->get_conditional_format();
     if (cond_format)
     {
@@ -820,14 +735,85 @@ void gnumeric_sheet_context::end_condition()
 
 void gnumeric_sheet_context::end_expression()
 {
-    spreadsheet::iface::import_conditional_format* cond_format =
+    if (!mp_sheet)
+        return;
+
+    ss::iface::import_conditional_format* cond_format =
         mp_sheet->get_conditional_format();
     if (cond_format)
     {
-        cond_format->set_formula(chars);
+        cond_format->set_formula(m_chars);
         cond_format->commit_condition();
     }
 }
 
+void gnumeric_sheet_context::end_merge()
+{
+    if (!mp_sheet || m_merge_area.empty())
+        return;
+
+    auto* sp = mp_sheet->get_sheet_properties();
+    if (!sp)
+        return;
+
+    auto* resolver = mp_factory->get_reference_resolver(ss::formula_ref_context_t::global);
+    if (!resolver)
+        return;
+
+    try
+    {
+        ss::range_t range = to_rc_range(resolver->resolve_range(m_merge_area));
+        sp->set_merge_cell_range(range);
+    }
+    catch (const invalid_arg_error& e)
+    {
+        std::ostringstream os;
+        os << "failed to parse a merged area '" << m_merge_area << "': " << e.what();
+        warn(os.str());
+    }
 }
+
+void gnumeric_sheet_context::end_name()
+{
+    if (m_name.empty())
+        return;
+
+    mp_sheet = mp_factory->get_sheet(m_name);
+    m_name = std::string_view{};
+}
+
+void gnumeric_sheet_context::end_names()
+{
+    if (!mp_sheet)
+        return;
+
+    ss::iface::import_named_expression* named_exp = mp_sheet->get_named_expression();
+    if (!named_exp)
+        return;
+
+    for (const auto& name : m_cxt_names.get_names())
+    {
+        try
+        {
+            named_exp->set_base_position(name.position);
+            named_exp->set_named_expression(name.name, name.value);
+            named_exp->commit();
+        }
+        catch (const std::exception& e)
+        {
+            std::ostringstream os;
+            os << "failed to commit a named expression named '" << name.name
+                << "': (reason='" << e.what() << "'; value='" << name.value << "')";
+            warn(os.str());
+        }
+    }
+}
+
+void gnumeric_sheet_context::end_styles()
+{
+    m_styles = m_cxt_styles.pop_styles();
+}
+
+} // namespace orcus
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

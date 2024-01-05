@@ -7,82 +7,104 @@
 
 #include "odf_styles.hpp"
 
+#include <stdexcept>
+
 namespace orcus {
 
-odf_style::odf_style() : family(style_family_unknown), column_data(nullptr) {}
-odf_style::odf_style(std::string_view _name, odf_style_family _family, std::string_view parent) :
+odf_style::odf_style() : family(style_family_unknown) {}
+odf_style::odf_style(std::string_view _name, std::string_view _display_name, odf_style_family _family, std::string_view parent) :
     name(_name),
+    display_name(_display_name),
     family(_family),
-    parent_name(parent),
-    column_data(nullptr)
+    parent_name(parent)
 {
     switch (family)
     {
         case style_family_table_column:
-            column_data = new column;
-        break;
+            data = column{};
+            break;
         case style_family_table_row:
-            row_data = new row;
-        break;
+            data = row{};
+            break;
         case style_family_table_cell:
-            cell_data = new cell;
-        break;
+            data = cell{};
+            break;
         case style_family_table:
-            table_data = new table;
-        break;
+            data = table{};
+            break;
         case style_family_graphic:
-            graphic_data = new graphic;
-        break;
+            data = graphic{};
+            break;
         case style_family_paragraph:
-            paragraph_data = new paragraph;
-        break;
+            data = paragraph{};
+            break;
         case style_family_text:
-            text_data = new text;
-        break;
+            data = text{};
+            break;
         case style_family_unknown:
-        default:
-            ;
+            throw std::invalid_argument("unkown style family is not allowed");
     }
 }
 
-odf_style::~odf_style()
+odf_style::~odf_style() {}
+
+odf_number_format::odf_number_format(std::string_view _name, bool _is_volatile):
+    name(_name),
+    is_volatile(_is_volatile)
 {
-    switch (family)
+}
+
+void merge(odf_styles_map_type& dst, odf_styles_map_type& src)
+{
+    for (auto& [name, style] : src)
+        dst.insert_or_assign(name, std::move(style));
+
+    src.clear();
+}
+
+void dump_state(const odf_styles_map_type& styles_map, std::ostream& os)
+{
+    os << "styles picked up:\n";
+
+    auto it = styles_map.begin(), it_end = styles_map.end();
+    for (; it != it_end; ++it)
     {
-        case style_family_table_column:
-            delete column_data;
-        break;
-        case style_family_table_row:
-            delete row_data;
-        break;
-        case style_family_table_cell:
-            delete cell_data;
-        break;
-        case style_family_table:
-            delete table_data;
-        break;
-        case style_family_graphic:
-            delete graphic_data;
-        break;
-        case style_family_paragraph:
-            delete paragraph_data;
-        break;
-        case style_family_text:
-            delete text_data;
-        break;
-        case style_family_unknown:
-        default:
-            ;
+        os << "  style: " << it->first << " [ ";
+
+        switch (it->second->family)
+        {
+            case style_family_table_column:
+            {
+                const auto& data = std::get<odf_style::column>(it->second->data);
+                os << "column width: " << data.width.to_string();
+                break;
+            }
+            case style_family_table_row:
+            {
+                const auto& data = std::get<odf_style::row>(it->second->data);
+                os << "row height: " << data.height.to_string();
+                break;
+            }
+            case style_family_table_cell:
+            {
+                const auto& cell = std::get<odf_style::cell>(it->second->data);
+                os << "xf ID: " << cell.xf;
+                break;
+            }
+            case style_family_text:
+            {
+                const auto& data = std::get<odf_style::text>(it->second->data);
+                os << "font ID: " << data.font;
+                break;
+            }
+            default:
+                ;
+        }
+
+        os << " ]\n";
     }
 }
 
-number_formatting_style::number_formatting_style(std::string_view style_name, const bool volatile_style):
-    number_formatting(0),
-    name(style_name),
-    is_volatile(volatile_style)
-{
-}
+} // namespace orcus
 
-
-}
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

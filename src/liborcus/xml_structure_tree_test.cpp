@@ -7,7 +7,6 @@
 
 #include <orcus/xml_structure_tree.hpp>
 #include <orcus/xml_namespace.hpp>
-#include <orcus/global.hpp>
 #include <orcus/stream.hpp>
 #include <orcus/parser_global.hpp>
 
@@ -16,11 +15,11 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include <boost/filesystem.hpp>
+
+#include "filesystem_env.hpp"
 
 using namespace std;
 using namespace orcus;
-namespace fs = boost::filesystem;
 
 const fs::path test_base_dir(SRCDIR"/test/xml-structure");
 

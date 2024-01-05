@@ -14,12 +14,12 @@
 #include "orcus/string_pool.hpp"
 
 #include "formula_result.hpp"
-#include "pstring.hpp"
 
 #include <string>
 #include <unordered_map>
 #include <list>
 #include <deque>
+#include <optional>
 
 namespace orcus {
 
@@ -42,10 +42,16 @@ class xls_xml_data_context : public xml_context_base
 {
     struct format_type
     {
-        bool bold = false;
-        bool italic = false;
+        std::optional<bool> bold;
+        std::optional<bool> italic;
+        std::optional<bool> underline;
+        std::optional<bool> strikethrough;
+        std::optional<bool> subscript;
+        std::optional<bool> superscript;
 
-        spreadsheet::color_rgb_t color;
+        std::optional<std::string_view> font_face;
+        std::optional<double> font_size;
+        std::optional<spreadsheet::color_rgb_t> color;
 
         void merge(const format_type& other);
         bool formatted() const;
@@ -92,15 +98,15 @@ public:
 
 private:
 
-    void start_element_data(const xml_token_pair_t& parent, const xml_attrs_t& attrs);
+    void start_element_data(const xml_token_pair_t& parent, const xml_token_attrs_t& attrs);
     void end_element_data();
 
     bool handle_array_formula_result();
     void push_array_result(
         range_formula_results& res, size_t row_offset, size_t col_offset);
 
-    void push_formula_cell(const pstring& formula);
-    void store_array_formula_parent_cell(const pstring& formula);
+    void push_formula_cell(std::string_view formula);
+    void store_array_formula_parent_cell(std::string_view formula);
     void update_current_format();
 };
 
@@ -111,27 +117,31 @@ class xls_xml_context : public xml_context_base
     struct cell_formula_type
     {
         spreadsheet::address_t pos;
-        pstring formula;
+        std::string_view formula;
         formula_result result;
     };
 
     struct array_formula_type
     {
-        pstring formula;
+        std::string_view formula;
         range_formula_results results;
 
-        array_formula_type(const spreadsheet::range_t& _range, const pstring& _formula);
+        array_formula_type(const spreadsheet::range_t& _range, std::string_view _formula);
     };
 
     struct border_style_type
     {
         spreadsheet::border_direction_t dir = spreadsheet::border_direction_t::unknown;
         spreadsheet::border_style_t style = spreadsheet::border_style_t::unknown;
-        spreadsheet::color_rgb_t color;
+        std::optional<spreadsheet::color_rgb_t> color;
     };
 
     struct font_style_type
     {
+        std::string_view name;
+        std::string_view family;
+        std::optional<double> size;
+        std::optional<spreadsheet::underline_t> underline;
         bool bold = false;
         bool italic = false;
 
@@ -153,27 +163,37 @@ class xls_xml_context : public xml_context_base
         spreadsheet::hor_alignment_t hor = spreadsheet::hor_alignment_t::unknown;
         spreadsheet::ver_alignment_t ver = spreadsheet::ver_alignment_t::unknown;
         int8_t indent = 0;
+        bool wrap_text = false;
+        bool shrink_to_fit = false;
+    };
+
+    struct cell_protection_type
+    {
+        bool locked = true;  // NB: default is locked
+        bool hide_formula = false;
     };
 
     struct style_type
     {
-        pstring id;
-        pstring name;
+        std::string_view id;
+        std::string_view parent_id;
+        std::string_view name;
 
         font_style_type font;
         fill_style_type fill;
         text_alignment_type text_alignment;
-        pstring number_format;
+        cell_protection_type cell_protection;
+        std::string_view number_format;
         std::vector<border_style_type> borders;
     };
 
     struct named_exp
     {
-        pstring name;
-        pstring expression;
+        std::string_view name;
+        std::string_view expression;
         spreadsheet::sheet_t scope;
 
-        named_exp(const pstring& _name, const pstring& _expression, spreadsheet::sheet_t _scope);
+        named_exp(std::string_view _name, std::string_view _expression, spreadsheet::sheet_t _scope);
     };
 
     struct selection
@@ -214,7 +234,7 @@ class xls_xml_context : public xml_context_base
 
     using named_expressions_type = std::vector<named_exp>;
     using styles_type = std::vector<std::unique_ptr<style_type>>;
-    using style_id_xf_map_type = std::unordered_map<pstring, size_t, pstring::hash>;
+    using style_id_xf_map_type = std::unordered_map<std::string_view, std::size_t>;
     using array_formula_pair_type = std::pair<spreadsheet::range_t, std::unique_ptr<array_formula_type>>;
     using array_formulas_type = std::list<array_formula_pair_type>;
     using cell_formulas_type = std::deque<std::deque<cell_formula_type>>;
@@ -228,20 +248,20 @@ public:
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) override;
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child) override;
 
-    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs) override;
+    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs) override;
     virtual bool end_element(xmlns_id_t ns, xml_token_t name) override;
     virtual void characters(std::string_view str, bool transient) override;
 
 private:
 
-    void start_element_borders(const xml_attrs_t& attrs);
-    void start_element_border(const xml_attrs_t& attrs);
-    void start_element_number_format(const xml_attrs_t& attrs);
-    void start_element_cell(const xml_attrs_t& attrs);
-    void start_element_column(const xml_attrs_t& attrs);
-    void start_element_row(const xml_attrs_t& attrs);
-    void start_element_table(const xml_attrs_t& attrs);
-    void start_element_worksheet(const xml_attrs_t& attrs);
+    void start_element_borders(const xml_token_attrs_t& attrs);
+    void start_element_border(const xml_token_attrs_t& attrs);
+    void start_element_number_format(const xml_token_attrs_t& attrs);
+    void start_element_cell(const xml_token_attrs_t& attrs);
+    void start_element_column(const xml_token_attrs_t& attrs);
+    void start_element_row(const xml_token_attrs_t& attrs);
+    void start_element_table(const xml_token_attrs_t& attrs);
+    void start_element_worksheet(const xml_token_attrs_t& attrs);
 
     void end_element_borders();
     void end_element_border();
@@ -266,12 +286,12 @@ private:
     spreadsheet::iface::import_factory* get_import_factory();
     spreadsheet::iface::import_sheet* get_import_sheet();
     spreadsheet::address_t get_current_pos() const;
-    pstring pop_and_clear_formula();
+    std::string_view pop_and_clear_formula();
     bool is_array_formula() const;
     const spreadsheet::range_t& get_array_range() const;
     array_formulas_type& get_array_formula_store();
 
-    void store_cell_formula(const pstring& formula, const formula_result& res);
+    void store_cell_formula(std::string_view formula, const formula_result& res);
 
 private:
     spreadsheet::iface::import_factory* mp_factory;
@@ -287,8 +307,8 @@ private:
     spreadsheet::row_t m_cur_merge_down;
     spreadsheet::col_t m_cur_merge_across;
     spreadsheet::range_t m_cur_array_range;
-    pstring m_cur_cell_formula;
-    pstring m_cur_cell_style_id;
+    std::string_view m_cur_cell_formula;
+    std::string_view m_cur_cell_style_id;
 
     cell_formulas_type m_cell_formulas;
     array_formulas_type m_array_formulas;
@@ -302,7 +322,8 @@ private:
     styles_type m_styles;
     table_properties m_table_props;
 
-    style_id_xf_map_type m_style_map;
+    style_id_xf_map_type m_style_map_cell;
+    style_id_xf_map_type m_style_map_named_style;
 
     xls_xml_data_context m_cc_data;
 };

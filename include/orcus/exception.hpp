@@ -18,51 +18,51 @@ namespace orcus {
 class ORCUS_PSR_DLLPUBLIC general_error : public std::exception
 {
 public:
-    explicit general_error(const std::string& msg);
-    explicit general_error(const std::string& cls, const std::string& msg);
-    virtual ~general_error() throw();
-    virtual const char* what() const throw();
+    explicit general_error(std::string msg);
+    explicit general_error(std::string_view cls, std::string_view msg);
+    virtual ~general_error() noexcept;
+    virtual const char* what() const noexcept;
 
 protected:
     void append_msg(const std::string& s);
 
 private:
-    ::std::string m_msg;
+    std::string m_msg;
 };
 
 class ORCUS_PSR_DLLPUBLIC invalid_arg_error : public std::invalid_argument
 {
 public:
     explicit invalid_arg_error(const std::string& msg);
-    virtual ~invalid_arg_error() throw();
+    virtual ~invalid_arg_error() noexcept;
 };
 
 class ORCUS_PSR_DLLPUBLIC xml_structure_error : public general_error
 {
 public:
-    explicit xml_structure_error(const ::std::string& msg);
-    virtual ~xml_structure_error() throw();
+    explicit xml_structure_error(std::string msg);
+    virtual ~xml_structure_error() noexcept;
 };
 
 class ORCUS_PSR_DLLPUBLIC json_structure_error : public general_error
 {
 public:
-    explicit json_structure_error(const ::std::string& msg);
-    virtual ~json_structure_error() throw();
+    explicit json_structure_error(std::string msg);
+    virtual ~json_structure_error() noexcept;
 };
 
 class ORCUS_PSR_DLLPUBLIC invalid_map_error : public general_error
 {
 public:
-    explicit invalid_map_error(const ::std::string& msg);
-    virtual ~invalid_map_error() throw();
+    explicit invalid_map_error(std::string msg);
+    virtual ~invalid_map_error() noexcept;
 };
 
 class ORCUS_PSR_DLLPUBLIC value_error : public general_error
 {
 public:
-    explicit value_error(const std::string& msg);
-    virtual ~value_error() throw();
+    explicit value_error(std::string msg);
+    virtual ~value_error() noexcept;
 };
 
 /**
@@ -71,8 +71,68 @@ public:
 class ORCUS_PSR_DLLPUBLIC xpath_error : public general_error
 {
 public:
-    xpath_error(const std::string& msg);
-    virtual ~xpath_error() throw();
+    xpath_error(std::string msg);
+    virtual ~xpath_error() noexcept;
+};
+
+/**
+ * This gets thrown when a public interface method is expected to return a
+ * non-null pointer to another interface but actually returns a null pointer.
+ */
+class ORCUS_PSR_DLLPUBLIC interface_error : public general_error
+{
+public:
+    interface_error(std::string msg);
+    virtual ~interface_error() noexcept;
+};
+
+/**
+ * Exception related to a parsing error that includes an offset in the stream
+ * where the error occurred.
+ */
+class ORCUS_PSR_DLLPUBLIC parse_error : public general_error
+{
+    std::ptrdiff_t m_offset;  /// offset in the stream where the error occurred.
+
+protected:
+    parse_error(std::string_view cls, std::string_view msg, std::ptrdiff_t offset);
+
+public:
+    parse_error(std::string msg, std::ptrdiff_t offset);
+
+    /**
+     * Get the offset in a stream associated with the error.
+     *
+     * @return offset in a stream where the error occurred.
+     */
+    std::ptrdiff_t offset() const;
+
+    static void throw_with(
+        std::string_view msg_before, char c, std::string_view msg_after, std::ptrdiff_t offset);
+
+    static void throw_with(
+        std::string_view msg_before, std::string_view msg, std::string_view msg_after, std::ptrdiff_t offset);
+};
+
+/**
+ * This exception is thrown when SAX parser detects a malformed XML document.
+ */
+class ORCUS_PSR_DLLPUBLIC malformed_xml_error : public parse_error
+{
+public:
+    malformed_xml_error() = delete;
+    malformed_xml_error(std::string_view msg, std::ptrdiff_t offset);
+    virtual ~malformed_xml_error();
+};
+
+/**
+ * Exception related to parsing of zip archive stream.
+ */
+class ORCUS_PSR_DLLPUBLIC zip_error : public general_error
+{
+public:
+    zip_error(std::string_view msg);
+    virtual ~zip_error();
 };
 
 namespace detail {

@@ -1,6 +1,12 @@
-liborcus (0.17.2-2) unstable; urgency=medium
+liborcus (0.19.2-3) unstable; urgency=medium
 
-  * Team upload.
+  * upload to unstable 
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 24 Nov 2023 18:24:33 +0100
+
+liborcus (0.19.2-2) experimental; urgency=medium
+
+  * merge 0.17.2-2 changes....:
 
   [ Debian Janitor ]
   * Remove constraints unnecessary since buster:
@@ -14,7 +20,58 @@ liborcus (0.17.2-2) unstable; urgency=medium
   * Fix d/watch so it matches with the new GitLab layout.
   * Update d/copyright after the previous update (just following lintian).
 
- -- Mattia Rizzolo <mattia@debian.org>  Fri, 18 Feb 2022 12:30:04 +0100
+ -- Rene Engelhard <rene@debian.org>  Fri, 24 Nov 2023 18:09:36 +0100
+
+liborcus (0.19.2-1) experimental; urgency=medium
+
+  * New upstream version 0.19.2
+    - fixes segmentation fault in orcus-test-xml-mapped (closes: #1054376)
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 10 Nov 2023 18:21:38 +0100
+
+liborcus (0.19.1-2) experimental; urgency=medium
+
+  * use dh_makeshlibs -VUpstream-Version to bump .shlibs to >= 0.19.1
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 27 Oct 2023 19:06:26 +0000
+
+liborcus (0.19.1-1) experimental; urgency=medium
+
+  * New upstream version 0.19.1
+
+ -- Rene Engelhard <rene@debian.org>  Mon, 23 Oct 2023 17:50:38 +0200
+
+liborcus (0.19.0-2) experimental; urgency=medium
+
+  * debian/rules: export DEB_CXXFLAGS_MAINT_APPEND += -fexcess-precision=fast
+
+ -- Rene Engelhard <rene@debian.org>  Sun, 22 Oct 2023 09:00:42 +0000
+
+liborcus (0.19.0-1) experimental; urgency=medium
+
+  * New upstream version 0.19.0
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 03 Oct 2023 14:44:19 +0200
+
+liborcus (0.18.1-2) experimental; urgency=medium
+
+  * Update tests/control: 0.17->0.18 (closes: #1038690) 
+
+ -- Rene Engelhard <rene@debian.org>  Tue, 20 Jun 2023 17:39:51 +0200
+
+liborcus (0.18.1-1) experimental; urgency=medium
+
+  * New upstream version 0.18.1
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 10 Feb 2023 19:04:45 +0100
+
+liborcus (0.18.0-1) experimental; urgency=medium
+
+  * New upstream version 0.18.0
+
+  * explicitely build with --enable-static for now
+
+ -- Rene Engelhard <rene@debian.org>  Fri, 13 Jan 2023 19:46:14 +0100
 
 liborcus (0.17.2-1) unstable; urgency=medium
 

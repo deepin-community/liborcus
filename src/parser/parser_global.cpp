@@ -7,7 +7,6 @@
 
 #include <orcus/parser_global.hpp>
 #include <orcus/cell_buffer.hpp>
-#include <orcus/global.hpp>
 #include <orcus/exception.hpp>
 
 #include "numeric_parser.hpp"
@@ -49,24 +48,25 @@ bool is_in(char c, std::string_view allowed)
     return std::any_of(allowed.begin(), allowed.end(), f);
 }
 
-double parse_numeric(const char*& p, size_t max_length)
+const char* parse_numeric(const char* p, const char* p_end, double& value)
 {
     using numeric_parser_type = detail::numeric_parser<detail::generic_parser_trait>;
-
-    const char* p_end = p + max_length;
 
     numeric_parser_type parser(p, p_end);
     double v = parser.parse();
     if (!std::isnan(v))
         p = parser.get_char_position();
-    return v;
+
+    value = v;
+    return p;
 }
 
-long parse_integer(const char*& p, size_t max_length)
+const char* parse_integer(const char* p, const char* p_end, long& value)
 {
-    const char* p_end = p + max_length;
+    if (p >= p_end)
+        return p;
 
-    long ret = 0.0;
+    long result = 0.0;
     bool negative_sign = false;
 
     // Check for presence of a sign.
@@ -76,11 +76,11 @@ long parse_integer(const char*& p, size_t max_length)
         {
             case '+':
                 ++p;
-            break;
+                break;
             case '-':
                 negative_sign = true;
                 ++p;
-            break;
+                break;
             default:
                 ;
         }
@@ -89,13 +89,17 @@ long parse_integer(const char*& p, size_t max_length)
     for (; p != p_end; ++p)
     {
         if (*p < '0' || '9' < *p)
-            return negative_sign ? -ret : ret;
+        {
+            value = negative_sign ? -result : result;
+            return p;
+        }
 
-        ret *= 10;
-        ret += *p - '0';
+        result *= 10;
+        result += *p - '0';
     }
 
-    return negative_sign ? -ret : ret;
+    value = negative_sign ? -result : result;
+    return p;
 }
 
 string_escape_char_t get_string_escape_char_type(char c)
@@ -180,19 +184,20 @@ parse_quoted_string_state parse_string_with_escaped_char(
         switch (*p)
         {
             case '"':
+            {
                 // closing quote.
                 buffer.append(p_head, len);
                 ++p; // skip the quote.
-                ret.str = buffer.get();
-                ret.length = buffer.size();
+                std::string_view s = buffer.str();
+                ret.str = s.data();
+                ret.length = s.size();
                 return ret;
-            break;
+            }
             case '\\':
             {
                 escape = true;
                 continue;
             }
-            break;
             default:
                 ;
         }
@@ -239,8 +244,9 @@ parse_quoted_string_state parse_single_quoted_string_buffered(
                 if (last == '\'')
                 {
                     buffer.append(p0, len-1);
-                    ret.str = buffer.get();
-                    ret.length = buffer.size();
+                    auto s = buffer.str();
+                    ret.str = s.data();
+                    ret.length = s.size();
                     return ret;
                 }
             }
@@ -253,8 +259,9 @@ parse_quoted_string_state parse_single_quoted_string_buffered(
     if (last == '\'')
     {
         buffer.append(p0, len-1);
-        ret.str = buffer.get();
-        ret.length = buffer.size();
+        auto s = buffer.str();
+        ret.str = s.data();
+        ret.length = s.size();
         return ret;
     }
 

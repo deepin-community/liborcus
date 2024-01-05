@@ -5,8 +5,8 @@ Depends:
 
 Tests: unit
 Depends:
- liborcus-0.17-0,
- liborcus-spreadsheet-model-0.17-0,
+ liborcus-0.18-0,
+ liborcus-spreadsheet-model-0.18-0,
  python3-orcus,
  @builddeps@,
 Restrictions: build-needed, rw-build-tree

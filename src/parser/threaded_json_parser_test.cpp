@@ -7,7 +7,6 @@
 
 #include "test_global.hpp"
 #include <orcus/threaded_json_parser.hpp>
-#include <orcus/global.hpp>
 
 #include <cstring>
 
@@ -144,7 +143,7 @@ void test_threaded_json_parser_basic()
         }
     };
 
-    for (size_t i = 0, n = ORCUS_N_ELEMENTS(tcs); i < n; ++i)
+    for (size_t i = 0, n = std::size(tcs); i < n; ++i)
         test_parser(tcs[i].source, tcs[i].expected);
 }
 
@@ -159,7 +158,7 @@ void test_threaded_json_parser_invalid()
         "\"key\": {\"inner\": 12}"
     };
 
-    for (size_t i = 0; i < ORCUS_N_ELEMENTS(invalids); ++i)
+    for (size_t i = 0; i < std::size(invalids); ++i)
     {
         const char* src = invalids[i];
 
@@ -170,7 +169,7 @@ void test_threaded_json_parser_invalid()
             parser.parse();
             assert(false);
         }
-        catch (const json::parse_error&)
+        catch (const parse_error&)
         {
             // works as expected.
             cout << "invalid source: " << src << endl;

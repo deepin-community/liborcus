@@ -7,7 +7,6 @@
 
 #include "test_global.hpp"
 #include "orcus/parser_base.hpp"
-#include "orcus/global.hpp"
 
 using namespace std;
 using namespace orcus;
@@ -17,7 +16,7 @@ void test_skip_space_and_control()
     class _test_type : public orcus::parser_base
     {
     public:
-        _test_type(const char* p, size_t n) : orcus::parser_base(p, n, false) {}
+        _test_type(const char* p, size_t n) : orcus::parser_base(p, n) {}
 
         void run()
         {

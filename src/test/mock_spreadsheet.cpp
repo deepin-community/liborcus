@@ -122,12 +122,12 @@ import_sheet_properties::~import_sheet_properties()
 {
 }
 
-void import_sheet_properties::set_column_width(col_t, double, length_unit_t)
+void import_sheet_properties::set_column_width(col_t, col_t, double, length_unit_t)
 {
     assert(false);
 }
 
-void import_sheet_properties::set_column_hidden(col_t, bool)
+void import_sheet_properties::set_column_hidden(col_t, col_t, bool)
 {
     assert(false);
 }
@@ -288,6 +288,16 @@ void import_sheet::set_format(row_t, col_t, size_t)
 }
 
 void import_sheet::set_format(row_t, col_t, row_t, col_t, size_t)
+{
+    assert(false);
+}
+
+void import_sheet::set_column_format(col_t, col_t, std::size_t)
+{
+    assert(false);
+}
+
+void import_sheet::set_row_format(row_t, std::size_t)
 {
     assert(false);
 }

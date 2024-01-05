@@ -9,8 +9,7 @@
 #define ORCUS_XLSX_TABLE_CONTEXT_HPP
 
 #include "xml_context_base.hpp"
-
-#include <memory>
+#include "xlsx_autofilter_context.hpp"
 
 namespace orcus {
 
@@ -33,14 +32,17 @@ public:
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
-    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
+    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(std::string_view str, bool transient);
+
+private:
+    void start_element_table(const xml_token_attrs_t& attrs);
 
 private:
     spreadsheet::iface::import_table& m_table;
     spreadsheet::iface::import_reference_resolver& m_resolver;
-    std::unique_ptr<xml_context_base> mp_child;
+
+    xlsx_autofilter_context m_cxt_autofilter;
 };
 
 }

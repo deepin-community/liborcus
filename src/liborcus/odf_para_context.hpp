@@ -11,7 +11,6 @@
 #include "xml_context_base.hpp"
 #include "odf_styles.hpp"
 
-#include "pstring.hpp"
 #include "orcus/string_pool.hpp"
 
 #include <vector>
@@ -34,7 +33,7 @@ public:
     virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child);
 
-    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs);
+    virtual void start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
     virtual void characters(std::string_view str, bool transient);
 
@@ -51,8 +50,8 @@ private:
     odf_styles_map_type& m_styles;
 
     string_pool m_pool;
-    std::vector<pstring> m_span_stack; /// stack of text spans.
-    std::vector<pstring> m_contents;
+    std::vector<std::string_view> m_span_stack; /// stack of text spans.
+    std::vector<std::string_view> m_contents;
     size_t m_string_index;
     bool m_has_content;
 };

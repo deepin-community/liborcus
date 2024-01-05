@@ -7,7 +7,6 @@
 
 #include "xml_map_tree.hpp"
 #include "xpath_parser.hpp"
-#include "orcus/global.hpp"
 
 #define ORCUS_DEBUG_XML_MAP_TREE 0
 
@@ -20,26 +19,20 @@
 #include <iostream>
 #include <sstream>
 
-using namespace std;
-
 namespace orcus {
 
 namespace {
 
 template<typename T>
-void print_element_stack(ostream& os, const T& elem_stack)
+void print_element_stack(std::ostream& os, const T& elem_stack)
 {
-    typename T::const_iterator it = elem_stack.begin(), it_end = elem_stack.end();
-    for (; it != it_end; ++it)
-    {
-        const xml_map_tree::element& elem = **it;
-        os << '/' << elem.name.name;
-    }
+    for (const auto& elem : elem_stack)
+        os << '/' << elem->name.name;
 }
 
-}
+} // anonymous namespace
 
-xml_map_tree::range_field_link::range_field_link(const pstring& _xpath, const pstring& _label) :
+xml_map_tree::range_field_link::range_field_link(std::string_view _xpath, std::string_view _label) :
     xpath(_xpath), label(_label) {}
 
 xml_map_tree::element_position::element_position() :
@@ -58,12 +51,12 @@ xml_map_tree::linkable::linkable(
 }
 
 xml_map_tree::attribute::attribute(args_type args) :
-    linkable(std::get<0>(args), xml_name_t(std::get<1>(args)), node_attribute, std::get<2>(args)) {}
+    linkable(std::get<0>(args), xml_name_t(std::get<1>(args)), linkable_node_type::attribute, std::get<2>(args)) {}
 
 xml_map_tree::attribute::~attribute() {}
 
 xml_map_tree::element::element(args_type args) :
-    linkable(std::get<0>(args), std::get<1>(args), node_element, std::get<3>(args)),
+    linkable(std::get<0>(args), std::get<1>(args), linkable_node_type::element, std::get<3>(args)),
     elem_type(std::get<2>(args)),
     child_elements(nullptr),
     range_parent(nullptr),
@@ -72,20 +65,20 @@ xml_map_tree::element::element(args_type args) :
 {
     xml_map_tree& parent = std::get<0>(args);
 
-    if (elem_type == element_unlinked)
+    if (elem_type == element_type::unlinked)
     {
         child_elements = parent.m_element_store_pool.construct();
         return;
     }
 
-    assert(elem_type == element_linked);
+    assert(elem_type == element_type::linked);
 }
 
 xml_map_tree::element::~element() {}
 
 xml_map_tree::element* xml_map_tree::element::get_child(const xml_name_t& _name)
 {
-    if (elem_type != element_unlinked)
+    if (elem_type != element_type::unlinked)
         return nullptr;
 
     assert(child_elements);
@@ -124,8 +117,8 @@ xml_map_tree::element* xml_map_tree::element::get_or_create_child(
             element::args_type(
                 parent,
                 xml_name_t(_name.ns, nm),
-                element_unlinked,
-                reference_unknown
+                element_type::unlinked,
+                reference_type::unknown
             )
         )
     );
@@ -138,7 +131,7 @@ xml_map_tree::element* xml_map_tree::element::get_or_create_linked_child(
 {
     if (!child_elements)
     {
-        assert(elem_type == element_linked);
+        assert(elem_type == element_type::linked);
         std::ostringstream os;
         constexpr xml_name_t::to_string_type type = xml_name_t::use_alias;
 
@@ -161,7 +154,7 @@ xml_map_tree::element* xml_map_tree::element::get_or_create_linked_child(
     {
         // Specified child element already exists. Make sure it's unlinked.
         element* elem = *it;
-        if (elem->ref_type != reference_unknown || elem->elem_type != element_unlinked)
+        if (elem->ref_type != reference_type::unknown || elem->elem_type != element_type::unlinked)
             throw xpath_error("This element is already linked.  You can't link the same element twice.");
 
         elem->link_reference(parent, _ref_type);
@@ -177,7 +170,7 @@ xml_map_tree::element* xml_map_tree::element::get_or_create_linked_child(
             element::args_type(
                 parent,
                 xml_name_t(_name.ns, nm),
-                element_linked,
+                element_type::linked,
                 _ref_type
             )
         )
@@ -188,17 +181,17 @@ xml_map_tree::element* xml_map_tree::element::get_or_create_linked_child(
 
 void xml_map_tree::element::link_reference(xml_map_tree& parent, reference_type _ref_type)
 {
-    if (elem_type == element_unlinked)
+    if (elem_type == element_type::unlinked)
         parent.m_element_store_pool.destroy(child_elements);
 
-    elem_type = element_linked;
+    elem_type = element_type::linked;
     ref_type = _ref_type;
     parent.create_ref_store(*this);
 }
 
 bool xml_map_tree::element::unlinked_attribute_anchor() const
 {
-    return elem_type == element_unlinked && ref_type == reference_unknown && !attributes.empty();
+    return elem_type == element_type::unlinked && ref_type == reference_type::unknown && !attributes.empty();
 }
 
 xml_map_tree::walker::walker(const xml_map_tree& parent) :
@@ -242,7 +235,7 @@ xml_map_tree::element* xml_map_tree::walker::push_element(const xml_name_t& name
         return p;
     }
 
-    if (m_stack.back()->elem_type == element_unlinked)
+    if (m_stack.back()->elem_type == element_type::unlinked)
     {
         // Check if the current element has a child of the same name.
         element* p = m_stack.back()->get_child(name);
@@ -291,26 +284,26 @@ xml_map_tree::xml_map_tree(xmlns_repository& xmlns_repo) :
 
 xml_map_tree::~xml_map_tree() {}
 
-void xml_map_tree::set_namespace_alias(const pstring& alias, const pstring& uri, bool default_ns)
+void xml_map_tree::set_namespace_alias(std::string_view alias, std::string_view uri, bool default_ns)
 {
 #if ORCUS_DEBUG_XML_MAP_TREE
     cout << "xml_map_tree::set_namespace_alias: alias='" << alias << "', uri='" << uri << "', default=" << default_ns << endl;
 #endif
     // We need to turn the alias string persistent because the xmlns context
     // doesn't intern the alias strings.
-    pstring alias_safe = m_names.intern(alias).first;
+    std::string_view alias_safe = m_names.intern(alias).first;
     xmlns_id_t ns = m_xmlns_cxt.push(alias_safe, uri);
 
     if (default_ns)
         m_default_ns = ns;
 }
 
-xmlns_id_t xml_map_tree::get_namespace(const pstring& alias) const
+xmlns_id_t xml_map_tree::get_namespace(std::string_view alias) const
 {
     return m_xmlns_cxt.get(alias);
 }
 
-void xml_map_tree::set_cell_link(const pstring& xpath, const cell_position& ref)
+void xml_map_tree::set_cell_link(std::string_view xpath, const cell_position& ref)
 {
     if (xpath.empty())
         return;
@@ -319,17 +312,17 @@ void xml_map_tree::set_cell_link(const pstring& xpath, const cell_position& ref)
     cout << "xml_map_tree::set_cell_link: xpath='" << xpath << "' (ref=" << ref << ")" << endl;
 #endif
 
-    linked_node_type linked_node = get_linked_node(xpath, reference_cell);
+    linked_node_type linked_node = get_linked_node(xpath, reference_type::cell);
     assert(linked_node.node);
     assert(!linked_node.elem_stack.empty());
     cell_reference* cell_ref = nullptr;
     switch (linked_node.node->node_type)
     {
-        case node_element:
+        case linkable_node_type::element:
             assert(static_cast<element*>(linked_node.node)->cell_ref);
             cell_ref = static_cast<element*>(linked_node.node)->cell_ref;
             break;
-        case node_attribute:
+        case linkable_node_type::attribute:
             assert(static_cast<attribute*>(linked_node.node)->cell_ref);
             cell_ref = static_cast<attribute*>(linked_node.node)->cell_ref;
             break;
@@ -346,7 +339,7 @@ void xml_map_tree::start_range(const cell_position& pos)
     m_cur_range_pos = pos;
 }
 
-void xml_map_tree::append_range_field_link(const pstring& xpath, const pstring& label)
+void xml_map_tree::append_range_field_link(std::string_view xpath, std::string_view label)
 {
     if (xpath.empty())
         return;
@@ -357,11 +350,11 @@ void xml_map_tree::append_range_field_link(const pstring& xpath, const pstring& 
 void xml_map_tree::insert_range_field_link(
     range_reference& range_ref, element_list_type& range_parent, const range_field_link& field)
 {
-    linked_node_type linked_node = get_linked_node(field.xpath, reference_range_field);
+    linked_node_type linked_node = get_linked_node(field.xpath, reference_type::range_field);
     if (linked_node.elem_stack.size() < 2)
         throw xpath_error("Path of a range field link must be at least 2 levels.");
 
-    if (linked_node.node->node_type == node_unknown)
+    if (linked_node.node->node_type == linkable_node_type::unknown)
         throw xpath_error("Unrecognized node type");
 
     if (linked_node.anchor_elem)
@@ -372,20 +365,20 @@ void xml_map_tree::insert_range_field_link(
 
     switch (linked_node.node->node_type)
     {
-        case node_element:
+        case linkable_node_type::element:
         {
             element* p = static_cast<element*>(linked_node.node);
-            assert(p && p->ref_type == reference_range_field && p->field_ref);
+            assert(p && p->ref_type == reference_type::range_field && p->field_ref);
             p->field_ref->ref = &range_ref;
             p->field_ref->column_pos = range_ref.field_nodes.size();
 
             range_ref.field_nodes.push_back(p);
             break;
         }
-        case node_attribute:
+        case linkable_node_type::attribute:
         {
             attribute* p = static_cast<attribute*>(linked_node.node);
-            assert(p && p->ref_type == reference_range_field && p->field_ref);
+            assert(p && p->ref_type == reference_type::range_field && p->field_ref);
             p->field_ref->ref = &range_ref;
             p->field_ref->column_pos = range_ref.field_nodes.size();
 
@@ -400,17 +393,16 @@ void xml_map_tree::insert_range_field_link(
     // current range reference.
     if (range_parent.empty())
     {
-        // First field link in this range.
-        element_list_type::iterator it_end = linked_node.elem_stack.end();
-        if (linked_node.node->node_type == node_element)
-            --it_end; // Skip the linked element, which is used as a field in a range.
+        // First field link in this range. Find the first row-group element
+        // going up from the linked node.
+        auto rit = linked_node.elem_stack.rbegin();
+        while (rit != linked_node.elem_stack.rend() && !(*rit)->row_group)
+            ++rit;
 
-        --it_end; // Skip the next-up element, which is used to group a single record entry.
+        ++rit; // parent of the raw group
+        auto it_end = rit.base();
+
         range_parent.assign(linked_node.elem_stack.begin(), it_end);
-#if ORCUS_DEBUG_XML_MAP_TREE
-        print_element_stack(cout, range_parent);
-        cout << endl;
-#endif
     }
     else
     {
@@ -436,9 +428,14 @@ void xml_map_tree::insert_range_field_link(
         if (range_parent.empty())
             throw xpath_error("Two field links in the same range reference must at least share the first level of their paths.");
     }
+
+#if ORCUS_DEBUG_XML_MAP_TREE
+        print_element_stack(std::cout, range_parent);
+        std::cout << std::endl;
+#endif
 }
 
-void xml_map_tree::set_range_row_group(const pstring& xpath)
+void xml_map_tree::set_range_row_group(std::string_view xpath)
 {
     if (xpath.empty())
         return;
@@ -482,7 +479,7 @@ void xml_map_tree::commit_range()
     m_cur_range_pos.col = -1;
 }
 
-const xml_map_tree::linkable* xml_map_tree::get_link(const pstring& xpath) const
+const xml_map_tree::linkable* xml_map_tree::get_link(std::string_view xpath) const
 {
     if (!mp_root)
         return nullptr;
@@ -495,7 +492,7 @@ const xml_map_tree::linkable* xml_map_tree::get_link(const pstring& xpath) const
 #endif
     const linkable* cur_node = mp_root;
 
-    xpath_parser parser(m_xmlns_cxt, xpath.get(), xpath.size(), m_default_ns);
+    xpath_parser parser(m_xmlns_cxt, xpath.data(), xpath.size(), m_default_ns);
 
     // Check the root element first.
     xpath_parser::token token = parser.next();
@@ -511,7 +508,7 @@ const xml_map_tree::linkable* xml_map_tree::get_link(const pstring& xpath) const
         if (token.attribute)
         {
             // The current node should be an element and should have an attribute of the same name.
-            if (cur_node->node_type != node_element)
+            if (cur_node->node_type != linkable_node_type::element)
                 return nullptr;
 
             const element* elem = static_cast<const element*>(cur_node);
@@ -533,11 +530,11 @@ const xml_map_tree::linkable* xml_map_tree::get_link(const pstring& xpath) const
 
         // See if an element of this name exists below the current element.
 
-        if (cur_node->node_type != node_element)
+        if (cur_node->node_type != linkable_node_type::element)
             return nullptr;
 
         const element* elem = static_cast<const element*>(cur_node);
-        if (elem->elem_type != element_unlinked)
+        if (elem->elem_type != element_type::unlinked)
             return nullptr;
 
         if (!elem->child_elements)
@@ -558,7 +555,7 @@ const xml_map_tree::linkable* xml_map_tree::get_link(const pstring& xpath) const
         cur_node = *it;
     }
 
-    if (cur_node->node_type != node_element || static_cast<const element*>(cur_node)->elem_type == element_unlinked)
+    if (cur_node->node_type != linkable_node_type::element || static_cast<const element*>(cur_node)->elem_type == element_type::unlinked)
         // Non-leaf elements are not links.
         return nullptr;
 
@@ -575,7 +572,7 @@ xml_map_tree::range_ref_map_type& xml_map_tree::get_range_references()
     return m_field_refs;
 }
 
-pstring xml_map_tree::intern_string(const pstring& str) const
+std::string_view xml_map_tree::intern_string(std::string_view str) const
 {
     return m_names.intern(str).first;
 }
@@ -604,23 +601,23 @@ void xml_map_tree::create_ref_store(linkable& node)
 {
     switch (node.ref_type)
     {
-        case xml_map_tree::reference_cell:
+        case xml_map_tree::reference_type::cell:
             node.cell_ref = m_cell_reference_pool.construct();
             break;
-        case xml_map_tree::reference_range_field:
+        case xml_map_tree::reference_type::range_field:
             node.field_ref = m_field_in_range_pool.construct();
             break;
-        case xml_map_tree::reference_unknown:
+        case xml_map_tree::reference_type::unknown:
             break;
     }
 }
 
-xml_map_tree::linked_node_type xml_map_tree::get_linked_node(const pstring& xpath, reference_type ref_type)
+xml_map_tree::linked_node_type xml_map_tree::get_linked_node(std::string_view xpath, reference_type ref_type)
 {
     linked_node_type ret;
 
     assert(!xpath.empty());
-    xpath_parser parser(m_xmlns_cxt, xpath.get(), xpath.size(), m_default_ns);
+    xpath_parser parser(m_xmlns_cxt, xpath.data(), xpath.size(), m_default_ns);
 
     // Get the root element first.
     xpath_parser::token token = parser.next();
@@ -641,8 +638,8 @@ xml_map_tree::linked_node_type xml_map_tree::get_linked_node(const pstring& xpat
             element::args_type(
                 *this,
                 xml_name_t(token.ns, nm),
-                element_unlinked,
-                reference_unknown
+                element_type::unlinked,
+                reference_type::unknown
             )
         );
     }
@@ -716,10 +713,10 @@ xml_map_tree::linked_node_type xml_map_tree::get_linked_node(const pstring& xpat
     return ret;
 }
 
-xml_map_tree::element* xml_map_tree::get_element(const pstring& xpath)
+xml_map_tree::element* xml_map_tree::get_element(std::string_view xpath)
 {
     assert(!xpath.empty());
-    xpath_parser parser(m_xmlns_cxt, xpath.get(), xpath.size(), m_default_ns);
+    xpath_parser parser(m_xmlns_cxt, xpath.data(), xpath.size(), m_default_ns);
 
     // Get the root element first.
     xpath_parser::token token = parser.next();
@@ -740,8 +737,8 @@ xml_map_tree::element* xml_map_tree::get_element(const pstring& xpath)
             element::args_type(
                 *this,
                 xml_name_t(token.ns, nm),
-                element_unlinked,
-                reference_unknown
+                element_type::unlinked,
+                reference_type::unknown
             )
         );
     }

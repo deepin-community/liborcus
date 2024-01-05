@@ -8,7 +8,6 @@
 #include <orcus/css_document_tree.hpp>
 #include <orcus/css_parser.hpp>
 #include <orcus/string_pool.hpp>
-#include "pstring.hpp"
 
 #define ORCUS_DEBUG_CSS_DOCTREE 0
 
@@ -18,8 +17,6 @@
 #include <algorithm>
 #include <iterator>
 #include <string_view>
-
-using namespace std;
 
 namespace orcus {
 
@@ -36,7 +33,7 @@ class parser_handler
     css_document_tree& m_doc;
     std::vector<selector_type> m_cur_selector_group;
     css_properties_t m_cur_properties;
-    pstring m_cur_prop_name;
+    std::string_view m_cur_prop_name;
     std::vector<css_property_value_t> m_cur_prop_values;
     css_selector_t m_cur_selector;  /// current selector
     css_simple_selector_t m_cur_simple_selector;
@@ -50,24 +47,23 @@ public:
         m_cur_combinator(css::combinator_t::descendant),
         m_in_prop(false) {}
 
-    void at_rule_name(const char* p, size_t n)
+    void at_rule_name(std::string_view name)
     {
 #if ORCUS_DEBUG_CSS_DOCTREE
-        cout << "@" << string(p, n).c_str();
+        cout << "@" << name;
 #else
-        (void)p;
-        (void)n;
+        (void)name;
 #endif
     }
 
-    void simple_selector_type(const char* p, size_t n)
+    void simple_selector_type(std::string_view type)
     {
-        m_cur_simple_selector.name = pstring(p, n);
+        m_cur_simple_selector.name = type;
     }
 
-    void simple_selector_class(const char* p, size_t n)
+    void simple_selector_class(std::string_view cls)
     {
-        m_cur_simple_selector.classes.insert(pstring(p, n));
+        m_cur_simple_selector.classes.insert(cls);
     }
 
     void simple_selector_pseudo_element(css::pseudo_element_t pe)
@@ -81,9 +77,9 @@ public:
         m_cur_simple_selector.pseudo_classes |= pc;
     }
 
-    void simple_selector_id(const char* p, size_t n)
+    void simple_selector_id(std::string_view id)
     {
-        m_cur_simple_selector.id = std::string_view(p, n);
+        m_cur_simple_selector.id = id;
     }
 
     void end_simple_selector()
@@ -119,20 +115,19 @@ public:
         m_cur_combinator = combinator;
     }
 
-    void property_name(const char* p, size_t n)
+    void property_name(std::string_view name)
     {
-        m_cur_prop_name = pstring(p, n);
+        m_cur_prop_name = name;
 #if ORCUS_DEBUG_CSS_DOCTREE
-        cout << string(p, n).c_str() << ":";
+        cout << name << ":";
 #endif
     }
 
-    void value(const char* p, size_t n)
+    void value(std::string_view s)
     {
-        std::string_view s(p, n);
         m_cur_prop_values.push_back(s);
 #if ORCUS_DEBUG_CSS_DOCTREE
-        cout << " '" << string(p, n).c_str() << "'";
+        cout << " '" << s << "'";
 #endif
     }
 
@@ -180,14 +175,14 @@ public:
         m_cur_prop_values.push_back(val);
     }
 
-    void url(const char* p, size_t n)
+    void url(std::string_view url)
     {
 #if ORCUS_DEBUG_CSS_DOCTREE
-        cout << " url(" << pstring(p, n) << ")";
+        cout << " url(" << url << ")";
 #endif
         css_property_value_t val;
         val.type = orcus::css::property_value_t::url;
-        val.value = std::string_view(p, n);
+        val.value = url;
         m_cur_prop_values.push_back(val);
     }
 
@@ -243,7 +238,7 @@ public:
     {
         m_cur_properties.insert(
             css_properties_t::value_type(m_cur_prop_name, m_cur_prop_values));
-        m_cur_prop_name.clear();
+        m_cur_prop_name = std::string_view{};
         m_cur_prop_values.clear();
 #if ORCUS_DEBUG_CSS_DOCTREE
         cout << endl;
@@ -352,8 +347,8 @@ void store_properties(
     css_properties_t::const_iterator it = props.begin(), ite = props.end();
     for (; it != ite; ++it)
     {
-        pstring key = sp.intern(it->first).first;
-        vector<css_property_value_t> vals;
+        std::string_view key = sp.intern(it->first).first;
+        std::vector<css_property_value_t> vals;
         for_each(it->second.begin(), it->second.end(), intern_inserter(sp, vals));
         prop_store[key] = vals;
     }
@@ -422,31 +417,31 @@ void dump_pseudo_elements(css::pseudo_element_t elem)
         return;
 
     if (elem & css::pseudo_element_after)
-        cout << "::after";
+        std::cout << "::after";
     if (elem & css::pseudo_element_before)
-        cout << "::before";
+        std::cout << "::before";
     if (elem & css::pseudo_element_first_letter)
-        cout << "::first-letter";
+        std::cout << "::first-letter";
     if (elem & css::pseudo_element_first_line)
-        cout << "::first-line";
+        std::cout << "::first-line";
     if (elem & css::pseudo_element_selection)
-        cout << "::selection";
+        std::cout << "::selection";
     if (elem & css::pseudo_element_backdrop)
-        cout << "::backdrop";
+        std::cout << "::backdrop";
 }
 
 void dump_properties(const css_properties_t& props)
 {
-    cout << '{' << endl;
+    std::cout << '{' << std::endl;
     css_properties_t::const_iterator it = props.begin(), ite = props.end();
     for (; it != ite; ++it)
     {
-        cout << "    * " << it->first << ": ";
-        const vector<css_property_value_t>& vals = it->second;
-        copy(vals.begin(), vals.end(), ostream_iterator<css_property_value_t>(cout, " "));
-        cout << ';' << endl;
+        std::cout << "    * " << it->first << ": ";
+        const std::vector<css_property_value_t>& vals = it->second;
+        std::copy(vals.begin(), vals.end(), std::ostream_iterator<css_property_value_t>(std::cout, " "));
+        std::cout << ';' << std::endl;
     }
-    cout << '}' << endl;
+    std::cout << '}' << std::endl;
 }
 
 void dump_all_properties(const css_selector_t& selector, const css_pseudo_element_properties_t& properties)
@@ -458,9 +453,9 @@ void dump_all_properties(const css_selector_t& selector, const css_pseudo_elemen
         if (prop.empty())
             continue;
 
-        cout << selector;
+        std::cout << selector;
         dump_pseudo_elements(it_prop->first);
-        cout << endl;
+        std::cout << std::endl;
         dump_properties(prop);
     }
 }
@@ -540,9 +535,7 @@ css_document_tree::css_document_tree(css_document_tree&& other) :
     other.mp_impl = std::make_unique<impl>();
 }
 
-css_document_tree::~css_document_tree()
-{
-}
+css_document_tree::~css_document_tree() = default;
 
 css_document_tree& css_document_tree::operator=(css_document_tree&& other)
 {
@@ -558,7 +551,7 @@ void css_document_tree::load(std::string_view stream)
         return;
 
     parser_handler handler(*this);
-    css_parser<parser_handler> parser(stream.data(), stream.size(), handler);
+    css_parser<parser_handler> parser(stream, handler);
     parser.parse();
 }
 

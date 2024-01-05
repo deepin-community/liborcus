@@ -10,18 +10,17 @@
 #include <orcus/spreadsheet/document.hpp>
 #include <orcus/spreadsheet/factory.hpp>
 #include <orcus/exception.hpp>
-#include <orcus/global.hpp>
 #include <orcus/parser_global.hpp>
 
 #include <iostream>
 #include <vector>
 #include <cassert>
 #include <sstream>
-#include <boost/filesystem.hpp>
+
+#include "filesystem_env.hpp"
 
 using namespace std;
 using namespace orcus;
-namespace fs = boost::filesystem;
 
 namespace {
 

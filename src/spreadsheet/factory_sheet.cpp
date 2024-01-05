@@ -9,7 +9,6 @@
 #include "orcus/spreadsheet/sheet.hpp"
 #include "orcus/spreadsheet/document.hpp"
 #include "orcus/spreadsheet/view.hpp"
-#include "orcus/global.hpp"
 #include "orcus/measurement.hpp"
 #include "orcus/string_pool.hpp"
 
@@ -497,6 +496,16 @@ void import_sheet::set_format(
     m_sheet.set_format(row_start, col_start, row_end, col_end, xf_index);
 }
 
+void import_sheet::set_column_format(col_t col, col_t col_span, std::size_t xf_index)
+{
+    m_sheet.set_column_format(col, col_span, xf_index);
+}
+
+void import_sheet::set_row_format(row_t row, std::size_t xf_index)
+{
+    m_sheet.set_row_format(row, xf_index);
+}
+
 void import_sheet::set_string(row_t row, col_t col, string_id_t sindex)
 {
     m_sheet.set_string(row, col, sindex);
@@ -572,15 +581,15 @@ import_sheet_properties::import_sheet_properties(document& doc, sheet& sh) :
 
 import_sheet_properties::~import_sheet_properties() {}
 
-void import_sheet_properties::set_column_width(col_t col, double width, orcus::length_unit_t unit)
+void import_sheet_properties::set_column_width(col_t col, col_t col_span, double width, orcus::length_unit_t unit)
 {
     col_width_t w = orcus::convert(width, unit, length_unit_t::twip);
-    m_sheet.set_col_width(col, w);
+    m_sheet.set_col_width(col, col_span, w);
 }
 
-void import_sheet_properties::set_column_hidden(col_t col, bool hidden)
+void import_sheet_properties::set_column_hidden(col_t col, col_t col_span, bool hidden)
 {
-    m_sheet.set_col_hidden(col, hidden);
+    m_sheet.set_col_hidden(col, col_span, hidden);
 }
 
 void import_sheet_properties::set_row_height(row_t row, double height, orcus::length_unit_t unit)

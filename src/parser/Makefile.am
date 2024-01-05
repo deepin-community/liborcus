@@ -6,6 +6,14 @@ AM_CPPFLAGS = \
 	$(BOOST_CPPFLAGS) \
 	-D__ORCUS_PSR_BUILDING_DLL
 
+if HAVE_FILESYSTEM
+AM_CPPFLAGS += "-DHAVE_FILESYSTEM=1"
+endif
+
+if HAVE_EXPERIMENTAL_FILESYSTEM
+AM_CPPFLAGS += "-DHAVE_EXPERIMENTAL_FILESYSTEM=1"
+endif
+
 lib_LTLIBRARIES = liborcus-parser-@ORCUS_API_VERSION@.la
 liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES = \
 	win_stdint.h \
@@ -20,7 +28,6 @@ liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES = \
 	json_parser_thread.cpp \
 	parser_base.cpp \
 	parser_global.cpp \
-	pstring.cpp \
 	sax_parser_base.cpp \
 	sax_token_parser.cpp \
 	sax_token_parser_thread.cpp \
@@ -39,34 +46,43 @@ liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES = \
 
 liborcus_parser_@ORCUS_API_VERSION@_la_LDFLAGS = \
 	-no-undefined \
-	$(BOOST_SYSTEM_LDFLAGS) \
-	$(BOOST_FILESYSTEM_LDFLAGS)
+	$(BOOST_SYSTEM_LDFLAGS)
 
 liborcus_parser_@ORCUS_API_VERSION@_la_LIBADD = \
 	$(BOOST_SYSTEM_LIBS) \
-	$(BOOST_FILESYSTEM_LIBS) \
 	$(ZLIB_LIBS)
 
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+liborcus_parser_@ORCUS_API_VERSION@_la_LDFLAGS += -lstdc++fs
+else
+liborcus_parser_@ORCUS_API_VERSION@_la_LDFLAGS += $(BOOST_FILESYSTEM_LDFLAGS)
+liborcus_parser_@ORCUS_API_VERSION@_la_LIBADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
+
 EXTRA_PROGRAMS = \
-	parser-test-string-pool \
-	parser-test-xml-namespace \
-	parser-test-base64 \
 	css-parser-test \
 	csv-parser-test \
 	json-parser-test \
-	yaml-parser-test \
-	sax-parser-test \
-	sax-ns-parser-test \
-	sax-token-parser-test \
-	parser-test-threaded-sax-token-parser \
-	parser-test-stream \
-	parser-test-threaded-json-parser \
-	parser-test-zip-archive \
+	parser-global-test \
 	parser-test-base \
-	parser-test-global \
+	parser-test-base64 \
 	parser-test-json-validation \
 	parser-test-numeric \
+	parser-test-stream \
+	parser-test-string-pool \
+	parser-test-threaded-json-parser \
+	parser-test-threaded-sax-token-parser \
+	parser-test-xml-namespace \
+	parser-test-xml-validation \
+	parser-test-zip-archive \
+	sax-ns-parser-test \
+	sax-parser-test \
+	sax-token-parser-test \
+	types-test \
 	utf8-test \
+	yaml-parser-test \
 	xml-writer-test
 
 # parser-test-string-pool
@@ -75,7 +91,10 @@ parser_test_string_pool_SOURCES = \
 	string_pool.cpp \
 	string_pool_test.cpp
 
-parser_test_string_pool_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
+parser_test_string_pool_LDADD = \
+    liborcus-parser-@ORCUS_API_VERSION@.la \
+	$(BOOST_SYSTEM_LIBS)
+
 parser_test_string_pool_CPPFLAGS = $(AM_CPPFLAGS)
 
 # parser-test-xml-namespace
@@ -84,8 +103,34 @@ parser_test_xml_namespace_SOURCES = \
 	xml_namespace.cpp \
 	xml_namespace_test.cpp
 
-parser_test_xml_namespace_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
+parser_test_xml_namespace_LDADD = \
+	liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a \
+	$(BOOST_SYSTEM_LIBS)
+
 parser_test_xml_namespace_CPPFLAGS = $(AM_CPPFLAGS)
+
+# parser-test-xml-validation
+
+parser_test_xml_validation_SOURCES = \
+	parser_test_xml_validation.cpp
+
+parser_test_xml_validation_CPPFLAGS = $(AM_CPPFLAGS)
+parser_test_xml_validation_LDFLAGS = \
+	$(BOOST_SYSTEM_LDFLAGS)
+parser_test_xml_validation_LDADD = \
+	liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a \
+	$(BOOST_SYSTEM_LIBS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+parser_test_xml_validation_LDFLAGS += -lstdc++fs
+else
+parser_test_xml_validation_LDFLAGS += $(BOOST_FILESYSTEM_LDFLAGS)
+parser_test_xml_validation_LDADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
 
 # parser-test-base64
 
@@ -174,7 +219,9 @@ parser_test_threaded_json_parser_CPPFLAGS = $(AM_CPPFLAGS)
 parser_test_stream_SOURCES = \
 	stream_test.cpp
 
-parser_test_stream_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
+parser_test_stream_LDADD = \
+	liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a
 parser_test_stream_CPPFLAGS = $(AM_CPPFLAGS)
 
 # parser-test-zip-archive
@@ -182,8 +229,24 @@ parser_test_stream_CPPFLAGS = $(AM_CPPFLAGS)
 parser_test_zip_archive_SOURCES = \
 	zip_archive_test.cpp
 
-parser_test_zip_archive_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
 parser_test_zip_archive_CPPFLAGS = $(AM_CPPFLAGS)
+parser_test_zip_archive_LDADD = \
+	liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a \
+	$(BOOST_SYSTEM_LIBS)
+parser_test_zip_archive_LDFLAGS = \
+	$(BOOST_SYSTEM_LDFLAGS)
+
+if !HAVE_FILESYSTEM
+if HAVE_EXPERIMENTAL_FILESYSTEM
+parser_test_zip_archive_LDFLAGS += -lstdc++fs
+else
+parser_test_zip_archive_LDFLAGS += $(BOOST_FILESYSTEM_LDFLAGS)
+parser_test_zip_archive_LDADD += $(BOOST_FILESYSTEM_LIBS)
+endif
+endif
+
+
 
 # parser-test-base
 
@@ -193,13 +256,15 @@ parser_test_base_SOURCES = \
 parser_test_base_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
 parser_test_base_CPPFLAGS = $(AM_CPPFLAGS)
 
-# parser-test-global
+# parser-global-test
 
-parser_test_global_SOURCES = \
+parser_global_test_SOURCES = \
 	parser_global_test.cpp
 
-parser_test_global_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
-parser_test_global_CPPFLAGS = $(AM_CPPFLAGS)
+parser_global_test_LDADD = \
+	liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a
+parser_global_test_CPPFLAGS = $(AM_CPPFLAGS)
 
 # parser-test-json-validation
 
@@ -208,6 +273,15 @@ parser_test_json_validation_SOURCES = \
 
 parser_test_json_validation_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
 parser_test_json_validation_CPPFLAGS = $(AM_CPPFLAGS)
+
+# types-test
+
+types_test_SOURCES = types_test.cpp
+
+types_test_LDADD = \
+	liborcus-parser-@ORCUS_API_VERSION@.la \
+	../test/liborcus-test.a
+types_test_CPPFLAGS = $(AM_CPPFLAGS)
 
 # utf8-test
 
@@ -235,26 +309,30 @@ parser_test_numeric_LDADD = liborcus-parser-@ORCUS_API_VERSION@.la
 parser_test_numeric_CPPFLAGS = $(AM_CPPFLAGS)
 
 TESTS = \
-	parser-test-string-pool \
-	parser-test-xml-namespace \
-	parser-test-base64 \
 	css-parser-test \
 	csv-parser-test \
 	json-parser-test \
-	sax-parser-test \
-	sax-ns-parser-test \
-	sax-token-parser-test \
-	parser-test-threaded-sax-token-parser \
-	parser-test-threaded-json-parser \
-	parser-test-stream \
-	parser-test-zip-archive \
+	parser-global-test \
 	parser-test-base \
-	parser-test-global \
+	parser-test-base64 \
 	parser-test-json-validation \
 	parser-test-numeric \
+	parser-test-stream \
+	parser-test-string-pool \
+	parser-test-threaded-json-parser \
+	parser-test-threaded-sax-token-parser \
+	parser-test-xml-namespace \
+	parser-test-xml-validation \
+	parser-test-zip-archive \
+	sax-ns-parser-test \
+	sax-parser-test \
+	sax-token-parser-test \
+	types-test \
 	utf8-test \
+	yaml-parser-test \
 	xml-writer-test
 
 distclean-local:
 	rm -rf $(TESTS)
 
+@VALGRIND_CHECK_RULES@

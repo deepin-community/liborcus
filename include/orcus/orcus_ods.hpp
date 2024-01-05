@@ -33,7 +33,7 @@ public:
 
     static bool detect(const unsigned char* blob, size_t size);
 
-    virtual void read_file(const std::string& filepath) override;
+    virtual void read_file(std::string_view filepath) override;
 
     virtual void read_stream(std::string_view stream) override;
 
@@ -41,6 +41,7 @@ public:
 
 private:
     static void list_content(const zip_archive& archive);
+    void read_styles(const zip_archive& archive);
     void read_content(const zip_archive& archive);
     void read_content_xml(const unsigned char* p, size_t size);
 

@@ -16,8 +16,6 @@
 #include <iostream>
 #include <cassert>
 
-using namespace std;
-
 namespace orcus {
 
 text_para_context::text_para_context(
@@ -29,9 +27,7 @@ text_para_context::text_para_context(
 {
 }
 
-text_para_context::~text_para_context()
-{
-}
+text_para_context::~text_para_context() = default;
 
 xml_context_base* text_para_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
@@ -43,7 +39,7 @@ void text_para_context::end_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*
     // not implemented yet.
 }
 
-void text_para_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_attrs_t& attrs)
+void text_para_context::start_element(xmlns_id_t ns, xml_token_t name, const xml_token_attrs_t& attrs)
 {
     xml_token_pair_t parent = push_stack(ns, name);
     if (ns == NS_odf_text)
@@ -59,7 +55,7 @@ void text_para_context::start_element(xmlns_id_t ns, xml_token_t name, const xml
                 // text span.
                 xml_element_expected(parent, NS_odf_text, XML_p);
                 flush_segment();
-                pstring style_name =
+                std::string_view style_name =
                     for_each(attrs.begin(), attrs.end(), single_attr_getter(m_pool, NS_odf_text, XML_style_name)).get_value();
                 m_span_stack.push_back(style_name);
 
@@ -144,7 +140,7 @@ void text_para_context::flush_segment()
     const odf_style* style = nullptr;
     if (!m_span_stack.empty())
     {
-        pstring style_name = m_span_stack.back();
+        std::string_view style_name = m_span_stack.back();
         auto it = m_styles.find(style_name);
         if (it != m_styles.end())
             style = it->second.get();
@@ -154,11 +150,11 @@ void text_para_context::flush_segment()
     {
         if (style && style->family == style_family_text)
         {
-            const odf_style::text* data = style->text_data;
-            mp_sstrings->set_segment_font(data->font);
+            const auto& data = std::get<odf_style::text>(style->data);
+            mp_sstrings->set_segment_font(data.font);
         }
 
-        for (pstring ps : m_contents)
+        for (std::string_view ps : m_contents)
             mp_sstrings->append_segment(ps);
     }
 

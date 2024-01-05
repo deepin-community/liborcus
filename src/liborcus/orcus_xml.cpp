@@ -6,13 +6,11 @@
  */
 
 #include <orcus/orcus_xml.hpp>
-#include <orcus/global.hpp>
 #include <orcus/sax_ns_parser.hpp>
 #include <orcus/spreadsheet/import_interface.hpp>
 #include <orcus/spreadsheet/export_interface.hpp>
 #include <orcus/stream.hpp>
 #include <orcus/string_pool.hpp>
-#include "pstring.hpp"
 
 #include "orcus_xml_impl.hpp"
 
@@ -24,8 +22,6 @@
 
 #include <vector>
 #include <fstream>
-
-using namespace std;
 
 namespace orcus {
 
@@ -45,7 +41,7 @@ class xml_data_sax_handler
             name(_ns, _name),
             element_open_begin(0),
             element_open_end(0),
-            type(xml_map_tree::element_unknown) {}
+            type(xml_map_tree::element_type::unknown) {}
     };
 
     std::vector<sax_ns_parser_attribute> m_attrs;
@@ -154,10 +150,10 @@ public:
                 std::string_view val_trimmed = trim(p->value);
                 switch (linked_attr.ref_type)
                 {
-                    case xml_map_tree::reference_cell:
+                    case xml_map_tree::reference_type::cell:
                         set_single_link_cell(*linked_attr.cell_ref, val_trimmed);
                         break;
-                    case xml_map_tree::reference_range_field:
+                    case xml_map_tree::reference_type::range_field:
                     {
                         set_field_link_cell(*linked_attr.field_ref, val_trimmed);
                         break;
@@ -184,12 +180,12 @@ public:
         {
             switch (mp_current_elem->ref_type)
             {
-                case xml_map_tree::reference_cell:
+                case xml_map_tree::reference_type::cell:
                 {
                     set_single_link_cell(*mp_current_elem->cell_ref, m_current_chars);
                     break;
                 }
-                case xml_map_tree::reference_range_field:
+                case xml_map_tree::reference_type::range_field:
                 {
                     set_field_link_cell(*mp_current_elem->field_ref, m_current_chars);
                     break;
@@ -230,7 +226,7 @@ public:
 
             // Store the end element position in stream for linked elements.
             const scope& cur = m_scopes.back();
-            if (mp_current_elem->ref_type == xml_map_tree::reference_cell ||
+            if (mp_current_elem->ref_type == xml_map_tree::reference_type::cell ||
                 mp_current_elem->range_parent ||
                 (!m_in_range_ref && mp_current_elem->unlinked_attribute_anchor()))
             {
@@ -264,9 +260,16 @@ public:
             m_current_chars = m_pool.intern(m_current_chars).first;
     }
 
-    void attribute(std::string_view /*name*/, std::string_view /*val*/)
+    void attribute(std::string_view name, std::string_view val)
     {
-        // Ignore attributes in XML declaration.
+        if (name == "encoding")
+        {
+            if (auto* gs = m_factory.get_global_settings(); gs)
+            {
+                character_set_t cs = to_character_set(val);
+                gs->set_character_set(cs);
+            }
+        }
     }
 
     void attribute(const sax_ns_parser_attribute& at)
@@ -293,7 +296,7 @@ struct scope
     {
         current_child_pos = end_child_pos;
 
-        if (element.elem_type == xml_map_tree::element_unlinked)
+        if (element.elem_type == xml_map_tree::element_type::unlinked)
         {
             current_child_pos = element.child_elements->begin();
             end_child_pos = element.child_elements->end();
@@ -304,7 +307,7 @@ struct scope
 typedef std::vector<std::unique_ptr<scope>> scopes_type;
 
 void write_opening_element(
-    ostream& os, const xml_map_tree::element& elem, const xml_map_tree::range_reference& ref,
+    std::ostream& os, const xml_map_tree::element& elem, const xml_map_tree::range_reference& ref,
     const spreadsheet::iface::export_sheet& sheet, spreadsheet::row_t current_row, bool self_close)
 {
     if (elem.attributes.empty())
@@ -321,7 +324,7 @@ void write_opening_element(
     for (const auto& p_attr : elem.attributes)
     {
         const xml_map_tree::attribute& attr = *p_attr;
-        if (attr.ref_type != xml_map_tree::reference_range_field)
+        if (attr.ref_type != xml_map_tree::reference_type::range_field)
             // In theory this should never happen but it won't hurt to check.
             continue;
 
@@ -337,13 +340,13 @@ void write_opening_element(
 }
 
 void write_opening_element(
-    ostream& os, const xml_map_tree::element& elem, const spreadsheet::iface::export_factory& fact, bool self_close)
+    std::ostream& os, const xml_map_tree::element& elem, const spreadsheet::iface::export_factory& fact, bool self_close)
 {
     os << '<' << elem;
     for (const auto& p_attr : elem.attributes)
     {
         const xml_map_tree::attribute& attr = *p_attr;
-        if (attr.ref_type != xml_map_tree::reference_cell)
+        if (attr.ref_type != xml_map_tree::reference_type::cell)
             // We should only see single linked cell here, as all
             // field links are handled by the range parent above.
             continue;
@@ -375,7 +378,7 @@ void write_opening_element(
  * @param factory export factory instance.
  */
 void write_range_reference_group(
-   ostream& os, const xml_map_tree::element& root, const xml_map_tree::range_reference& ref,
+   std::ostream& os, const xml_map_tree::element& root, const xml_map_tree::range_reference& ref,
    const spreadsheet::iface::export_factory& factory)
 {
     const spreadsheet::iface::export_sheet* sheet = factory.get_sheet(ref.pos.sheet);
@@ -396,7 +399,7 @@ void write_range_reference_group(
             // Self-closing element has no child elements nor content.
             bool self_close =
                 (cur_scope.current_child_pos == cur_scope.end_child_pos) &&
-                (cur_scope.element.ref_type != xml_map_tree::reference_range_field);
+                (cur_scope.element.ref_type != xml_map_tree::reference_type::range_field);
 
             if (!cur_scope.opened)
             {
@@ -415,7 +418,7 @@ void write_range_reference_group(
             for (; cur_scope.current_child_pos != cur_scope.end_child_pos; ++cur_scope.current_child_pos)
             {
                 const xml_map_tree::element& child_elem = **cur_scope.current_child_pos;
-                if (child_elem.elem_type == xml_map_tree::element_unlinked)
+                if (child_elem.elem_type == xml_map_tree::element_type::unlinked)
                 {
                     // This is a non-leaf element.  Push a new scope with this
                     // element and re-start the loop.
@@ -426,7 +429,7 @@ void write_range_reference_group(
                 }
 
                 // This is a leaf element.  This must be a field link element.
-                if (child_elem.ref_type == xml_map_tree::reference_range_field)
+                if (child_elem.ref_type == xml_map_tree::reference_type::range_field)
                 {
                     write_opening_element(os, child_elem, ref, *sheet, current_row, false);
                     sheet->write_string(os, ref.pos.row + 1 + current_row, ref.pos.col + child_elem.field_ref->column_pos);
@@ -439,7 +442,7 @@ void write_range_reference_group(
                 continue;
 
             // Write content of this element before closing it (if it's linked).
-            if (scopes.back()->element.ref_type == xml_map_tree::reference_range_field)
+            if (scopes.back()->element.ref_type == xml_map_tree::reference_type::range_field)
                 sheet->write_string(
                     os, ref.pos.row + 1 + current_row, ref.pos.col + scopes.back()->element.field_ref->column_pos);
 
@@ -457,11 +460,11 @@ void write_range_reference_group(
  * @param os output stream
  * @param elem_top topmost element in the range reference sub-structure.
  */
-void write_range_reference(ostream& os, const xml_map_tree::element& elem_top, const spreadsheet::iface::export_factory& factory)
+void write_range_reference(std::ostream& os, const xml_map_tree::element& elem_top, const spreadsheet::iface::export_factory& factory)
 {
     // Top element is expected to have one or more child elements, and each
     // child element represents a separate database range.
-    if (elem_top.elem_type != xml_map_tree::element_unlinked)
+    if (elem_top.elem_type != xml_map_tree::element_type::unlinked)
         return;
 
     assert(elem_top.child_elements);
@@ -501,13 +504,13 @@ void orcus_xml::set_namespace_alias(std::string_view alias, std::string_view uri
 
 void orcus_xml::set_cell_link(std::string_view xpath, std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col)
 {
-    pstring sheet_safe = mp_impl->map_tree.intern_string(sheet);
+    std::string_view sheet_safe = mp_impl->map_tree.intern_string(sheet);
     mp_impl->map_tree.set_cell_link(xpath, xml_map_tree::cell_position(sheet_safe, row, col));
 }
 
 void orcus_xml::start_range(std::string_view sheet, spreadsheet::row_t row, spreadsheet::col_t col)
 {
-    pstring sheet_safe = mp_impl->map_tree.intern_string(sheet);
+    std::string_view sheet_safe = mp_impl->map_tree.intern_string(sheet);
     mp_impl->cur_range_ref = xml_map_tree::cell_position(sheet_safe, row, col);
     mp_impl->map_tree.start_range(mp_impl->cur_range_ref);
 }
@@ -579,7 +582,7 @@ void orcus_xml::read_stream(std::string_view stream)
     xml_data_sax_handler handler(
        *mp_impl->im_factory, mp_impl->link_positions, mp_impl->map_tree);
 
-    sax_ns_parser<xml_data_sax_handler> parser(stream.data(), stream.size(), ns_cxt, handler);
+    sax_ns_parser<xml_data_sax_handler> parser(stream, ns_cxt, handler);
     parser.parse();
 }
 
@@ -627,7 +630,7 @@ void orcus_xml::write(std::string_view stream, std::ostream& out) const
     for (; it != it_end; ++it)
     {
         const xml_map_tree::element& elem = **it;
-        if (elem.ref_type == xml_map_tree::reference_cell)
+        if (elem.ref_type == xml_map_tree::reference_type::cell)
         {
             // Single cell link
             const xml_map_tree::cell_position& pos = elem.cell_ref->pos;
@@ -641,7 +644,7 @@ void orcus_xml::write(std::string_view stream, std::ostream& out) const
             std::ptrdiff_t close_end   = elem.stream_pos.close_end;
 
             assert(open_begin > begin_pos);
-            out << pstring(p0+begin_pos, open_begin-begin_pos); // stream since last linked element.
+            out << std::string_view(p0+begin_pos, open_begin-begin_pos); // stream since last linked element.
 
             write_opening_element(out, elem, fact, false);
             sheet->write_string(out, pos.row, pos.col);

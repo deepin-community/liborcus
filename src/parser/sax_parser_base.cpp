@@ -6,7 +6,6 @@
  */
 
 #include "orcus/sax_parser_base.hpp"
-#include "orcus/global.hpp"
 
 #include "utf8.hpp"
 
@@ -19,11 +18,6 @@
 #endif
 
 namespace orcus { namespace sax {
-
-malformed_xml_error::malformed_xml_error(const std::string& msg, std::ptrdiff_t offset) :
-    ::orcus::parse_error("malformed_xml_error", msg, offset) {}
-
-malformed_xml_error::~malformed_xml_error() throw() {}
 
 char decode_xml_encoded_char(const char* p, size_t n)
 {
@@ -114,8 +108,8 @@ struct parser_base::impl
     std::vector<std::unique_ptr<cell_buffer>> m_cell_buffers;
 };
 
-parser_base::parser_base(const char* content, size_t size, bool transient_stream) :
-    ::orcus::parser_base(content, size, transient_stream),
+parser_base::parser_base(const char* content, size_t size) :
+    ::orcus::parser_base(content, size),
     mp_impl(std::make_unique<impl>()),
     m_nest_level(0),
     m_buffer_pos(0),
@@ -141,7 +135,7 @@ cell_buffer& parser_base::get_cell_buffer()
 void parser_base::comment()
 {
     // Parse until we reach '-->'.
-    size_t len = remains();
+    size_t len = available_size();
     assert(len > 3);
     char c = cur_char();
     size_t i = 0;
@@ -168,32 +162,9 @@ void parser_base::comment()
     next();
 }
 
-void parser_base::skip_bom()
-{
-    if (remains() < 4)
-        // Stream too short to have a byte order mark.
-        return;
-
-    if (is_blank(cur_char()))
-        // Allow leading whitespace in the XML stream.
-        // TODO : Make this configurable since strictly speaking such an XML
-        // sttream is invalid.
-        return;
-
-    // 0xef 0xbb 0 xbf is the UTF-8 byte order mark
-    unsigned char c = static_cast<unsigned char>(cur_char());
-    if (c != '<')
-    {
-        if (c != 0xef || static_cast<unsigned char>(next_and_char()) != 0xbb ||
-            static_cast<unsigned char>(next_and_char()) != 0xbf || next_and_char() != '<')
-            throw malformed_xml_error(
-                "unsupported encoding. only 8 bit encodings are supported", offset());
-    }
-}
-
 void parser_base::expects_next(const char* p, size_t n)
 {
-    if (remains() < n+1)
+    if (available_size() < n+1)
         throw malformed_xml_error(
             "not enough stream left to check for an expected string segment.", offset());
 
@@ -291,16 +262,17 @@ void parser_base::value_with_encoded_char(cell_buffer& buf, std::string_view& st
         buf.append(p0, mp_char-p0);
 
     if (!buf.empty())
-        str = std::string_view(buf.get(), buf.size());
+        str = buf.str();
 
     // Skip the closing quote.
     assert(!has_char() || cur_char() == quote_char);
-    next();
+    if (has_char())
+       next();
 }
 
 bool parser_base::value(std::string_view& str, bool decode)
 {
-    char c = cur_char();
+    char c = cur_char_checked();
     if (c != '"' && c != '\'')
         throw malformed_xml_error("value must be quoted", offset());
 
@@ -327,7 +299,7 @@ bool parser_base::value(std::string_view& str, bool decode)
     // Skip the closing quote.
     next();
 
-    return transient_stream();
+    return false;
 }
 
 void parser_base::name(std::string_view& str)

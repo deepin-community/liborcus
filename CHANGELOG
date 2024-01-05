@@ -1,3 +1,177 @@
+orcus 0.19.2
+
+* general
+
+  * fixed a build issue with gcc 14 due to a missing include for std::find_if
+    and std::for_each.
+
+  * fixed a segmentation fault with the orcus-test-xml-mapped test which
+    manifested on hppa hardware, as originally reported on
+    https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1054376.
+
+* xls-xml
+
+  * fixed a crash when loading a document that includes a style record
+    referencing an unnamed style record as its parent.  In Excel-generated
+    documents, styles only reference named styles as their parents.  But in
+    3rd-party generated documents, styles referencing unnamed styles as their
+    parents can occur.
+
+* gnumeric
+
+  * fixed a crash when the document model returned a null pointer when a
+    reference resolver interface was requested.
+
+orcus 0.19.1
+
+* general
+
+  * implemented orcus::create_filter() which instantiates a filter object of
+    specified type.  The returned object is of type
+    orcus::iface::import_filter.
+
+  * moved test cases for format detection to the respective filter test files.
+
+* gnumeric
+
+  * fixed a bug where the import filter did not set the formula grammer prior
+    to importing.
+
+orcus 0.19.0
+
+* general
+
+  * added support for allowing use of std::filesystem,
+    std::experimental::filesystem or boost::filesystem per build
+    configuration.
+
+* xlsx
+
+  * refactored styles import to use style indices returned by the document
+    model implementer rather than using the indices stored in the file.  This
+    allows the implementer to aggregate some style records and re-use the same
+    index for records that are stored as different records in the original
+    file.
+
+* xls-xml
+
+  * fixed a bug where column styles were not applied to the correct columns
+    when the starting column index was not 0.
+
+* gnumeric
+
+  * overhauled the Gnumeric import filter to fix many bugs and support many
+    missing features relative to the other filters included in orcus.  Most
+    notable mentions are:
+
+    * cell styles
+
+    * rich-text strings
+
+    * named ranges
+
+    * row heights and column widths
+
+    * merged cells
+
+* parquet
+
+  * added partial support for Apache Parquet import filter.  This is still
+    heavily experimental.
+
+orcus 0.18.1
+
+* sax parser
+
+  * added support for optionally skipping multiple BOM's in the beginning of
+    XML stream.  This affects all XML-based file format filters such as
+    xls-xml (aka Excel 2003 XML).
+
+* xml-map
+
+  * fixed a bug where XML documents consisting of simple single-column records
+    were not properly converted to sheet data.
+
+* xls-xml
+
+  * fixed a bug where the filter would always pass border color even when it
+    was not set.
+
+* buildsystem
+
+  * added new configure switches --without-benchmark and --without-doc-example
+    to optinally skip building of these two directories.
+
+orcus 0.18.0
+
+* general
+
+  * fixed the flat output mode to properly calculate the lengths of UTF-8
+    encoded strings.
+
+  * replaced all uses of std::strtol() to parse_integer() to properly parse
+    strings that are not necessarily null-terminated.
+
+  * added a new output format type 'debug-state' which dumps the internal
+    state of the populated document model in detail.  This can be useful
+    during debugging.
+
+  * separated the import_shared_string interface implementation from the
+    backend shared strings store per separation of responsibility.
+
+  * merged the foo_t and foo_active_t struct pair, such as font_t and
+    font_active_t, in the styles store into a single type using std::optional.
+
+  * revised the documentation and public API and cleaned things up where
+    necessary.
+
+* ods
+
+  * reimplemented the number format styles import to correctly keep track of
+    element stacks and correctly perform structure checks to detect malformed
+    documents.
+
+  * added new interface to import named styles applied to columns.
+
+  * added new interface to import attributes for asian and complex scripts for
+    the folloiwng font attributes:
+
+    * font name
+
+    * font size
+
+    * font style
+
+    * font weight
+
+  * re-designed the styles import interface to make it multi-level.
+
+  * re-worked the import of the style:text-underline-width attribute to make
+    its handling more in line with the specifications.
+
+* xls-xml
+
+  * added support for importing wrap-text and shrink-to-fit cell format
+    attributes.
+
+  * added support for importing cell-hidden and locked attributes.
+
+  * added support for importing direct and named cell formats applied to
+    columns and rows.
+
+* xlsx
+
+  * added support for importing wrap-text and shrink-to-fit cell format
+    attributes.
+
+  * added support for importing direct and named cell formats applied to
+    columns and rows.
+
+* xml-map
+
+  * added a new interface to pass the encoding information to the document
+    model so that it can correctly decode non-UTF-8-encoded string values.
+
 orcus 0.17.2
 
 * ods

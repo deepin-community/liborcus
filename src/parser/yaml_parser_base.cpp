@@ -6,7 +6,6 @@
  */
 
 #include <orcus/yaml_parser_base.hpp>
-#include <orcus/global.hpp>
 #include <orcus/cell_buffer.hpp>
 #include <orcus/parser_global.hpp>
 
@@ -19,20 +18,6 @@
 #include <algorithm>
 
 namespace orcus { namespace yaml {
-
-parse_error::parse_error(const std::string& msg, std::ptrdiff_t offset) :
-    ::orcus::parse_error(msg, offset) {}
-
-void parse_error::throw_with(const char* msg_before, char c, const char* msg_after, std::ptrdiff_t offset)
-{
-    throw parse_error(build_message(msg_before, c, msg_after), offset);
-}
-
-void parse_error::throw_with(
-    const char* msg_before, const char* p, size_t n, const char* msg_after, std::ptrdiff_t offset)
-{
-    throw parse_error(build_message(msg_before, p, n, msg_after), offset);
-}
 
 struct scope
 {
@@ -68,10 +53,10 @@ const size_t parser_base::parse_indent_blank_line    = std::numeric_limits<size_
 const size_t parser_base::parse_indent_end_of_stream = std::numeric_limits<size_t>::max() - 1;
 const size_t parser_base::scope_empty = std::numeric_limits<size_t>::max() - 2;
 
-parser_base::parser_base(const char* p, size_t n) :
-    ::orcus::parser_base(p, n, false), mp_impl(std::make_unique<impl>()) {}
+parser_base::parser_base(std::string_view content) :
+    orcus::parser_base(content.data(), content.size()), mp_impl(std::make_unique<impl>()) {}
 
-parser_base::~parser_base() {}
+parser_base::~parser_base() = default;
 
 void parser_base::push_parse_token(detail::parse_token_t t)
 {
@@ -302,7 +287,7 @@ std::string_view parser_base::merge_line_buffer()
     mp_impl->m_line_buffer.clear();
     mp_impl->m_in_literal_block = false;
 
-    return std::string_view(buf.get(), buf.size());
+    return buf.str();
 }
 
 const char* parser_base::get_doc_hash() const
@@ -317,34 +302,46 @@ void parser_base::set_doc_hash(const char* hash)
 
 namespace {
 
-mdds::sorted_string_map<detail::keyword_t>::entry keyword_entries[] = {
-    { ORCUS_ASCII("FALSE"), detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("False"), detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("N"),     detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("NO"),    detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("NULL"),  detail::keyword_t::null          },
-    { ORCUS_ASCII("No"),    detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("Null"),  detail::keyword_t::null          },
-    { ORCUS_ASCII("OFF"),   detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("ON"),    detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("Off"),   detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("On"),    detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("TRUE"),  detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("True"),  detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("Y"),     detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("YES"),   detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("Yes"),   detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("false"), detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("n"),     detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("no"),    detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("null"),  detail::keyword_t::null          },
-    { ORCUS_ASCII("off"),   detail::keyword_t::boolean_false },
-    { ORCUS_ASCII("on"),    detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("true"),  detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("y"),     detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("yes"),   detail::keyword_t::boolean_true  },
-    { ORCUS_ASCII("~"),     detail::keyword_t::null          },
+namespace keyword {
+
+using map_type = mdds::sorted_string_map<detail::keyword_t, mdds::string_view_map_entry>;
+
+constexpr map_type::entry entries[] = {
+    { "FALSE", detail::keyword_t::boolean_false },
+    { "False", detail::keyword_t::boolean_false },
+    { "N",     detail::keyword_t::boolean_false },
+    { "NO",    detail::keyword_t::boolean_false },
+    { "NULL",  detail::keyword_t::null          },
+    { "No",    detail::keyword_t::boolean_false },
+    { "Null",  detail::keyword_t::null          },
+    { "OFF",   detail::keyword_t::boolean_false },
+    { "ON",    detail::keyword_t::boolean_true  },
+    { "Off",   detail::keyword_t::boolean_false },
+    { "On",    detail::keyword_t::boolean_true  },
+    { "TRUE",  detail::keyword_t::boolean_true  },
+    { "True",  detail::keyword_t::boolean_true  },
+    { "Y",     detail::keyword_t::boolean_true  },
+    { "YES",   detail::keyword_t::boolean_true  },
+    { "Yes",   detail::keyword_t::boolean_true  },
+    { "false", detail::keyword_t::boolean_false },
+    { "n",     detail::keyword_t::boolean_false },
+    { "no",    detail::keyword_t::boolean_false },
+    { "null",  detail::keyword_t::null          },
+    { "off",   detail::keyword_t::boolean_false },
+    { "on",    detail::keyword_t::boolean_true  },
+    { "true",  detail::keyword_t::boolean_true  },
+    { "y",     detail::keyword_t::boolean_true  },
+    { "yes",   detail::keyword_t::boolean_true  },
+    { "~",     detail::keyword_t::null          },
 };
+
+const map_type& get()
+{
+    static const map_type map(entries, std::size(entries), detail::keyword_t::unknown);
+    return map;
+}
+
+} // namespace keyword
 
 void throw_quoted_string_parse_error(
     const char* func_name, const parse_quoted_string_state& ret, std::ptrdiff_t offset)
@@ -365,13 +362,7 @@ void throw_quoted_string_parse_error(
 
 detail::keyword_t parser_base::parse_keyword(const char* p, size_t len)
 {
-    static mdds::sorted_string_map<detail::keyword_t> map(
-        keyword_entries,
-        ORCUS_N_ELEMENTS(keyword_entries),
-        detail::keyword_t::unknown);
-
-    detail::keyword_t value = map.find(p, len);
-    return value;
+    return keyword::get().find({p, len});
 }
 
 parser_base::key_value parser_base::parse_key_value(const char* p, size_t len)
@@ -434,7 +425,7 @@ parser_base::key_value parser_base::parse_key_value(const char* p, size_t len)
         // Key has not been found.
         detail::scope_t st = get_scope_type();
         if (st == detail::scope_t::map)
-            throw yaml::parse_error("key was expected, but not found.", offset_last_char_of_line());
+            throw parse_error("key was expected, but not found.", offset_last_char_of_line());
     }
 
     return kv;
@@ -488,7 +479,7 @@ void parser_base::handle_line_in_literal(size_t indent)
         // Start a new multi-line string scope.
 
         if (indent == cur_scope)
-            throw yaml::parse_error("parse: first line of a literal block must be indented.", offset());
+            throw parse_error("parse: first line of a literal block must be indented.", offset());
 
         push_scope(indent);
         set_scope_type(yaml::detail::scope_t::multi_line_string);

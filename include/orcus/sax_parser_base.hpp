@@ -29,14 +29,6 @@ using std::endl;
 
 namespace orcus { namespace sax {
 
-class ORCUS_PSR_DLLPUBLIC malformed_xml_error : public ::orcus::parse_error
-{
-public:
-    malformed_xml_error() = delete;
-    malformed_xml_error(const std::string& msg, std::ptrdiff_t offset);
-    virtual ~malformed_xml_error() throw();
-};
-
 /**
  * Document type declaration passed by sax_parser to its handler's doctype()
  * call.
@@ -83,25 +75,33 @@ ORCUS_PSR_DLLPUBLIC std::string decode_xml_unicode_char(const char* p, size_t n)
  */
 struct parser_element
 {
-    std::string_view ns;            // element namespace (optional)
-    std::string_view name;          // element name
-    std::ptrdiff_t begin_pos; // position of the opening brace '<'.
-    std::ptrdiff_t end_pos;   // position of the char after the closing brace '>'.
+    /** Optional element namespace. It may be empty if it's not given. */
+    std::string_view ns;
+    /** Element name. */
+    std::string_view name;
+    /** Position of the opening brace '<'. */
+    std::ptrdiff_t begin_pos;
+    /** Position immediately after the closing brace '>'. */
+    std::ptrdiff_t end_pos;
 };
 
 /**
  * Attribute properties passed by sax_parser to its handler's attribute()
- * call. When an attribute value is transient, it has been converted due to
- * presence of encoded character(s) and stored in a temporary buffer. The
- * handler must assume that the value will not survive beyond the scope of
- * the callback.
+ * call. When an attribute value is "transient", it has been converted due to
+ * presence of encoded character(s) and has been stored in a temporary buffer.
+ * The handler must assume that the value will not survive after the callback
+ * function ends.
  */
 struct parser_attribute
 {
-    std::string_view ns;      // attribute namespace (optional)
-    std::string_view name;    // attribute name
-    std::string_view value;   // attribute value
-    bool transient;  // whether or not the attribute value is on a temporary buffer.
+    /** Optional attribute namespace.  It may be empty if it's not given. */
+    std::string_view ns;
+    /** Attribute name. */
+    std::string_view name;
+    /** Attribute value. */
+    std::string_view value;
+    /** Whether or not the attribute value is in a temporary buffer. */
+    bool transient;
 };
 
 class ORCUS_PSR_DLLPUBLIC parser_base : public ::orcus::parser_base
@@ -118,7 +118,7 @@ protected:
     bool m_root_elem_open:1;
 
 protected:
-    parser_base(const char* content, size_t size, bool transient_stream);
+    parser_base(const char* content, size_t size);
     ~parser_base();
 
     void next_check()
@@ -144,22 +144,6 @@ protected:
     {
         if (!has_char())
             throw malformed_xml_error(msg, offset());
-    }
-
-    /**
-     * Determine the number of remaining characters <strong>including</strong>
-     * the current character.
-     *
-     *
-     * @return number of remaining characters including the current character.
-     */
-    inline size_t remains() const
-    {
-#if ORCUS_DEBUG_SAX_PARSER
-        if (mp_char >= mp_end)
-            throw malformed_xml_error("xml stream ended prematurely.", offset());
-#endif
-        return mp_end - mp_char;
     }
 
     char cur_char_checked() const
@@ -193,20 +177,18 @@ protected:
 
     void comment();
 
-    /**
-     * Skip an optional byte order mark at the begining of the xml stream.
-     */
-    void skip_bom();
-
     void expects_next(const char* p, size_t n);
 
     void parse_encoded_char(cell_buffer& buf);
     void value_with_encoded_char(cell_buffer& buf, std::string_view& str, char quote_char);
 
     /**
-     * Parse quoted value.  Note that the retrieved string may be stored in
-     * the temporary cell buffer if the decode parameter is true. Use the
-     * string immediately after this call before the buffer becomes invalid.
+     * Parse quoted value.  Note that the retrieved string may be stored in a
+     * temporary cell buffer if the decode parameter is true. Use the string
+     * immediately after this call before the buffer becomes invalid.
+     *
+     * @note This method checks for valid stream; the caller doesn't need to
+     *       check for valid stream before calling this method.
      *
      * @return true if the value is stored in temporary buffer, false
      *         otherwise.

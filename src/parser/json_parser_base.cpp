@@ -6,7 +6,6 @@
  */
 
 #include "orcus/json_parser_base.hpp"
-#include "orcus/global.hpp"
 #include "orcus/cell_buffer.hpp"
 #include "numeric_parser.hpp"
 
@@ -17,43 +16,28 @@ namespace orcus { namespace json {
 
 namespace {
 
-double parse_numeric_json(const char*& p, size_t max_length)
+const char* parse_numeric_json(const char* p, const char* p_end, double& value)
 {
     using numeric_parser_type = detail::numeric_parser<detail::json_parser_trait>;
-
-    const char* p_end = p + max_length;
 
     numeric_parser_type parser(p, p_end);
     double v = parser.parse();
     if (!std::isnan(v))
         p = parser.get_char_position();
-    return v;
+
+    value = v;
+    return p;
 };
 
 } // anonymous namespace
-
-parse_error::parse_error(const std::string& msg, std::ptrdiff_t offset) :
-    ::orcus::parse_error(msg, offset) {}
-
-void parse_error::throw_with(
-    const char* msg_before, char c, const char* msg_after, std::ptrdiff_t offset)
-{
-    throw parse_error(build_message(msg_before, c, msg_after), offset);
-}
-
-void parse_error::throw_with(
-    const char* msg_before, const char* p, size_t n, const char* msg_after, std::ptrdiff_t offset)
-{
-    throw parse_error(build_message(msg_before, p, n, msg_after), offset);
-}
 
 struct parser_base::impl
 {
     cell_buffer m_buffer;
 };
 
-parser_base::parser_base(const char* p, size_t n) :
-    ::orcus::parser_base(p, n, false), mp_impl(std::make_unique<impl>())
+parser_base::parser_base(std::string_view content) :
+    orcus::parser_base(content.data(), content.size()), mp_impl(std::make_unique<impl>())
 {
 
     set_numeric_parser(parse_numeric_json);
@@ -63,12 +47,12 @@ parser_base::~parser_base() {}
 
 void parser_base::skip_ws()
 {
-    skip(ORCUS_ASCII(" \n\r\t"));
+    skip(" \n\r\t");
 }
 
 void parser_base::parse_true()
 {
-    if (!parse_expected(ORCUS_ASCII("true")))
+    if (!parse_expected("true"))
         throw parse_error("parse_true: boolean 'true' expected.", offset());
 
     skip_ws();
@@ -76,7 +60,7 @@ void parser_base::parse_true()
 
 void parser_base::parse_false()
 {
-    if (!parse_expected(ORCUS_ASCII("false")))
+    if (!parse_expected("false"))
         throw parse_error("parse_false: boolean 'false' expected.", offset());
 
     skip_ws();
@@ -84,7 +68,7 @@ void parser_base::parse_false()
 
 void parser_base::parse_null()
 {
-    if (!parse_expected(ORCUS_ASCII("null")))
+    if (!parse_expected("null"))
         throw parse_error("parse_null: null expected.", offset());
 
     skip_ws();

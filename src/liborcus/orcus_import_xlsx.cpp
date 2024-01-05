@@ -8,13 +8,11 @@
 #include "orcus/orcus_import_xlsx.hpp"
 
 #include "orcus/xml_namespace.hpp"
-#include "orcus/global.hpp"
 #include "orcus/spreadsheet/import_interface.hpp"
 #include "orcus/config.hpp"
 
 #include "xlsx_types.hpp"
 #include "xlsx_handler.hpp"
-#include "xlsx_context.hpp"
 #include "ooxml_tokens.hpp"
 
 #include "xml_stream_parser.hpp"

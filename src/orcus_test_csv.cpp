@@ -7,9 +7,8 @@
 
 #include "orcus_test_global.hpp"
 #include "orcus/orcus_csv.hpp"
+#include <orcus/format_detection.hpp>
 #include "orcus/config.hpp"
-#include "pstring.hpp"
-#include "orcus/global.hpp"
 #include "orcus/stream.hpp"
 #include "orcus/spreadsheet/factory.hpp"
 #include "orcus/spreadsheet/document.hpp"
@@ -22,6 +21,7 @@
 #include <vector>
 
 using namespace orcus;
+namespace ss = orcus::spreadsheet;
 
 namespace {
 
@@ -32,8 +32,23 @@ std::vector<const char*> dirs = {
     SRCDIR"/test/csv/quoted-with-delim/",
 };
 
+void test_csv_create_filter()
+{
+    ORCUS_TEST_FUNC_SCOPE;
+
+    ss::range_size_t ssize{1048576, 16384};
+    std::unique_ptr<ss::document> doc = std::make_unique<ss::document>(ssize);
+    ss::import_factory factory(*doc);
+
+    auto f = create_filter(format_t::csv, &factory);
+    assert(f);
+    assert(f->get_name() == "csv");
+}
+
 void test_csv_import()
 {
+    ORCUS_TEST_FUNC_SCOPE;
+
     for (const char* dir : dirs)
     {
         std::string path(dir);
@@ -87,6 +102,8 @@ void test_csv_import()
 
 void test_csv_import_split_sheet()
 {
+    ORCUS_TEST_FUNC_SCOPE;
+
     const char* dir = SRCDIR"/test/csv/split-sheet/";
 
     std::string path(dir);
@@ -176,14 +193,53 @@ void test_csv_import_split_sheet()
     test::verify_content(__FILE__, __LINE__, control.str(), check);
 }
 
+void test_csv_dump_flat_utf8()
+{
+    ORCUS_TEST_FUNC_SCOPE;
+
+    constexpr std::string_view src =
+        "New York,fabriqué\n"
+        "garçon,вход\n"
+        "выход,помогите\n"
+        "Nähe,San Diego";
+
+    constexpr std::string_view expected =
+        "rows: 4  cols: 2\n"
+        "+----------+-----------+\n"
+        "| New York | fabriqué  |\n"
+        "+----------+-----------+\n"
+        "| garçon   | вход      |\n"
+        "+----------+-----------+\n"
+        "| выход    | помогите  |\n"
+        "+----------+-----------+\n"
+        "| Nähe     | San Diego |\n"
+        "+----------+-----------+\n";
+
+    ss::range_size_t ss{1048576, 16384};
+    ss::document doc{ss};
+    ss::import_factory factory(doc);
+    orcus_csv app(&factory);
+    app.read_stream(src);
+
+    const ss::sheet* sh = doc.get_sheet(0);
+    assert(sh);
+    std::ostringstream os;
+    sh->dump_flat(os);
+    std::string flat_dump = os.str();
+
+    test::verify_content(__FILE__, __LINE__, expected, flat_dump);
 }
+
+} // anonymous namespace
 
 int main()
 {
     try
     {
+        test_csv_create_filter();
         test_csv_import();
         test_csv_import_split_sheet();
+        test_csv_dump_flat_utf8();
     }
     catch (const std::exception& e)
     {

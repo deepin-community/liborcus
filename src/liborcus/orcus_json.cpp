@@ -10,7 +10,6 @@
 #include <orcus/json_structure_tree.hpp>
 #include <orcus/config.hpp>
 #include <orcus/spreadsheet/import_interface.hpp>
-#include <orcus/global.hpp>
 #include <orcus/json_parser.hpp>
 #include <orcus/stream.hpp>
 
@@ -19,8 +18,6 @@
 
 #include <iostream>
 #include <sstream>
-
-using namespace std;
 
 namespace orcus {
 
@@ -137,9 +134,9 @@ public:
         push_node(json_map_tree::input_node_type::object);
     }
 
-    void object_key(const char* p, size_t len, bool /*transient*/)
+    void object_key(std::string_view key, bool /*transient*/)
     {
-        m_walker.set_object_key(p, len);
+        m_walker.set_object_key(key.data(), key.size());
     }
 
     void end_object()
@@ -168,10 +165,10 @@ public:
         pop_node(json_map_tree::input_node_type::value);
     }
 
-    void string(const char* p, size_t len, bool /*transient*/)
+    void string(std::string_view val, bool /*transient*/)
     {
         push_node(json_map_tree::input_node_type::value);
-        commit_value(json_value(p, len));
+        commit_value(json_value(val.data(), val.size()));
         pop_node(json_map_tree::input_node_type::value);
     }
 
@@ -387,7 +384,7 @@ void orcus_json::read_stream(std::string_view stream)
     }
 
     json_content_handler hdl(mp_impl->map_tree, *mp_impl->im_factory);
-    json_parser<json_content_handler> parser(stream.data(), stream.size(), hdl);
+    json_parser<json_content_handler> parser(stream, hdl);
     parser.parse();
 
     mp_impl->im_factory->finalize();
@@ -421,8 +418,8 @@ void orcus_json::read_map_definition(std::string_view stream)
             // Set cell links.
             for (const json::const_node& link_node : root.child("cells"))
             {
-                pstring path = link_node.child("path").string_value();
-                pstring sheet = link_node.child("sheet").string_value();
+                std::string_view path = link_node.child("path").string_value();
+                std::string_view sheet = link_node.child("sheet").string_value();
                 spreadsheet::row_t row = link_node.child("row").numeric_value();
                 spreadsheet::col_t col = link_node.child("column").numeric_value();
 
@@ -435,7 +432,7 @@ void orcus_json::read_map_definition(std::string_view stream)
             // Set range links.
             for (const json::const_node& link_node : root.child("ranges"))
             {
-                pstring sheet = link_node.child("sheet").string_value();
+                std::string_view sheet = link_node.child("sheet").string_value();
                 spreadsheet::row_t row = link_node.child("row").numeric_value();
                 spreadsheet::col_t col = link_node.child("column").numeric_value();
 
@@ -445,8 +442,8 @@ void orcus_json::read_map_definition(std::string_view stream)
 
                 for (const json::const_node& field_node : link_node.child("fields"))
                 {
-                    pstring path = field_node.child("path").string_value();
-                    pstring label;
+                    std::string_view path = field_node.child("path").string_value();
+                    std::string_view label;
                     if (field_node.has_key("label"))
                     {
                         json::const_node label_node = field_node.child("label");
@@ -459,7 +456,7 @@ void orcus_json::read_map_definition(std::string_view stream)
 
                 for (const json::const_node& rg_node : link_node.child("row-groups"))
                 {
-                    pstring path = rg_node.child("path").string_value();
+                    std::string_view path = rg_node.child("path").string_value();
                     set_range_row_group(path);
                 }
 
@@ -467,7 +464,7 @@ void orcus_json::read_map_definition(std::string_view stream)
             }
         }
     }
-    catch (const json::parse_error& e)
+    catch (const parse_error& e)
     {
         std::ostringstream os;
         os << "Error parsing the map definition file:" << std::endl
@@ -496,7 +493,7 @@ void orcus_json::detect_map_definition(std::string_view stream)
         start_range(sheet_name, 0, 0, true);
 
         for (const std::string& s : range.paths)
-            append_field_link(s, pstring());
+            append_field_link(s, std::string_view());
 
         for (const std::string& s : range.row_groups)
             set_range_row_group(s);

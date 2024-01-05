@@ -10,19 +10,23 @@
 
 #include <cstdlib>
 
-#include "orcus/spreadsheet/view_types.hpp"
-#include "orcus/types.hpp"
-#include "orcus/env.hpp"
+#include "view_types.hpp"
+#include "../types.hpp"
+#include "../env.hpp"
 
 namespace orcus { namespace spreadsheet { namespace iface {
 
+/**
+ * Interface for importing view properties.  This interface may be obtained
+ * from the import_sheet interface.
+ */
 class ORCUS_DLLPUBLIC import_sheet_view
 {
 public:
     virtual ~import_sheet_view();
 
     /**
-     * Set this sheet as the active sheet.
+     * Set the current sheet as the active sheet.
      */
     virtual void set_sheet_active() = 0;
 
@@ -44,7 +48,7 @@ public:
         sheet_pane_t active_pane) = 0;
 
     /**
-     * Set the information about frozen view in the current sheet.
+     * Set the state of frozen view in the current sheet.
      *
      * @param visible_columns number of visible columns in the left pane.
      * @param visible_rows number of visible rows in the top pane.

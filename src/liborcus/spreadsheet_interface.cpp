@@ -5,10 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "orcus/spreadsheet/import_interface.hpp"
-#include "orcus/spreadsheet/import_interface_pivot.hpp"
-#include "orcus/spreadsheet/import_interface_view.hpp"
-#include "orcus/spreadsheet/export_interface.hpp"
+#include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/spreadsheet/import_interface_styles.hpp>
+#include <orcus/spreadsheet/import_interface_pivot.hpp>
+#include <orcus/spreadsheet/import_interface_view.hpp>
+#include <orcus/spreadsheet/export_interface.hpp>
 
 namespace orcus { namespace spreadsheet { namespace iface {
 
@@ -23,6 +24,20 @@ import_pivot_cache_records::~import_pivot_cache_records() {}
 import_shared_strings::~import_shared_strings() {}
 
 import_styles::~import_styles() {}
+
+import_font_style::~import_font_style() {}
+
+import_fill_style::~import_fill_style() {}
+
+import_border_style::~import_border_style() {}
+
+import_cell_protection::~import_cell_protection() {}
+
+import_number_format::~import_number_format() {}
+
+import_xf::~import_xf() {}
+
+import_cell_style::~import_cell_style() {}
 
 import_sheet_properties::~import_sheet_properties() {}
 

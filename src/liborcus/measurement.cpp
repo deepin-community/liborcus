@@ -11,7 +11,6 @@
 
 #include <mdds/sorted_string_map.hpp>
 #include <mdds/global.hpp>
-#include <orcus/global.hpp>
 
 #include <sstream>
 
@@ -20,21 +19,22 @@ namespace orcus {
 double to_double(std::string_view s, const char** p_parse_ended)
 {
     const char* p = s.data();
-    double val = parse_numeric(p, s.size());
+    double value;
+    const char* p_last = parse_numeric(p, p + s.size(), value);
     if (p_parse_ended)
-        *p_parse_ended = p;
+        *p_parse_ended = p_last;
 
-    return val;
+    return value;
 }
 
 long to_long(std::string_view s, const char** p_parse_ended)
 {
-    const char* p = s.data();
-    long val = parse_integer(p, s.size());
+    long value;
+    const char* p_last = parse_integer(s.data(), s.data() + s.size(), value);
     if (p_parse_ended)
-        *p_parse_ended = p;
+        *p_parse_ended = p_last;
 
-    return val;
+    return value;
 }
 
 bool to_bool(std::string_view s)
@@ -44,23 +44,34 @@ bool to_bool(std::string_view s)
         // Any single char other than '0' is true.
         return s[0] != '0';
 
-    return s == "true";
+    return s == "true" || s == "TRUE";
 }
 
 namespace {
 
-typedef mdds::sorted_string_map<length_unit_t> length_map;
+namespace length {
 
-length_map::entry length_map_entries[] =
+using map_type = mdds::sorted_string_map<length_unit_t, mdds::string_view_map_entry>;
+
+// Keys must be sorted.
+constexpr map_type::entry entries[] =
 {
-    {MDDS_ASCII("cm"), length_unit_t::centimeter},
-    {MDDS_ASCII("in"), length_unit_t::inch},
-    {MDDS_ASCII("mm"), length_unit_t::millimeter},
-    {MDDS_ASCII("pt"), length_unit_t::point},
-    {MDDS_ASCII("px"), length_unit_t::pixel}
+    { "cm", length_unit_t::centimeter },
+    { "in", length_unit_t::inch },
+    { "mm", length_unit_t::millimeter },
+    { "pt", length_unit_t::point },
+    { "px", length_unit_t::pixel }
 };
 
+const map_type& get()
+{
+    static map_type mt(entries, std::size(entries), length_unit_t::unknown);
+    return mt;
 }
+
+} // namespace length
+
+} // anonymous namespace
 
 length_t to_length(std::string_view str)
 {
@@ -71,11 +82,10 @@ length_t to_length(std::string_view str)
     const char* p = str.data();
     const char* p_start = p;
     const char* p_end = p_start + str.size();
-    ret.value = parse_numeric(p, p_end-p);
+    p = parse_numeric(p, p_end, ret.value);
 
-    static const length_map units(length_map_entries, ORCUS_N_ELEMENTS(length_map_entries), length_unit_t::unknown);
     std::string_view tail(p, p_end-p);
-    ret.unit = units.find(tail.data(), tail.size());
+    ret.unit = length::get().find(tail);
 
     return ret;
 }

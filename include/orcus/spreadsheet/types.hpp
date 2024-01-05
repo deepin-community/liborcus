@@ -15,48 +15,101 @@
 #include <iosfwd>
 #include <initializer_list>
 #include <string_view>
+#include <vector>
 
-// NB: This header should only use primitive data types and enums.
+// NB: This header should only define primitive data types, enums and structs.
 
 namespace orcus { namespace spreadsheet {
 
-typedef int32_t row_t;
-typedef int32_t col_t;
-typedef int32_t sheet_t;
-typedef uint8_t color_elem_t;
-typedef uint16_t col_width_t;
-typedef uint16_t row_height_t;
-typedef uint32_t string_id_t;
+/** Row ID type. */
+using row_t = int32_t;
+/** Column ID type. */
+using col_t = int32_t;
+/** Sheet ID type. */
+using sheet_t = int32_t;
+/** Individual color element type. */
+using color_elem_t = uint8_t;
+/** Type for column width values.  Column width values are stored in twips. */
+using col_width_t = uint16_t;
+/** Type for row height values.  Row height values are stored in twips. */
+using row_height_t = uint16_t;
+/** Type for string ID's for string cells. */
+using string_id_t = uint32_t;
+/** Pivot cache ID type. */
+using pivot_cache_id_t = uint32_t;
 
-typedef uint32_t pivot_cache_id_t;
-
+/**
+ * Get the special column width value that represents the default column
+ * width.  The value itself is not to be used as an actual width value.
+ *
+ * @return value that represents the default column width.
+ */
 ORCUS_DLLPUBLIC col_width_t get_default_column_width();
+
+/**
+ * Get the special row height value that represents the default row height.
+ * The value itself is not to be used as an actual row height value.
+ *
+ * @return value that represents the default row height.
+ */
 ORCUS_DLLPUBLIC row_height_t get_default_row_height();
 
+/**
+ * Type of error value in cells.
+ */
 enum class error_value_t
 {
+    /**
+     * Error type unknown, typically used as an initial error value or generic
+     * default value.
+     */
     unknown = 0,
-    null,         // #NULL!
-    div0,         // #DIV/0!
-    value,        // #VALUE!
-    ref,          // #REF!
-    name,         // #NAME?
-    num,          // #NUM!
-    na            // #N/A!
+    /** Null reference error, displayed as `#NULL!`. */
+    null,
+    /** Division-by-zero error, displayed as `#DIV/0`. */
+    div0,
+    /** Formula expression error, displayed as `#VALUE!`. */
+    value,
+    /** Reference error, displayed as `#REF!`. */
+    ref,
+    /** Invalid named-expression error, displayed as `#NAME?` */
+    name,
+    /** Invalid numeric value error, displayed as `#NUM!`. */
+    num,
+    /** No value is available error, displayed as `#N/A!`. */
+    na
 };
 
+/**
+ * Type of border direction, used to reference the position of a border in a
+ * cell.
+ */
 enum class border_direction_t
 {
+    /** Unknown or uninitialized border direction value. */
     unknown = 0,
+    /** Top border of a cell. */
     top,
+    /** Bottom border of a cell. */
     bottom,
+    /** Left border of a cell. */
     left,
+    /** Right border of a cell. */
     right,
+    /**
+     * Cross-diagonal borders of a cell. This is equivalent of both
+     * @p diagonal_bl_tr and @p diagonal_tl_br combined.
+     */
     diagonal,
+    /** Diagonal border of a cell that runs from bottom-left to top-right. */
     diagonal_bl_tr,
+    /** Diagonal border of a cell that runs from top-left to bottom-right. */
     diagonal_tl_br
 };
 
+/**
+ * Type of border style.
+ */
 enum class border_style_t
 {
     unknown = 0,
@@ -79,6 +132,9 @@ enum class border_style_t
     fine_dashed
 };
 
+/**
+ * Type of fill pattern for cell background.
+ */
 enum class fill_pattern_t
 {
     none = 0,
@@ -102,6 +158,11 @@ enum class fill_pattern_t
     medium_gray
 };
 
+/**
+ * Strikethrough style as applied to a cell value.
+ *
+ * @note This is specific to ODS format.
+ */
 enum class strikethrough_style_t
 {
     none = 0,
@@ -114,14 +175,24 @@ enum class strikethrough_style_t
     wave
 };
 
+/**
+ * Strikethrough type as applied to a cell value.
+ *
+ * @note This is specific to ODS format.
+ */
 enum class strikethrough_type_t
 {
     unknown = 0,
     none,
-    single,
+    single_type,
     double_type
 };
 
+/**
+ * Width of strikethrough applied to a cell value.
+ *
+ * @note This is specific to ODS format.
+ */
 enum class strikethrough_width_t
 {
     unknown = 0,
@@ -132,10 +203,17 @@ enum class strikethrough_width_t
     bold
 };
 
+/**
+ * Text used for strike-through.
+ *
+ * @note This is specific to ODS format.
+ */
 enum class strikethrough_text_t
 {
     unknown = 0,
+    /** `/` is used as the text. */
     slash,
+    /** `X` is used as the text. */
     cross
 };
 
@@ -157,12 +235,20 @@ enum class formula_grammar_t
     gnumeric
 };
 
+/**
+ * Type of formula expression.
+ */
 enum class formula_t
 {
+    /** Formula expression type unknown, or generic default value. */
     unknown = 0,
+    /** Formula expression in an array of cells. */
     array,
+    /** Formula expression in a data table. */
     data_table,
+    /** Formula expression in a normal formula cell. */
     normal,
+    /** Formula expression in a shared formula cell. */
     shared
 };
 
@@ -179,78 +265,119 @@ enum class formula_ref_context_t
      */
     global = 0,
 
-    /** base cell position of either a named range or expression. */
+    /** Base cell position of either a named range or expression. */
     named_expression_base,
 
     /**
-     * named range is a special case of named expression where the expression
+     * Named range is a special case of named expression where the expression
      * consists of only one range token.
      */
     named_range,
 };
 
 /**
- * Policy on how to handle a formula cell containing an expression that has
- * not been successfully parsed.
+ * Type of policy on how to handle a formula cell with an erroneous expression
+ * that has been parsed unsuccessfully.
  */
 enum class formula_error_policy_t
 {
     unknown,
-    /** loading of the document will be halted. */
+    /** Loading of the document will be halted. */
     fail,
-    /** the error cell will be skipped. */
+    /** The error cell will be skipped. */
     skip
 };
 
+/**
+ * Underline type for a cell value.
+ */
 enum class underline_t
 {
+    /** Underline is absent. */
     none = 0,
+    /** Underline consists of a single line. */
     single_line,
-    single_accounting, // unique to xlsx
+    /**
+     * Single line for accounting format.
+     *
+     * @note This is unique to xlsx format.
+     */
+    single_accounting,
+    /** Underline consists of a double line. */
     double_line,
-    double_accounting, // unique to xlsx
+    /**
+     * Double line for accounting format.
+     *
+     * @note This is unique to xlsx format.
+     */
+    double_accounting,
+    /** Underline is dotted. */
     dotted,
+    /** Underline is dashed. */
     dash,
+    /** Underline consists of repeated long dash segments. */
     long_dash,
+    /** Underline consists of repeated dot and dash segments. */
     dot_dash,
-    dot_dot_dot_dash, // TODO:API: -> dot_dot_dash
+    /** Underline consists of repeated dot, dot and dash segments. */
+    dot_dot_dash,
+    /** Underline is waved. */
     wave
 };
 
+/**
+ * Underline width types, specific to ODF.  When the enum value is either
+ * percent, positive_integer, or positive_length, the actual value should be
+ * given separately.
+ *
+ * @note The automatic enum value corresponds with the "auto" text value,
+ * which could not be used since it's a keyword in C++.
+ */
 enum class underline_width_t
 {
     none = 0,
-    normal,
+    automatic,
     bold,
-    thin,
+    dash,
     medium,
     thick,
-    positive_integer,
+    thin,
     percent,
+    positive_integer,
     positive_length
 };
 
+/**
+ * Underline mode that determines whether an underline is applied to both
+ * words and spaces, or words only.
+ *
+ * @note This is specific to ODS format.
+ */
 enum class underline_mode_t
 {
-    continuos = 0, // TODO:API: fix this typo
+    /** Underline is applied to both words and spaces. */
+    continuous = 0,
+    /** Underline is applied only to words. */
     skip_white_space
 };
 
+/**
+ * Whether a single line or a double line is used as an underline.
+ *
+ * @todo Perhaps we should merge this with underline_t.
+ */
 enum class underline_type_t
 {
     none = 0,
-    single,  // TODO:API: standardize these values
-    double_type            //necessary to not call it "double", since it is a reserved word
+    /** A single line is used as an underline. */
+    single_type,
+    /** A double line is used as an underline. */
+    double_type
 };
 
-struct underline_attrs_t
-{
-    underline_t underline_style;
-    underline_width_t underline_width;
-    underline_mode_t underline_mode;
-    underline_type_t underline_type;
-};
-
+/**
+ * Type of horizontal alignment applied to a cell content.
+ */
 enum class hor_alignment_t
 {
     unknown = 0,
@@ -262,6 +389,9 @@ enum class hor_alignment_t
     filled
 };
 
+/**
+ * Type of vertical alignment applied to a cell content.
+ */
 enum class ver_alignment_t
 {
     unknown = 0,
@@ -270,6 +400,21 @@ enum class ver_alignment_t
     bottom,
     justified,
     distributed
+};
+
+/**
+ * Cell format categories. The abbreviation "xf" stands for "cell format"
+ * where the "x" is short for cell.
+ */
+enum class xf_category_t
+{
+    unknown,
+    /** Direct cell format, also often referenced as xf. */
+    cell,
+    /** Cell format for named styles. */
+    cell_style,
+    /** Incremental cell format, also referenced as dxf. */
+    differential,
 };
 
 /**
@@ -301,6 +446,9 @@ enum class totals_row_function_t
     custom
 };
 
+/**
+ * Type of conditional format.
+ */
 enum class conditional_format_t
 {
     unknown = 0,
@@ -312,6 +460,9 @@ enum class conditional_format_t
     iconset
 };
 
+/**
+ * Operator type associated with a conditional format rule.
+ */
 enum class condition_operator_t
 {
     unknown = 0,
@@ -341,6 +492,14 @@ enum class condition_operator_t
     expression
 };
 
+/**
+ * Type of a condition in a conditional format rule.  This is applicable only
+ * when the type of a conditional format entry is either:
+ *
+ * @li @p colorscale,
+ * @li @p databar or
+ * @li @p iconset.
+ */
 enum class condition_type_t
 {
     unknown = 0,
@@ -353,6 +512,10 @@ enum class condition_type_t
     percentile
 };
 
+/**
+ * Type of a date condition when the type of a conditional format entry is
+ * @p date.
+ */
 enum class condition_date_t
 {
     unknown = 0,
@@ -371,6 +534,10 @@ enum class condition_date_t
     last_year,
 };
 
+/**
+ * Databar axis type, applicable only when the type of a conditional format
+ * entry is @p databar.
+ */
 enum class databar_axis_t
 {
     none = 0,
@@ -378,31 +545,57 @@ enum class databar_axis_t
     automatic
 };
 
+/**
+ * Type of range grouping in a group field of a pivot table cache.
+ */
 enum class pivot_cache_group_by_t
 {
+    /**
+     * Type of range grouping is unknown.
+     *
+     * This is an implicit default value of this type.
+     */
     unknown = 0,
-    days,     // grouping on "days" for date values.
-    hours,    // grouping on "hours" for date values.
-    minutes,  // grouping on "minutes" for date values.
-    months,   // grouping on "months" for date values.
-    quarters, // grouping on "quarters" for date values.
-    range,    // grouping by numeric ranges for numeric values.
-    seconds,  // grouping on "seconds" for date values.
-    years     // grouping on "years" for date values.
+    /** Grouping on "days" for date values. */
+    days,
+    /** Grouping on "hours" for date values. */
+    hours,
+    /** Grouping on "minutes" for date values. */
+    minutes,
+    /** Grouping on "months" for date values. */
+    months,
+    /** Grouping on "quarters" for date values. */
+    quarters,
+    /** Grouping by numeric ranges for numeric values. */
+    range,
+    /** Grouping on "seconds" for date values. */
+    seconds,
+    /** Grouping on "years" for date values. */
+    years
 };
 
+/**
+ * Stores a 2-dimensional cell address.
+ */
 struct address_t
 {
     row_t row;
     col_t column;
 };
 
+/**
+ * Stores the size of a range of a spreadsheet.
+ */
 struct range_size_t
 {
     row_t rows;
     col_t columns;
 };
 
+/**
+ * Stores a 2-dimensional cell range by storing the positions of the top-left
+ * and bottom-right corners of the range.
+ */
 struct range_t
 {
     address_t first;
@@ -410,7 +603,7 @@ struct range_t
 };
 
 /**
- * Stores 3-dimensional cell address.  The 'src' stands for
+ * Stores 3-dimensional cell address.  The 'src' abbreviation stands for
  * sheet-row-column.
  */
 struct src_address_t
@@ -421,7 +614,7 @@ struct src_address_t
 };
 
 /**
- * Stores 3-dimensional range address.  The 'src' stands for
+ * Stores 3-dimensional cell range address.  The 'src' abbreviation stands for
  * sheet-row-column.
  */
 struct src_range_t
@@ -430,7 +623,16 @@ struct src_range_t
     src_address_t last;
 };
 
+/**
+ * Convert a 3-dimensional cell address to a 2-dimensional counterpart by
+ * dropping the sheet index.
+ */
 ORCUS_DLLPUBLIC address_t to_rc_address(const src_address_t& r);
+
+/**
+ * Convert a 3-dimensional cell range address to a 2-dimensional counterpart
+ * by dropping the sheet indices.
+ */
 ORCUS_DLLPUBLIC range_t to_rc_range(const src_range_t& r);
 
 ORCUS_DLLPUBLIC bool operator== (const address_t& left, const address_t& right);
@@ -455,18 +657,14 @@ ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const address_t& v);
 ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const src_address_t& v);
 ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const range_t& v);
 
-struct ORCUS_DLLPUBLIC color_rgb_t
+/**
+ * Stores a color value in RGB format.
+ */
+struct color_rgb_t
 {
     color_elem_t red;
     color_elem_t green;
     color_elem_t blue;
-
-    color_rgb_t();
-    color_rgb_t(std::initializer_list<color_elem_t> vs);
-    color_rgb_t(const color_rgb_t& other);
-    color_rgb_t(color_rgb_t&& other);
-
-    color_rgb_t& operator= (const color_rgb_t& other);
 };
 
 /**
@@ -531,8 +729,20 @@ ORCUS_DLLPUBLIC color_rgb_t to_color_rgb_from_name(std::string_view s);
 ORCUS_DLLPUBLIC formula_error_policy_t to_formula_error_policy(std::string_view s);
 
 ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, error_value_t ev);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, border_style_t border);
 ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, formula_grammar_t grammar);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, underline_t uline);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, underline_width_t ulwidth);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, underline_mode_t ulmode);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, underline_type_t ultype);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, hor_alignment_t halign);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, ver_alignment_t valign);
 ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const color_rgb_t& color);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const fill_pattern_t& fill);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const strikethrough_style_t& ss);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const strikethrough_type_t& st);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const strikethrough_width_t& sw);
+ORCUS_DLLPUBLIC std::ostream& operator<< (std::ostream& os, const strikethrough_text_t& st);
 
 }}
 

@@ -9,6 +9,7 @@
 #define __ORCUS_SPREADSHEET_MOCK_IMPORT_INTERFACE_HPP__
 
 #include <orcus/spreadsheet/import_interface.hpp>
+#include <orcus/spreadsheet/import_interface_styles.hpp>
 
 namespace orcus { namespace spreadsheet { namespace mock {
 
@@ -39,66 +40,20 @@ public:
     // font
 
     virtual void set_font_count(size_t n) override;
-    virtual void set_font_bold(bool b) override;
-    virtual void set_font_italic(bool b) override;
-    virtual void set_font_name(std::string_view s) override;
-    virtual void set_font_size(double point) override;
-    virtual void set_font_underline(orcus::spreadsheet::underline_t e) override;
-    virtual size_t commit_font() override;
+    virtual iface::import_font_style* start_font_style() override;
 
     // fill
 
     virtual void set_fill_count(size_t n) override;
-    virtual void set_fill_pattern_type(fill_pattern_t fp) override;
-    virtual void set_fill_fg_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue) override;
-    virtual void set_fill_bg_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue) override;
-    virtual size_t commit_fill() override;
+    virtual iface::import_fill_style* start_fill_style() override;
 
     // border
 
     virtual void set_border_count(size_t n) override;
-    virtual void set_border_color(orcus::spreadsheet::border_direction_t dir,
-            color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue) override;
-    virtual size_t commit_border() override;
+    virtual iface::import_border_style* start_border_style() override;
 
-    // cell protection
-    virtual void set_cell_hidden(bool b) override;
-    virtual void set_cell_locked(bool b) override;
-    virtual size_t commit_cell_protection() override;
-
-    // cell style xf
-
-    virtual void set_cell_style_xf_count(size_t n) override;
-    virtual size_t commit_cell_style_xf() override;
-
-    // cell xf
-
-    virtual void set_cell_xf_count(size_t n) override;
-    virtual size_t commit_cell_xf() override;
-
-    // dxf
-    virtual void set_dxf_count(size_t n) override;
-    virtual size_t commit_dxf() override;
-
-    // xf (cell format) - used both by cell xf and cell style xf.
-
-    virtual void set_xf_number_format(size_t index) override;
-    virtual void set_xf_font(size_t index) override;
-    virtual void set_xf_fill(size_t index) override;
-    virtual void set_xf_border(size_t index) override;
-    virtual void set_xf_protection(size_t index) override;
-    virtual void set_xf_style_xf(size_t index) override;
-    virtual void set_xf_apply_alignment(bool b) override;
-    virtual void set_xf_horizontal_alignment(orcus::spreadsheet::hor_alignment_t align) override;
-    virtual void set_xf_vertical_alignment(orcus::spreadsheet::ver_alignment_t align) override;
-
-    // cell style entry
-
+    virtual void set_xf_count(xf_category_t cat, size_t n) = 0;
     virtual void set_cell_style_count(size_t n) override;
-    virtual void set_cell_style_name(std::string_view s) override;
-    virtual void set_cell_style_xf(size_t index) override;
-    virtual void set_cell_style_builtin(size_t index) override;
-    virtual size_t commit_cell_style() override;
 };
 
 class import_sheet_properties : public orcus::spreadsheet::iface::import_sheet_properties
@@ -106,9 +61,11 @@ class import_sheet_properties : public orcus::spreadsheet::iface::import_sheet_p
 public:
     virtual ~import_sheet_properties() override;
 
-    virtual void set_column_width(orcus::spreadsheet::col_t col, double width, orcus::length_unit_t unit) override;
+    virtual void set_column_width(
+        orcus::spreadsheet::col_t col, orcus::spreadsheet::col_t col_span, double width, orcus::length_unit_t unit) override;
 
-    virtual void set_column_hidden(orcus::spreadsheet::col_t col, bool hidden) override;
+    virtual void set_column_hidden(
+        orcus::spreadsheet::col_t col, orcus::spreadsheet::col_t col_span, bool hidden) override;
 
     virtual void set_row_height(orcus::spreadsheet::row_t row, double height, orcus::length_unit_t unit) override;
 
@@ -185,6 +142,10 @@ public:
 
     virtual void set_format(orcus::spreadsheet::row_t row_start, orcus::spreadsheet::col_t col_start,
             orcus::spreadsheet::row_t row_end, orcus::spreadsheet::col_t col_end, size_t xf_index) override;
+
+    virtual void set_column_format(col_t col, col_t col_span, std::size_t xf_index) override;
+
+    virtual void set_row_format(row_t col, std::size_t xf_index) override;
 
     virtual void fill_down_cells(row_t src_row, col_t src_col, row_t range_size) override;
 

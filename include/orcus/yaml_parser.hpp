@@ -13,6 +13,10 @@
 
 namespace orcus {
 
+/**
+ * Blank handler class for yaml_parser.  One can sub-class this and overwrite
+ * callback functions one needs to handle.
+ */
 class yaml_handler
 {
 public:
@@ -69,12 +73,11 @@ public:
     /**
      * Called when a string value is encountered.
      *
-     * @param p pointer to the first character of the string value.
-     * @param n length of the string value.
+     * @param value string value.
      */
-    void string(const char* p, size_t n)
+    void string(std::string_view value)
     {
-        (void)p; (void)n;
+        (void)value;
     }
 
     /**
@@ -103,13 +106,21 @@ public:
     void null() {}
 };
 
-template<typename _Handler>
+/**
+ * Parser for YAML documents.
+ *
+ * @tparam HandlerT Hanlder type with member functions for event callbacks.
+ *         Refer to yaml_handler.
+ *
+ * @warning This parser is still highly experimental.  Use with caution.
+ */
+template<typename HandlerT>
 class yaml_parser : public yaml::parser_base
 {
 public:
-    typedef _Handler handler_type;
+    typedef HandlerT handler_type;
 
-    yaml_parser(const char* p, size_t n, handler_type& hdl);
+    yaml_parser(std::string_view content, handler_type& hdl);
 
     void parse();
 
@@ -217,7 +228,7 @@ template<typename _Handler>
 void yaml_parser<_Handler>::handler_string(const char* p, size_t n)
 {
     push_parse_token(yaml::detail::parse_token_t::string);
-    m_handler.string(p, n);
+    m_handler.string({p, n});
 }
 
 template<typename _Handler>
@@ -249,8 +260,8 @@ void yaml_parser<_Handler>::handler_null()
 }
 
 template<typename _Handler>
-yaml_parser<_Handler>::yaml_parser(const char* p, size_t n, handler_type& hdl) :
-    yaml::parser_base(p, n), m_handler(hdl) {}
+yaml_parser<_Handler>::yaml_parser(std::string_view content, handler_type& hdl) :
+    yaml::parser_base(content), m_handler(hdl) {}
 
 template<typename _Handler>
 void yaml_parser<_Handler>::parse()
@@ -290,7 +301,7 @@ void yaml_parser<_Handler>::parse()
         if (cur_scope == scope_empty)
         {
             if (indent > 0)
-                throw yaml::parse_error(
+                throw parse_error(
                     "first node of the document should not be indented.", offset());
 
             push_scope(indent);
@@ -306,7 +317,7 @@ void yaml_parser<_Handler>::parse()
             {
                 cur_scope = end_scope();
                 if (cur_scope < indent)
-                    throw yaml::parse_error("parse: invalid indent level.", offset());
+                    throw parse_error("parse: invalid indent level.", offset());
             }
             while (indent < cur_scope);
         }
@@ -435,7 +446,8 @@ void yaml_parser<_Handler>::parse_value(const char* p, size_t len)
 
     const char* p0 = p;
     const char* p_end = p + len;
-    double val = parse_numeric(p, len);
+    double val;
+    p = parse_numeric(p, p_end, val);
     if (p == p_end)
     {
         handler_number(val);
@@ -502,10 +514,10 @@ void yaml_parser<_Handler>::parse_line(const char* p, size_t len)
                 // start of a document
                 ++p;
                 if (p == p_end)
-                    throw yaml::parse_error("parse_line: line ended with '--'.", offset_last_char_of_line());
+                    throw parse_error("parse_line: line ended with '--'.", offset_last_char_of_line());
 
                 if (*p != '-')
-                    yaml::parse_error::throw_with(
+                    parse_error::throw_with(
                         "parse_line: '-' expected but '", *p, "' found.",
                         offset_last_char_of_line() - std::ptrdiff_t(p_end-p));
 
@@ -532,7 +544,7 @@ void yaml_parser<_Handler>::parse_line(const char* p, size_t len)
                 // list item start with inline first item content.
                 ++p;
                 if (p == p_end)
-                    throw yaml::parse_error(
+                    throw parse_error(
                         "parse_line: list item expected, but the line ended prematurely.",
                         offset_last_char_of_line() - std::ptrdiff_t(p_end-p));
 
@@ -551,7 +563,7 @@ void yaml_parser<_Handler>::parse_line(const char* p, size_t len)
     }
 
     if (get_scope_type() == yaml::detail::scope_t::sequence)
-        yaml::parse_error::throw_with(
+        parse_error::throw_with(
             "'-' was expected for a sequence element, but '", *p, "' was found.",
             offset_last_char_of_line()-len+1);
 
@@ -580,7 +592,7 @@ void yaml_parser<_Handler>::parse_map_key(const char* p, size_t len)
             skip_blanks(p, p_end-p);
 
             if (*p != ':')
-                throw yaml::parse_error(
+                throw parse_error(
                     "parse_map_key: ':' is expected after the quoted string key.",
                     offset() - std::ptrdiff_t(p_end-p+1));
 
@@ -610,7 +622,7 @@ void yaml_parser<_Handler>::parse_map_key(const char* p, size_t len)
             skip_blanks(p, p_end-p);
 
             if (*p != ':')
-                throw yaml::parse_error(
+                throw parse_error(
                     "parse_map_key: ':' is expected after the quoted string key.",
                     offset() - std::ptrdiff_t(p_end-p+1));
 
@@ -663,7 +675,7 @@ void yaml_parser<_Handler>::parse_map_key(const char* p, size_t len)
 
     // inline map item.
     if (*p == '-')
-        throw yaml::parse_error(
+        throw parse_error(
             "parse_map_key: sequence entry is not allowed as an inline map item.",
             offset() - std::ptrdiff_t(p_end-p+1));
 

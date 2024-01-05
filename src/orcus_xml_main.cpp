@@ -12,7 +12,6 @@
 #include "orcus/spreadsheet/factory.hpp"
 #include "orcus/spreadsheet/document.hpp"
 #include "orcus/stream.hpp"
-#include "orcus/global.hpp"
 #include "orcus/sax_parser_base.hpp"
 
 #include "orcus_filter_global.hpp"
@@ -23,13 +22,13 @@
 #include <iostream>
 #include <fstream>
 #include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
 #include <mdds/sorted_string_map.hpp>
+
+#include "filesystem_env.hpp"
 
 using namespace orcus;
 using namespace std;
 namespace po = boost::program_options;
-namespace fs = boost::filesystem;
 
 namespace {
 
@@ -44,21 +43,20 @@ enum class type {
     structure,
 };
 
-typedef mdds::sorted_string_map<type> map_type;
+using map_type = mdds::sorted_string_map<type, mdds::string_view_map_entry>;
 
 // Keys must be sorted.
-const std::vector<map_type::entry> entries =
-{
-    { ORCUS_ASCII("dump"),      type::dump          },
-    { ORCUS_ASCII("map"),       type::map           },
-    { ORCUS_ASCII("map-gen"),   type::map_gen       },
-    { ORCUS_ASCII("structure"), type::structure     },
-    { ORCUS_ASCII("transform"), type::transform_xml },
+constexpr map_type::entry entries[] = {
+    { "dump",      type::dump          },
+    { "map",       type::map           },
+    { "map-gen",   type::map_gen       },
+    { "structure", type::structure     },
+    { "transform", type::transform_xml },
 };
 
 const map_type& get()
 {
-    static map_type mt(entries.data(), entries.size(), type::unknown);
+    static const map_type mt(entries, std::size(entries), type::unknown);
     return mt;
 }
 
@@ -68,7 +66,7 @@ std::string to_string(output_mode::type t)
 {
     for (const output_mode::map_type::entry& e : output_mode::entries)
         if (t == e.value)
-            return std::string(e.key, e.keylen);
+            return std::string(e.key);
 
     return std::string();
 }
@@ -90,13 +88,13 @@ std::string build_mode_help_text()
 {
     std::ostringstream os;
     os << "Mode of operation. Select one of the following options: ";
-    auto it = output_mode::entries.cbegin(), ite = output_mode::entries.cend();
+    auto it = output_mode::entries, ite = output_mode::entries + std::size(output_mode::entries);
     --ite;
 
     for (; it != ite; ++it)
-        os << std::string(it->key, it->keylen) << ", ";
+        os << std::string(it->key) << ", ";
 
-    os << "or " << std::string(it->key, it->keylen) << ".";
+    os << "or " << std::string(it->key) << ".";
     return os.str();
 }
 
@@ -202,7 +200,7 @@ int main(int argc, char** argv) try
     }
 
     std::string s = vm["mode"].as<std::string>();
-    output_mode::type mode = output_mode::get().find(s.data(), s.size());
+    output_mode::type mode = output_mode::get().find(s);
 
     if (mode == output_mode::type::unknown)
     {
@@ -334,7 +332,7 @@ int main(int argc, char** argv) try
                 ;
         }
     }
-    catch (const sax::malformed_xml_error& e)
+    catch (const malformed_xml_error& e)
     {
         cerr << create_parse_error_output(content.str(), e.offset()) << endl;
         cerr << e.what() << endl;

@@ -8,7 +8,6 @@
 #include "formula_token.hpp"
 #include "global.hpp"
 #include "orcus/spreadsheet/document.hpp"
-#include "orcus/global.hpp"
 
 #include <ixion/formula.hpp>
 #include <ixion/formula_name_resolver.hpp>
@@ -110,7 +109,7 @@ const char* to_formula_token_op(ixion::fopcode_t op)
         "ERROR",
     };
 
-    const int n_names = ORCUS_N_ELEMENTS(names);
+    auto n_names = std::size(names);
     return op < n_names ? names[op] : names[0];
 }
 
@@ -234,7 +233,7 @@ PyObject* create_formula_token_object(const ss::document& doc, const ixion::abs_
     assert(resolver);
     std::string ft_s = ixion::print_formula_token(cxt, pos, *resolver, token);
 
-    PyObject* obj = create_and_init_formula_token_object(token.get_opcode(), std::move(ft_s));
+    PyObject* obj = create_and_init_formula_token_object(token.opcode, std::move(ft_s));
     if (!obj)
         return nullptr;
 

@@ -30,22 +30,30 @@ struct date_time_t;
 
 namespace spreadsheet {
 
-class import_shared_strings;
+class shared_strings;
 class styles;
 class pivot_collection;
 class sheet;
+class import_factory;
 
 struct document_config;
 struct table_t;
+
+namespace detail {
+
 struct document_impl;
 
+}
+
 /**
- * Internal document representation used only for testing the filters.  It
- * uses ixion's model_context implementation to store raw cell values.
+ * Store spreadsheet document content.  It uses the @p model_context class
+ * from the ixion library to store raw cell values required in the computation
+ * of formula expressions.
  */
 class ORCUS_SPM_DLLPUBLIC document : public orcus::iface::document_dumper
 {
     friend class sheet;
+    friend class import_factory;
 
 public:
     document(const document&) = delete;
@@ -54,8 +62,14 @@ public:
     document(const range_size_t& sheet_size);
     ~document();
 
-    import_shared_strings* get_shared_strings();
-    const import_shared_strings* get_shared_strings() const;
+    /** See @ref iface::document_dumper. */
+    virtual void dump(dump_format_t format, const std::string& output) const override;
+
+    /** See @ref iface::document_dumper. */
+    virtual void dump_check(std::ostream& os) const override;
+
+    shared_strings& get_shared_strings();
+    const shared_strings& get_shared_strings() const;
 
     styles& get_styles();
     const styles& get_styles() const;
@@ -80,44 +94,16 @@ public:
      */
     void recalc_formula_cells();
 
-    virtual void dump(dump_format_t format, const std::string& output) const override;
-
-    /**
-     * Dump document content to specified output directory in flat format.
-     *
-     * @param outdir path to the output directory.
-     */
-    void dump_flat(const std::string& outdir) const;
-
-    /**
-     * Dump document content to specified output directory in html format.
-     *
-     * @param outdir path to the output directory.
-     */
-    void dump_html(const ::std::string& outdir) const;
-
-    /**
-     * Dump document content to specified output directory in json format.
-     *
-     * @param outdir path to the output directory.
-     */
-    void dump_json(const ::std::string& outdir) const;
-
-    /**
-     * Dump document content to specified output directory in csv format.
-     *
-     * @param outdir path to the output directory.
-     */
-    void dump_csv(const std::string& outdir) const;
-
-    /**
-     * Dump document content to stdout in the special format used for content
-     * verification during unit test.
-     */
-    virtual void dump_check(std::ostream& os) const override;
-
     sheet_t get_sheet_index(std::string_view name) const;
     std::string_view get_sheet_name(sheet_t sheet_pos) const;
+
+    /**
+     * Set a new name to a sheet.
+     *
+     * @param sheet_pos 0-based position of a sheet.
+     * @param name      New name to set to a sheet.
+     */
+    void set_sheet_name(sheet_t sheet_pos, std::string name);
 
     range_size_t get_sheet_size() const;
     void set_sheet_size(const range_size_t& sheet_size);
@@ -138,6 +124,7 @@ public:
     void set_config(const document_config& cfg);
 
     string_pool& get_string_pool();
+    const string_pool& get_string_pool() const;
 
     /**
      * Insert a new table object into the document.  The document will take
@@ -149,15 +136,28 @@ public:
      */
     void insert_table(table_t* p);
 
+    /**
+     * Get a structure containing properties of a named table.
+     *
+     * @param name Name of the table.
+     *
+     * @return Pointer to the structure containing the properties of a named
+     *         table, or @p nullptr if no such table exists for the given name.
+     */
     const table_t* get_table(std::string_view name) const;
 
-    void finalize();
-
 private:
+    void dump_flat(const std::string& outdir) const;
+    void dump_html(const ::std::string& outdir) const;
+    void dump_json(const ::std::string& outdir) const;
+    void dump_csv(const std::string& outdir) const;
+    void dump_debug_state(const std::string& outdir) const;
+
+    void finalize_import();
     void insert_dirty_cell(const ixion::abs_address_t& pos);
 
 private:
-    std::unique_ptr<document_impl> mp_impl;
+    std::unique_ptr<detail::document_impl> mp_impl;
 };
 
 }}

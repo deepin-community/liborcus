@@ -17,7 +17,10 @@
 namespace orcus {
 
 /**
- * Implements string hash map.
+ * This class implements a shared string pool with the ability to merge with
+ * other pools.
+ *
+ * @note This class is not copy-constructible, but is move-constructible.
  */
 class ORCUS_PSR_DLLPUBLIC string_pool
 {
@@ -26,6 +29,7 @@ public:
     string_pool& operator=(const string_pool&) = delete;
 
     string_pool();
+    string_pool(string_pool&& other);
     ~string_pool();
 
     /**
@@ -46,12 +50,31 @@ public:
      */
     std::vector<std::string_view> get_interned_strings() const;
 
+    /**
+     * Dump pool's content to stdout.
+     *
+     * @todo This needs to be reworked to make it more generally usable.
+     */
     void dump() const;
 
+    /**
+     * Clear pool's content.
+     */
     void clear();
 
+    /**
+     * Query the total number of strings stored in the pool.
+     *
+     * @return size_t total number of strings in the pool.
+     */
     size_t size() const;
 
+    /**
+     * Swap the content with another string-pool instance.
+     *
+     *
+     * @param other string-pool instance to swap contents with.
+     */
     void swap(string_pool& other);
 
     /**

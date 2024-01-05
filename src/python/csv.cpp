@@ -13,7 +13,6 @@
 #include "orcus/orcus_csv.hpp"
 #include "orcus/spreadsheet/document.hpp"
 #include "orcus/spreadsheet/factory.hpp"
-#include "orcus/global.hpp"
 #endif
 
 namespace orcus { namespace python {
@@ -80,7 +79,7 @@ PyObject* csv_read(PyObject* /*module*/, PyObject* args, PyObject* kwargs)
 
         Py_ssize_t n = 0;
         const char* p = PyUnicode_AsUTF8AndSize(str.get(), &n);
-        app.read_stream({p, n});
+        app.read_stream({p, static_cast<std::string_view::size_type>(n)});
 
         return create_document(std::move(doc));
     }

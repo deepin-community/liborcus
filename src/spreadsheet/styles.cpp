@@ -6,49 +6,99 @@
  */
 
 #include "orcus/spreadsheet/styles.hpp"
-#include "orcus/global.hpp"
 #include "orcus/string_pool.hpp"
 
+#include "ostream_utils.hpp"
+
+#include <functional>
 #include <algorithm>
 #include <cassert>
 #include <iomanip>
 #include <vector>
+#include <map>
 
 namespace orcus { namespace spreadsheet {
 
-namespace {
+font_t::font_t() = default;
+font_t::font_t(const font_t& other) = default;
+font_t::~font_t() = default;
 
-class ostream_format_switch
+font_t& font_t::operator=(const font_t& other) = default;
+
+bool font_t::operator==(const font_t& other) const
 {
-    std::ostream& m_os;
-    std::ios_base::fmtflags m_mask;
-public:
-    ostream_format_switch(std::ostream& os, std::ios_base::fmtflags mask) :
-        m_os(os), m_mask(mask)
-    {
-        m_os << std::setiosflags(m_mask);
-    }
+    if (name != other.name)
+        return false;
 
-    ~ostream_format_switch()
-    {
-        m_os << std::resetiosflags(m_mask);
-    }
-};
+    if (name_asian != other.name_asian)
+        return false;
 
+    if (name_complex != other.name_complex)
+        return false;
+
+    if (size != other.size)
+        return false;
+
+    if (size_asian != other.size_asian)
+        return false;
+
+    if (size_complex != other.size_complex)
+        return false;
+
+    if (bold != other.bold)
+        return false;
+
+    if (bold_asian != other.bold_asian)
+        return false;
+
+    if (bold_complex != other.bold_complex)
+        return false;
+
+    if (italic != other.italic)
+        return false;
+
+    if (italic_asian != other.italic_asian)
+        return false;
+
+    if (italic_complex != other.italic_complex)
+        return false;
+
+    if (underline_style != other.underline_style)
+        return false;
+
+    if (underline_width != other.underline_width)
+        return false;
+
+    if (underline_mode != other.underline_mode)
+        return false;
+
+    if (underline_type != other.underline_type)
+        return false;
+
+    if (underline_color != other.underline_color)
+        return false;
+
+    if (color != other.color)
+        return false;
+
+    if (strikethrough_style != other.strikethrough_style)
+        return false;
+
+    if (strikethrough_width != other.strikethrough_width)
+        return false;
+
+    if (strikethrough_type != other.strikethrough_type)
+        return false;
+
+    if (strikethrough_text != other.strikethrough_text)
+        return false;
+
+    return true;
 }
 
-font_t::font_t() :
-    size(0.0), bold(false),
-    italic(false), underline_style(underline_t::none),
-    underline_width(underline_width_t::none),
-    underline_mode(underline_mode_t::continuos),
-    underline_type(underline_type_t::none),
-    color(),
-    strikethrough_style(strikethrough_style_t::none),
-    strikethrough_width(strikethrough_width_t::unknown),
-    strikethrough_type(strikethrough_type_t::unknown),
-    strikethrough_text(strikethrough_text_t::unknown)
+bool font_t::operator!=(const font_t& other) const
 {
+    return !operator==(other);
 }
 
 void font_t::reset()
@@ -56,258 +106,66 @@ void font_t::reset()
     *this = font_t();
 }
 
-void font_active_t::set() noexcept
+std::size_t font_t::hash::operator()(const font_t& v) const
 {
-    name = true;
-    size = true;
-    bold = true;
-    italic = true;
-    underline_style = true;
-    underline_width = true;
-    underline_mode = true;
-    underline_type = true;
-    underline_color = true;
-    color = true;
-    strikethrough_style = true;
-    strikethrough_width = true;
-    strikethrough_type = true;
-    strikethrough_text = true;
+    std::size_t hash_value = 0u;
+
+    if (v.name)
+        hash_value |= std::hash<std::string_view>{}(*v.name);
+
+    if (v.size)
+        hash_value |= std::hash<double>{}(*v.size);
+
+    if (v.bold)
+        hash_value |= std::hash<bool>{}(*v.bold);
+
+    if (v.italic)
+        hash_value |= std::hash<bool>{}(*v.italic);
+
+    return hash_value;
 }
 
-void font_active_t::reset()
-{
-    *this = font_active_t();
-}
-
-bool font_active_t::operator== (const font_active_t& other) const noexcept
-{
-    return name == other.name &&
-        size == other.size &&
-        bold == other.bold &&
-        italic == other.italic &&
-        underline_style == other.underline_style &&
-        underline_width == other.underline_width &&
-        underline_mode == other.underline_mode &&
-        underline_type == other.underline_type &&
-        underline_color == other.underline_color &&
-        color == other.color &&
-        strikethrough_style == other.strikethrough_style &&
-        strikethrough_width == other.strikethrough_width &&
-        strikethrough_type == other.strikethrough_type &&
-        strikethrough_text == other.strikethrough_text;
-}
-
-bool font_active_t::operator!= (const font_active_t& other) const noexcept
-{
-    return !operator== (other);
-}
-
-color_t::color_t() :
-    alpha(0), red(0), green(0), blue(0)
-{
-}
-
-color_t::color_t(color_elem_t _red, color_elem_t _green, color_elem_t _blue) :
-    alpha(255), red(_red), green(_green), blue(_blue)
-{
-}
-
-color_t::color_t(color_elem_t _alpha, color_elem_t _red, color_elem_t _green, color_elem_t _blue) :
-    alpha(_alpha), red(_red), green(_green), blue(_blue)
-{
-}
-
-void color_t::reset()
-{
-    *this = color_t();
-}
-
-bool color_t::operator==(const color_t& other) const
-{
-    return alpha == other.alpha && red == other.red && green == other.green && blue == other.blue;
-}
-
-bool color_t::operator!=(const color_t& other) const
-{
-    return !operator==(other);
-}
-
-fill_t::fill_t() :
-    pattern_type(fill_pattern_t::none)
-{
-}
+fill_t::fill_t() = default;
 
 void fill_t::reset()
 {
     *this = fill_t();
 }
 
-void fill_active_t::set() noexcept
-{
-    pattern_type = true;
-    fg_color = true;
-    bg_color = true;
-}
-
-void fill_active_t::reset()
-{
-    *this = fill_active_t();
-}
-
-bool fill_active_t::operator== (const fill_active_t& other) const noexcept
-{
-    return pattern_type == other.pattern_type && fg_color == other.fg_color && bg_color == other.bg_color;
-}
-
-bool fill_active_t::operator!= (const fill_active_t& other) const noexcept
-{
-    return !operator==(other);
-}
-
-border_attrs_t::border_attrs_t():
-    style(orcus::spreadsheet::border_style_t::unknown)
-{
-}
+border_attrs_t::border_attrs_t() = default;
 
 void border_attrs_t::reset()
 {
     *this = border_attrs_t();
 }
 
-void border_attrs_active_t::set() noexcept
-{
-    style = true;
-    border_color = true;
-    border_width = true;
-}
-
-void border_attrs_active_t::reset()
-{
-    *this = border_attrs_active_t();
-}
-
-bool border_attrs_active_t::operator== (const border_attrs_active_t& other) const noexcept
-{
-    return style == other.style && border_color == other.border_color && border_width == other.border_width;
-}
-
-bool border_attrs_active_t::operator!= (const border_attrs_active_t& other) const noexcept
-{
-    return !operator==(other);
-}
-
-border_t::border_t()
-{
-}
+border_t::border_t() = default;
 
 void border_t::reset()
 {
     *this = border_t();
 }
 
-void border_active_t::set() noexcept
-{
-    top.set();
-    bottom.set();
-    left.set();
-    right.set();
-    diagonal.set();
-    diagonal_bl_tr.set();
-    diagonal_tl_br.set();
-}
-
-void border_active_t::reset()
-{
-    top.reset();
-    bottom.reset();
-    left.reset();
-    right.reset();
-    diagonal.reset();
-    diagonal_bl_tr.reset();
-    diagonal_tl_br.reset();
-}
-
-bool border_active_t::operator== (const border_active_t& other) const noexcept
-{
-    return top == other.top && bottom == other.bottom &&
-        left == other.left && right == other.right && diagonal == other.diagonal &&
-        diagonal_bl_tr == other.diagonal_bl_tr && diagonal_tl_br == other.diagonal_tl_br;
-}
-
-bool border_active_t::operator!= (const border_active_t& other) const noexcept
-{
-    return !operator== (other);
-}
-
-protection_t::protection_t() :
-    locked(false), hidden(false), print_content(false), formula_hidden(false)
-{
-}
+protection_t::protection_t() = default;
 
 void protection_t::reset()
 {
     *this = protection_t();
 }
 
-void protection_active_t::set() noexcept
-{
-    locked = true;
-    hidden = true;
-    print_content = true;
-    formula_hidden = true;
-}
-
-void protection_active_t::reset()
-{
-    *this = protection_active_t();
-}
-
-bool protection_active_t::operator== (const protection_active_t& other) const noexcept
-{
-    return locked == other.locked && hidden == other.hidden &&
-        print_content == other.print_content &&
-        formula_hidden == other.formula_hidden;
-}
-
-bool protection_active_t::operator!= (const protection_active_t& other) const noexcept
-{
-    return !operator== (other);
-}
-
-number_format_t::number_format_t() : identifier(0) {}
+number_format_t::number_format_t() = default;
 
 void number_format_t::reset()
 {
     *this = number_format_t();
 }
 
-bool number_format_t::operator== (const number_format_t& other) const
+bool number_format_t::operator== (const number_format_t& other) const noexcept
 {
     return identifier == other.identifier && format_string == other.format_string;
 }
 
-bool number_format_t::operator!= (const number_format_t& other) const
-{
-    return !operator== (other);
-}
-
-void number_format_active_t::set() noexcept
-{
-    identifier = true;
-    format_string = true;
-}
-
-void number_format_active_t::reset()
-{
-    *this = number_format_active_t();
-}
-
-bool number_format_active_t::operator== (const number_format_active_t& other) const noexcept
-{
-    return identifier == other.identifier && format_string == other.format_string;
-}
-
-bool number_format_active_t::operator!= (const number_format_active_t& other) const noexcept
+bool number_format_t::operator!= (const number_format_t& other) const noexcept
 {
     return !operator== (other);
 }
@@ -347,13 +205,15 @@ void cell_style_t::reset()
 
 std::ostream& operator<< (std::ostream& os, const color_t& c)
 {
-    ostream_format_switch ifs(os, std::ios::hex | std::ios::uppercase);
+    ::orcus::detail::ostream_format_guard ifs(os);
 
-    os << "(ARGB: "
-       << std::setfill('0') << std::setw(2) << int(c.alpha)
-       << std::setfill('0') << std::setw(2) << int(c.red)
-       << std::setfill('0') << std::setw(2) << int(c.green)
-       << std::setfill('0') << std::setw(2) << int(c.blue)
+    os << std::uppercase;
+
+    os << "(ARGB:"
+       << ' ' << std::hex << std::setfill('0') << std::setw(2) << int(c.alpha & 0xFF)
+       << ' ' << std::hex << std::setfill('0') << std::setw(2) << int(c.red & 0xFF)
+       << ' ' << std::hex << std::setfill('0') << std::setw(2) << int(c.green & 0xFF)
+       << ' ' << std::hex << std::setfill('0') << std::setw(2) << int(c.blue & 0xFF)
        << ")";
 
     return os;
@@ -361,15 +221,16 @@ std::ostream& operator<< (std::ostream& os, const color_t& c)
 
 struct styles::impl
 {
-    std::vector<style_attrs_t<font_t>> fonts;
-    std::vector<style_attrs_t<fill_t>> fills;
-    std::vector<style_attrs_t<border_t>> borders;
-    std::vector<style_attrs_t<protection_t>> protections;
-    std::vector<style_attrs_t<number_format_t>> number_formats;
+    std::vector<font_t> fonts;
+    std::vector<fill_t> fills;
+    std::vector<border_t> borders;
+    std::vector<protection_t> protections;
+    std::vector<number_format_t> number_formats;
     std::vector<cell_format_t> cell_style_formats;
     std::vector<cell_format_t> cell_formats;
     std::vector<cell_format_t> dxf_formats;
     std::vector<cell_style_t> cell_styles;
+    std::map<std::size_t, std::size_t> cell_styles_map; // style xf to style position in `cell_styles`
 
     string_pool str_pool;
 };
@@ -382,18 +243,9 @@ void styles::reserve_font_store(size_t n)
     mp_impl->fonts.reserve(n);
 }
 
-size_t styles::append_font(const font_t& font)
+std::size_t styles::append_font(const font_t& font)
 {
-    // Preserve current behavior until next API version.
-    font_active_t active;
-    active.set();
-    mp_impl->fonts.emplace_back(font, active);
-    return mp_impl->fonts.size() - 1;
-}
-
-size_t styles::append_font(const font_t& value, const font_active_t& active)
-{
-    mp_impl->fonts.emplace_back(value, active);
+    mp_impl->fonts.emplace_back(font);
     return mp_impl->fonts.size() - 1;
 }
 
@@ -402,18 +254,9 @@ void styles::reserve_fill_store(size_t n)
     mp_impl->fills.reserve(n);
 }
 
-size_t styles::append_fill(const fill_t& fill)
+std::size_t styles::append_fill(const fill_t& fill)
 {
-    // Preserve current behavior until next API version.
-    fill_active_t active;
-    active.set();
-    mp_impl->fills.emplace_back(fill, active);
-    return mp_impl->fills.size() - 1;
-}
-
-size_t styles::append_fill(const fill_t& value, const fill_active_t& active)
-{
-    mp_impl->fills.emplace_back(value, active);
+    mp_impl->fills.emplace_back(fill);
     return mp_impl->fills.size() - 1;
 }
 
@@ -422,33 +265,15 @@ void styles::reserve_border_store(size_t n)
     mp_impl->borders.reserve(n);
 }
 
-size_t styles::append_border(const border_t& border)
+std::size_t styles::append_border(const border_t& border)
 {
-    // Preserve current behavior until next API version.
-    border_active_t active;
-    active.set();
-    mp_impl->borders.emplace_back(border, active);
+    mp_impl->borders.emplace_back(border);
     return mp_impl->borders.size() - 1;
 }
 
-size_t styles::append_border(const border_t& value, const border_active_t& active)
+std::size_t styles::append_protection(const protection_t& protection)
 {
-    mp_impl->borders.emplace_back(value, active);
-    return mp_impl->borders.size() - 1;
-}
-
-size_t styles::append_protection(const protection_t& protection)
-{
-    // Preserve current behavior until next API version.
-    protection_active_t active;
-    active.set();
-    mp_impl->protections.emplace_back(protection, active);
-    return mp_impl->protections.size() - 1;
-}
-
-size_t styles::append_protection(const protection_t& value, const protection_active_t& active)
-{
-    mp_impl->protections.emplace_back(value, active);
+    mp_impl->protections.emplace_back(protection);
     return mp_impl->protections.size() - 1;
 }
 
@@ -457,22 +282,17 @@ void styles::reserve_number_format_store(size_t n)
     mp_impl->number_formats.reserve(n);
 }
 
-size_t styles::append_number_format(const number_format_t& nf)
+std::size_t styles::append_number_format(const number_format_t& nf)
 {
-    // Preserve current behavior until next API version.
-    number_format_active_t active;
-    active.set();
-    number_format_t copied = nf;
-    copied.format_string = mp_impl->str_pool.intern(nf.format_string).first;
-    mp_impl->number_formats.emplace_back(copied, active);
-    return mp_impl->number_formats.size() - 1;
-}
+    if (nf.format_string)
+    {
+        number_format_t copied = nf;
+        copied.format_string = mp_impl->str_pool.intern(*nf.format_string).first;
+        mp_impl->number_formats.emplace_back(copied);
+    }
+    else
+        mp_impl->number_formats.emplace_back(nf);
 
-size_t styles::append_number_format(const number_format_t& value, const number_format_active_t& active)
-{
-    number_format_t copied = value;
-    copied.format_string = mp_impl->str_pool.intern(value.format_string).first;
-    mp_impl->number_formats.emplace_back(copied, active);
     return mp_impl->number_formats.size() - 1;
 }
 
@@ -514,21 +334,12 @@ void styles::reserve_cell_style_store(size_t n)
     mp_impl->cell_styles.reserve(n);
 }
 
-size_t styles::append_cell_style(const cell_style_t& cs)
+void styles::append_cell_style(const cell_style_t& cs)
 {
     mp_impl->cell_styles.push_back(cs);
-    return mp_impl->cell_styles.size() - 1;
 }
 
 const font_t* styles::get_font(size_t index) const
-{
-    if (index >= mp_impl->fonts.size())
-        return nullptr;
-
-    return &mp_impl->fonts[index].first;
-}
-
-const style_attrs_t<font_t>* styles::get_font_state(size_t index) const
 {
     if (index >= mp_impl->fonts.size())
         return nullptr;
@@ -549,26 +360,10 @@ const fill_t* styles::get_fill(size_t index) const
     if (index >= mp_impl->fills.size())
         return nullptr;
 
-    return &mp_impl->fills[index].first;
-}
-
-const style_attrs_t<fill_t>* styles::get_fill_state(size_t index) const
-{
-    if (index >= mp_impl->fills.size())
-        return nullptr;
-
     return &mp_impl->fills[index];
 }
 
 const border_t* styles::get_border(size_t index) const
-{
-    if (index >= mp_impl->borders.size())
-        return nullptr;
-
-    return &mp_impl->borders[index].first;
-}
-
-const style_attrs_t<border_t>* styles::get_border_state(size_t index) const
 {
     if (index >= mp_impl->borders.size())
         return nullptr;
@@ -581,26 +376,10 @@ const protection_t* styles::get_protection(size_t index) const
     if (index >= mp_impl->protections.size())
         return nullptr;
 
-    return &mp_impl->protections[index].first;
-}
-
-const style_attrs_t<protection_t>* styles::get_protection_state(size_t index) const
-{
-    if (index >= mp_impl->protections.size())
-        return nullptr;
-
     return &mp_impl->protections[index];
 }
 
 const number_format_t* styles::get_number_format(size_t index) const
-{
-    if (index >= mp_impl->number_formats.size())
-        return nullptr;
-
-    return &mp_impl->number_formats[index].first;
-}
-
-const style_attrs_t<number_format_t>* styles::get_number_format_state(size_t index) const
 {
     if (index >= mp_impl->number_formats.size())
         return nullptr;
@@ -629,6 +408,16 @@ const cell_style_t* styles::get_cell_style(size_t index) const
     if (index >= mp_impl->cell_styles.size())
         return nullptr;
 
+    return &mp_impl->cell_styles[index];
+}
+
+const cell_style_t* styles::get_cell_style_by_xf(size_t xfid) const
+{
+    auto it = mp_impl->cell_styles_map.find(xfid);
+    if (it == mp_impl->cell_styles_map.end())
+        return nullptr;
+
+    auto index = it->second;
     return &mp_impl->cell_styles[index];
 }
 
@@ -680,6 +469,15 @@ size_t styles::get_cell_styles_count() const
 void styles::clear()
 {
     mp_impl = std::make_unique<impl>();
+}
+
+void styles::finalize_import()
+{
+    for (std::size_t i = 0; i < mp_impl->cell_styles.size(); ++i)
+    {
+        const auto& entry = mp_impl->cell_styles[i];
+        mp_impl->cell_styles_map.insert_or_assign(entry.xf, i);
+    }
 }
 
 }}

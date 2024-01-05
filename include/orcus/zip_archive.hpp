@@ -9,37 +9,57 @@
 #define INCLUDED_ORCUS_ZIP_ARCHIVE_HPP
 
 #include "env.hpp"
+#include "exception.hpp"
 
-#include <cstdlib>
-#include <exception>
-#include <string>
+#include <string_view>
 #include <vector>
+#include <memory>
+#include <ostream>
 
 namespace orcus {
 
-class zip_archive_stream;
-class zip_archive_impl;
-
-class ORCUS_PSR_DLLPUBLIC zip_error : public std::exception
+/**
+ * Structure containing file entry header attributes.
+ */
+struct ORCUS_PSR_DLLPUBLIC zip_file_entry_header
 {
-    std::string m_msg;
-public:
-    zip_error();
-    zip_error(const std::string& msg);
-    virtual ~zip_error() throw();
+    uint32_t header_signature = 0;
+    uint16_t required_version = 0;
+    uint16_t flag = 0;
+    uint16_t compression_method = 0;
+    uint16_t last_modified_time = 0;
+    uint16_t last_modified_date = 0;
+    uint32_t crc32 = 0;
+    uint32_t compressed_size = 0;
+    uint32_t uncompressed_size = 0;
 
-    virtual const char* what() const throw();
+    std::string filename;
+    std::vector<uint8_t> extra_field;
+
+    zip_file_entry_header();
+    zip_file_entry_header(const zip_file_entry_header& other);
+    zip_file_entry_header(zip_file_entry_header&& other);
+    ~zip_file_entry_header();
+
+    zip_file_entry_header& operator=(const zip_file_entry_header& other);
+    zip_file_entry_header& operator=(zip_file_entry_header&& other);
 };
+
+ORCUS_PSR_DLLPUBLIC std::ostream& operator<<(std::ostream& os, const zip_file_entry_header& header);
+
+class zip_archive_stream;
 
 class ORCUS_PSR_DLLPUBLIC zip_archive
 {
-    zip_archive_impl* mp_impl;
+    class impl;
 
+    std::unique_ptr<impl> mp_impl;
+
+public:
     zip_archive() = delete;
     zip_archive(const zip_archive&) = delete;
     zip_archive& operator= (const zip_archive) = delete;
 
-public:
     zip_archive(zip_archive_stream* stream);
     ~zip_archive();
 
@@ -51,19 +71,22 @@ public:
     void load();
 
     /**
-     * Dump the content of a specified file entry to stdout.
+     * Retrieve the header information for a file entry specified by index.
      *
-     * @param index file entry index
+     * @param index file entry index.
+     *
+     * @return header information for a file entry.
      */
-    void dump_file_entry(size_t index) const;
+    zip_file_entry_header get_file_entry_header(std::size_t index) const;
 
     /**
-     * Dump the content of a specified file entry to stdout.
+     * Retrieve the header information for a file entry specified by name.
      *
+     * @param name file entry name.
      *
-     * @param entry_name file entry name.
+     * @return header information for a file entry.
      */
-    void dump_file_entry(std::string_view entry_name) const;
+    zip_file_entry_header get_file_entry_header(std::string_view name) const;
 
     /**
      * Get file entry name from its index.
@@ -84,17 +107,17 @@ public:
     size_t get_file_entry_count() const;
 
     /**
-     * Retrieve data stream of specified file entry into buffer. The retrieved
-     * data stream gets uncompressed if the original stream is compressed.
-     * The method will overwrite the content of passed buffer if there is any
-     * pre-existing data in it.
+     * Retrieve data stream of specified file entry. The retrieved data stream
+     * gets uncompressed if the original stream is compressed.
      *
-     * @param entry_name file entry name
-     * @param buf buffer to put the retrieved data stream into.
+     * @param entry_name file entry name.
      *
-     * @return true if successful, false otherwise.
+     * @return buffer containing the data stream for specified entry.
+     *
+     * @exception zip_error thrown when any problem is encountered during data
+     *                      stream retrieval.
      */
-    bool read_file_entry(std::string_view entry_name, std::vector<unsigned char>& buf) const;
+    std::vector<unsigned char> read_file_entry(std::string_view entry_name) const;
 };
 
 }

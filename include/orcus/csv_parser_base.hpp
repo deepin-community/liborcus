@@ -31,7 +31,7 @@ using std::endl;
 namespace orcus { namespace csv {
 
 /**
- * Run-time configuration object for orcus::csv_parser.
+ * Run-time configuration object for csv_parser.
  */
 struct ORCUS_PSR_DLLPUBLIC parser_config
 {
@@ -54,15 +54,6 @@ struct ORCUS_PSR_DLLPUBLIC parser_config
     parser_config();
 };
 
-class ORCUS_PSR_DLLPUBLIC parse_error : public std::exception
-{
-    std::string m_msg;
-public:
-    parse_error(const std::string& msg);
-    virtual ~parse_error() throw();
-    virtual const char* what() const throw();
-};
-
 class ORCUS_PSR_DLLPUBLIC parser_base : public ::orcus::parser_base
 {
 protected:
@@ -70,7 +61,7 @@ protected:
     cell_buffer m_cell_buf;
 
 protected:
-    parser_base(const char* p, size_t n, const parser_config& config);
+    parser_base(std::string_view content, const parser_config& config);
 
     /**
      * This is different from the global 'is_blank' in that it doesn't treat
@@ -81,9 +72,6 @@ protected:
     bool is_text_qualifier(char c) const;
 
     void skip_blanks();
-
-private:
-    void maybe_skip_bom();
 };
 
 }}
